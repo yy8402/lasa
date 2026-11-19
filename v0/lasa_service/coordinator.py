@@ -819,7 +819,7 @@ class Coordinator:
                             "contract": request["selection"]["contract"],
                             "input": request["input"],
                             "verified_step_results": completed,
-                            "instruction": "Integrate the results. Preserve unmet requirements; unable is not fulfillment. Do not repeat execution.",
+                            "instruction": self.config.prompts["integration"],
                         },
                         {
                             "budget": left,

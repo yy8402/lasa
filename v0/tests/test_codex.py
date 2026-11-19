@@ -36,13 +36,22 @@ async def test_real_codex_transport_in_networkless_container_with_controlled_mod
         for rule in principal["rules"]:
             rule["budget"]["model_tokens"] = 500000
     policy.write_text(json.dumps(data))
+    prompts = dict(configuration(raw).prompts)
+    custom_instruction = "Execute the configured bounded task."
+    prompts["execution_developer"] += " " + custom_instruction
+    prompt_path = tmp_path / "prompts.json"
+    prompt_path.write_text(json.dumps(prompts), encoding="utf-8")
+    raw["prompts_file"] = str(prompt_path)
+    raw["executors"][0]["provider_base_url"] = "https://model.example.net/v1/"
     cfg = configuration(raw)
     calls = []
 
     async def model(request):
         value = json.loads(request.content)
         calls.append(value)
+        assert request.url == "https://model.example.net/v1/responses"
         assert request.headers["Authorization"] == "Bearer test-model-key"
+        assert custom_instruction.encode() in request.content
         final = {
             "output": {
                 "disposition": "fulfilled",

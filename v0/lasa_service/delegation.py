@@ -423,7 +423,7 @@ class DelegationController:
                         "contract": step["contract"],
                         "input": inputs,
                         "attempt_evidence": result["output"],
-                        "instruction": "Produce the requested typed outcome only if the attempt evidence supports it. Do not invent missing facts.",
+                        "instruction": c.config.prompts["fallback_conversion"],
                     },
                     {
                         "budget": left,

@@ -30,6 +30,7 @@ packages = ["lasa_service", "lasa_contracts"]
 package-dir = {lasa_service = "lasa_service", lasa_contracts = "design"}
 
 [tool.setuptools.package-data]
+lasa_service = ["prompts.json"]
 lasa_contracts = ["*.json", "examples/*.json", "standards/*.json", "*.md"]
 
 [tool.pytest.ini_options]

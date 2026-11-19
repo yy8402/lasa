@@ -4,6 +4,12 @@
     "config_version": {
       "const": "1.0"
     },
+    "prompts_file": {
+      "description": "Optional absolute path to the administrator's complete prompt file.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048
+    },
     "service": {
       "type": "object",
       "properties": {

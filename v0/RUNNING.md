@@ -34,6 +34,14 @@ uv run --project v0 python v0/deployment/run_service.py \
 
 The credential JSON contains environment-variable names mapped to secret values; its owner/mode are checked. The default generated model reference is `env:LASA_MODEL_API_KEY`. The backend listens on literal `127.0.0.1`; configure a TLS proxy so the generated HTTPS base URL reaches it. A private CA can be configured on the peer and CLI. HTTPS certificate validation remains enabled.
 
+## Model service and prompts
+
+In `config.json`, set `executors[].model` to the model ID, `provider_base_url` to the provider's HTTPS API base URL, and `credential_ref` to `env:NAME` or `file:/absolute/private/key.txt`. LASA appends `/responses`, so use a provider that supports the OpenAI Responses API, including structured outputs and streamed tool calls for Codex execution. Local task steps use the executor selected by their binding. Planning, verification, and unbound integration use the first executor. Each LASA peer has its own configuration.
+
+The bundled [prompts.json](lasa_service/prompts.json) contains all eight LASA-authored instruction templates used for planning, verification, execution, source retrieval, result integration, and fallback conversion. To customize them, copy that file to a private location and set the top-level `"prompts_file": "/absolute/path/to/prompts.json"` in `config.json`. LASA validates and loads the entire file when it starts. Keep all eight keys and the `{purpose}` placeholder in `assessment_developer`, then restart the service to apply edits. LASA supplies task inputs, contracts, and evidence at runtime. Codex App Server supplies its own built-in instructions.
+
+## Submitting work
+
 Submit work using a receiver-audience JWT in `LASA_ACCESS_TOKEN`:
 
 ```sh

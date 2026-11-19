@@ -3,6 +3,7 @@
 import copy
 import os
 from dataclasses import dataclass, field
+from importlib.resources import files
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
@@ -48,6 +49,7 @@ def within_url(url, base):
 class Configuration:
     document: dict
     environ: dict = field(repr=False)
+    prompts: dict[str, str] = field(repr=False)
     secrets: dict = field(default_factory=dict, repr=False)
     connectors: dict = field(default_factory=dict, repr=False)
     executor_operations: dict = field(default_factory=dict, repr=False)
@@ -59,7 +61,8 @@ class Configuration:
     @classmethod
     def from_document(cls, document, *, environ=None):
         document = copy.deepcopy(document)
-        Contracts().validate("Config", document)
+        contracts = Contracts()
+        contracts.validate("Config", document)
         validate_url(document["service"]["base_url"])
         require(
             within_url(document["service"]["descriptor_url"], document["service"]["base_url"]),
@@ -87,7 +90,13 @@ class Configuration:
                 within_url(peer["descriptor_url"], peer["allowed_base_url"]),
                 "Peer descriptor escaped configured boundary",
             )
-        config = cls(document, dict(os.environ if environ is None else environ))
+        if "prompts_file" in document:
+            prompt_path = Path(document["prompts_file"])
+            require(prompt_path.is_absolute(), "Prompt file path must be absolute")
+        else:
+            prompt_path = files("lasa_service").joinpath("prompts.json")
+        prompts = contracts.validate("Prompts", parse_json(prompt_path.read_bytes()))
+        config = cls(document, dict(os.environ if environ is None else environ), prompts)
         executor_ids = [x["id"] for x in document["executors"]]
         require(len(executor_ids) == len(set(executor_ids)), "Duplicate executor IDs")
         operation_owners = {}

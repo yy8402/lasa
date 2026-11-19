@@ -2,6 +2,53 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.example.net/lasa/1.1/private.schema.json",
   "$defs": {
+    "Prompts": {
+      "type": "object",
+      "$defs": {
+        "text": {
+          "type": "string",
+          "pattern": "\\S"
+        }
+      },
+      "properties": {
+        "assessment_developer": {
+          "$ref": "#/$defs/Prompts/$defs/text",
+          "pattern": "\\{purpose\\}"
+        },
+        "plan_proposal": {
+          "$ref": "#/$defs/Prompts/$defs/text"
+        },
+        "plan_verification": {
+          "$ref": "#/$defs/Prompts/$defs/text"
+        },
+        "outcome_verification": {
+          "$ref": "#/$defs/Prompts/$defs/text"
+        },
+        "execution_developer": {
+          "$ref": "#/$defs/Prompts/$defs/text"
+        },
+        "source_execution": {
+          "$ref": "#/$defs/Prompts/$defs/text"
+        },
+        "integration": {
+          "$ref": "#/$defs/Prompts/$defs/text"
+        },
+        "fallback_conversion": {
+          "$ref": "#/$defs/Prompts/$defs/text"
+        }
+      },
+      "required": [
+        "assessment_developer",
+        "plan_proposal",
+        "plan_verification",
+        "outcome_verification",
+        "execution_developer",
+        "source_execution",
+        "integration",
+        "fallback_conversion"
+      ],
+      "additionalProperties": false
+    },
     "AuthorizationPolicy": {
       "type": "object",
       "properties": {
