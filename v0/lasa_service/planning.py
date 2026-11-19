@@ -113,16 +113,20 @@ class ModelService:
         started = time.monotonic()
         try:
             async with asyncio.timeout(c.remaining_seconds(task_id, operation_id=operation)):
-                response = await self.client.post(
+                async with self.client.stream(
+                    "POST",
                     executor["provider_base_url"].rstrip("/") + "/responses",
                     json=body,
                     headers={
                         "Authorization": "Bearer " + c.config.secret(executor["credential_ref"])
                     },
-                )
-                require(response.status_code == 200, "peer_unavailable", 503)
-                require(len(response.content) <= 1048576, "verification_failed", 422)
-                value = parse_json(response.content)
+                ) as response:
+                    require(response.status_code == 200, "peer_unavailable", 503)
+                    content = bytearray()
+                    async for chunk in response.aiter_bytes():
+                        require(len(content) + len(chunk) <= 1048576, "verification_failed", 422)
+                        content.extend(chunk)
+                value = parse_json(content)
                 texts = [
                     part["text"]
                     for item in value.get("output", [])
@@ -213,10 +217,17 @@ class Planner:
                 ]
                 if ref["digest"] in c.registry.current
             }
+            offers = [
+                offer
+                for offer in (peer_catalog or {}).get("offers", [])
+                if offer["contract"]["digest"] in c.registry.current
+                and offer["authorization_ref"] == c.config.peer["authorization_ref"]
+                and c.registry.supported(offer["contract"])
+            ]
             definitions.update(
                 {
-                    x["contract"]["digest"]: x["definition"]
-                    for x in (peer_catalog or {}).get("offers", [])
+                    offer["contract"]["digest"]: c.registry.current[offer["contract"]["digest"]]
+                    for offer in offers
                 }
             )
             payload = {
@@ -230,9 +241,11 @@ class Planner:
                     {key: x[key] for key in ["contract", "allowed_effects", "approved_resources"]}
                     for x in c.config.document["bindings"]
                 ],
-                "peer_offers": (peer_catalog or {}).get("offers", []),
+                "peer_offers": offers,
                 "instruction": c.config.prompts["plan_proposal"],
             }
+            if "dependency_results" in request:
+                payload["request"]["dependency_results"] = request["dependency_results"]
             value = await c.models.ask(task_id, "planning", payload, PROPOSAL)
         validate_data(PROPOSAL, value)
         c.store.event(task_id, "planning_proposal", value)
@@ -285,21 +298,39 @@ class Planner:
         from .evidence import MAX_BYTES, verification_material
 
         material = verification_material(c, task_id, step_id=step_id, artifact_ids=artifact_ids)
-        source_profile = c.registry.source_profile(reference(definition))
+        contract = reference(definition)
+        source_profile = c.registry.source_profile(contract)
+        instruction = c.config.prompts["outcome_verification"]
         if source_profile:
-            from .outcomes import source_output
+            from .outcomes import assemble_source_outcome
 
+            assembled = assemble_source_outcome(source_profile, contract, inputs, material)
             require(
-                output == source_output(source_profile, reference(definition), inputs, material),
+                output == assembled.output,
                 "verification_failed",
                 422,
             )
-            material["source_validation"] = {
+            checked = {
                 "source": "receiver_deterministic_checks",
                 "profile": source_profile,
-                "output_digest": digest(output),
-                "checks": "Exact source fields match verified operation artifacts for this contract/input. UTF-8 content hashes and logical source identifiers are computed by the server; search projection and repository source mapping are checked by the server.",
             }
+            if assembled.document_read is not None:
+                checked["document_read"] = assembled.document_read
+                instruction += (
+                    " For documents.read, use trusted_execution_evidence.source_validation.document_read. "
+                    "The receiver independently computed document_content_utf8_sha256 over the UTF-8 bytes "
+                    "of the source operation's text field and verified the candidate's content, digest, "
+                    "document ID and source URI against that operation. Compare candidate_output.content_digest "
+                    "with document_content_utf8_sha256. The operation_result_artifact.canonical_json_sha256 "
+                    "covers the complete canonical JSON operation result stored in the referenced artifact. "
+                    "Use the receiver's checks for these exact fields and independently evaluate the required postconditions."
+                )
+            else:
+                checked["output_digest"] = digest(output)
+                checked["checks"] = (
+                    "Exact source fields match verified operation artifacts for this contract and input."
+                )
+            material["source_validation"] = checked
             require(len(canonical(material)) <= MAX_BYTES, "capacity_exhausted", 429)
         key = (
             task_id,
@@ -344,7 +375,7 @@ class Planner:
                 "claimed_evidence": evidence,
                 "original_requirements": requirements or [],
                 "trusted_execution_evidence": material,
-                "instruction": c.config.prompts["outcome_verification"],
+                "instruction": instruction,
             },
             VERDICT,
         )

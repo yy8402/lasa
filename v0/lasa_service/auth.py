@@ -20,14 +20,18 @@ class Authentication:
         if "jwks_file" in settings:
             document = parse_json(await asyncio.to_thread(Path(settings["jwks_file"]).read_bytes))
         else:
-            async with httpx.AsyncClient(
-                trust_env=False, follow_redirects=False, timeout=10
-            ) as client:
-                response = await client.get(settings["jwks_url"])
+            async with (
+                asyncio.timeout(10),
+                httpx.AsyncClient(trust_env=False, follow_redirects=False) as client,
+                client.stream("GET", settings["jwks_url"]) as response,
+            ):
                 response.raise_for_status()
-                if len(response.content) > 65536:
-                    raise ValueError("JWKS too large")
-                document = parse_json(response.content)
+                content = bytearray()
+                async for chunk in response.aiter_bytes():
+                    if len(content) + len(chunk) > 65536:
+                        raise ValueError("JWKS too large")
+                    content.extend(chunk)
+                document = parse_json(content)
         for key in document["keys"]:
             if (
                 key.get("alg") not in settings["allowed_algorithms"]
@@ -134,6 +138,7 @@ class Authorization:
         )
         require("external.write" not in allowed_effects, "authority_denied", 403)
         envelope = request.get("delegation")
+        require("dependency_results" not in request or envelope, "authority_denied", 403)
         if envelope:
             require(
                 principal["kind"] == "peer"

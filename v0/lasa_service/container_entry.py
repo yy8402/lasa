@@ -3,7 +3,6 @@
 import asyncio
 import base64
 import json
-import os
 import signal
 import subprocess
 import sys
@@ -71,7 +70,6 @@ async def serve(executable):
             await writer.wait_closed()
 
     server = await asyncio.start_server(http, "127.0.0.1", 39231, limit=65536)
-    os.environ["LASA_GATEWAY_URL"] = "http://127.0.0.1:39231"
     process = await asyncio.create_subprocess_exec(
         executable,
         "app-server",

@@ -37,7 +37,7 @@ async def test_verifier_gets_receiver_receipts_and_verified_artifact_without_for
                 context.task_id, "read-proof", "workspace.read", {"relative_path": "proof.txt"}
             )
             artifact = context.coordinator.snapshot_artifact(
-                context.task_id, "proof", "text/plain", "verified readback"
+                context.task_id, "text/plain", "verified readback"
             )
             result["artifact_ids"] = [artifact["artifact_id"]]
         return result
@@ -76,7 +76,6 @@ async def test_verifier_gets_receiver_receipts_and_verified_artifact_without_for
     result = await settled(client, response)
     assert result["status"] == ("completed" if performed and accept else "failed")
     assert observed
-    await c.jobs[result["task_id"]]
     assert result["task_id"] not in c.diagnostics.active_secrets
     if not (performed and accept):
         assert result["problem"]["code"] == "verification_failed" and "result" not in result
@@ -170,7 +169,7 @@ async def test_artifact_material_rejects_other_task_or_corrupt_snapshot(services
     async def handler(context):
         result = await FakeRuntime().run(context)
         artifact = context.coordinator.snapshot_artifact(
-            context.task_id, "proof", "text/plain", "verified snapshot"
+            context.task_id, "text/plain", "verified snapshot"
         )
         result["artifact_ids"] = [artifact["artifact_id"]]
         return result

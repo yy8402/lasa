@@ -1,22 +1,21 @@
 """Read-only installed-package, managed-runtime and HTTPS acceptance inventory."""
 
+import argparse
 import asyncio
-import hashlib
 import json
 import os
 import ssl
 import subprocess
-import sys
 import textwrap
-import zipfile
+from inspect import getsource
 from pathlib import Path
 
 import httpx
+from check_release import check_installed_files, check_wheel, sha
 
 ROOT = Path(__file__).resolve().parents[1]
 TARGET = ROOT / ".deploy/target"
 REMOTE = "/home/yang/Dev/CodeX/LASA/v0/.deploy/target"
-EVIDENCE = ROOT / "verification/connectors-20261119"
 
 
 def run(args, **kwargs):
@@ -25,20 +24,22 @@ def run(args, **kwargs):
     ).stdout
 
 
-def installed(python, target, files, ssh=False):
+def installed(python, target, project, files, ssh=False):
     script = (
-        "TARGET="
+        getsource(check_installed_files)
+        + "\nTARGET="
         + repr(str(target))
+        + "\nPROJECT="
+        + repr({"name": project["name"], "version": project["version"]})
         + "\nFILES="
         + repr(files)
         + "\n"
         + textwrap.dedent("""\
-        import hashlib,json,os,sqlite3,subprocess,sys,sysconfig
+        import hashlib,json,os,sqlite3,subprocess,sys
         from pathlib import Path
         import lasa_service
-        site=Path(sysconfig.get_path('purelib'));target=Path(TARGET)
-        actual={name:hashlib.sha256((site/name).read_bytes()).hexdigest() for name in FILES}
-        assert actual==FILES,'Installed file mismatch'
+        target=Path(TARGET)
+        actual=check_installed_files(PROJECT,FILES)
         layer='layer2' if os.uname().sysname=='Linux' else 'layer1'
         folder=target/layer
         config=json.loads((folder/'config.json').read_text())
@@ -70,27 +71,26 @@ def installed(python, target, files, ssh=False):
         if not ssh
         else ["ssh", "-o", "BatchMode=yes", "yang@192.168.0.188", python + " -I -"]
     )
-    return json.loads(run(command, input=script))
+    result = subprocess.run(command, input=script, capture_output=True, text=True, timeout=25)
+    if result.returncode:
+        raise RuntimeError(result.stderr.splitlines()[-1] if result.stderr else "Inventory failed")
+    return json.loads(result.stdout)
 
 
-async def main():
-    output = EVIDENCE / sys.argv[1]
-    assert not output.exists(), "Preserve previous inventories"
-    wheel = ROOT / "verification/dist/lasa_service_v0-1.1.0-py3-none-any.whl"
-    files = {}
-    with zipfile.ZipFile(wheel) as archive:
-        for name in archive.namelist():
-            if name.endswith("/") or not name.startswith(("lasa_service/", "lasa_contracts/")):
-                continue
-            source = ROOT / name.replace("lasa_contracts/", "design/", 1)
-            data = archive.read(name)
-            assert source.read_bytes() == data, "Checkout differs from release: " + name
-            files[name] = hashlib.sha256(data).hexdigest()
+async def inspect(wheel, output):
+    if output.exists():
+        raise FileExistsError("Choose a new path for the release inventory")
+    project, files = check_wheel(wheel)
     report = {
-        "wheel_sha256": hashlib.sha256(wheel.read_bytes()).hexdigest(),
-        "layer1": installed(str(TARGET / "venv/bin/python"), TARGET, files),
-        "layer2": installed(REMOTE + "/venv/bin/python", REMOTE, files, True),
+        "wheel_sha256": sha(wheel.read_bytes()),
+        "layer1": installed(str(TARGET / "venv/bin/python"), TARGET, project, files),
+        "layer2": installed(REMOTE + "/venv/bin/python", REMOTE, project, files, True),
     }
+    assert (
+        report["layer1"]["package_version"]
+        == report["layer2"]["package_version"]
+        == project["version"]
+    )
     domain = "gui/" + str(os.getuid())
     for label in ["com.lasa.layer1", "com.lasa.layer1-https", "com.lasa.tokens"]:
         status = run(["launchctl", "print", domain + "/" + label])
@@ -119,6 +119,9 @@ async def main():
                 base.rsplit("/lasa/v1", 1)[0] + "/health/ready", headers=headers
             )
             ready.raise_for_status()
+            descriptor = await client.get(base + "/descriptor", headers=headers)
+            descriptor.raise_for_status()
+            assert descriptor.json()["deployment_revision"] == report[layer]["deployment_revision"]
             catalog = await client.get(base + "/capabilities", headers=headers)
             catalog.raise_for_status()
             states = {}
@@ -148,11 +151,10 @@ async def main():
         for layer in ["layer1", "layer2"]
         for p in (TARGET / layer).glob("*-token.txt")
     )
-    for file in EVIDENCE.glob("*.json"):
-        text = file.read_text()
-        assert not any(value and value in text for value in secrets), "Credential in evidence"
-    report["privacy_scan"] = "No saved model/service token values in JSON evidence"
-    output.write_text(json.dumps(report, indent=2) + "\n")
+    text = json.dumps({**report, "privacy_scan": "No saved model/service token values"}, indent=2)
+    assert not any(value and value in text for value in secrets), "Credential in evidence"
+    with output.open("x") as evidence:
+        evidence.write(text + "\n")
     print(
         json.dumps(
             {
@@ -166,5 +168,13 @@ async def main():
     )
 
 
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--wheel", required=True, type=Path)
+    parser.add_argument("--output", required=True, type=Path)
+    args = parser.parse_args()
+    asyncio.run(inspect(args.wheel, args.output))
+
+
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

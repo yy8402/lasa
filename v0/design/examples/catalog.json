@@ -6,6 +6,7 @@
   "offers": [
     {
       "offer_id": "offer-design-review",
+      "authorization_ref": "default",
       "revision": "offer-review-r1",
       "catalog_view": "view-layer1-policy7",
       "contract": {
@@ -42,6 +43,7 @@
     },
     {
       "offer_id": "offer-task-attempt",
+      "authorization_ref": "default",
       "revision": "offer-attempt-r1",
       "catalog_view": "view-layer1-policy7",
       "contract": {

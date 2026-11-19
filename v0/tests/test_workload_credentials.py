@@ -24,7 +24,7 @@ async def test_peer_rereads_rotated_token_for_discovery_and_task_requests(tmp_pa
         url = raw["peer"]["descriptor_url"]
         await peer.get(url)
         token_file.write_text("refreshed-private-token")
-        await peer.get(url, refresh=True)
+        await peer.get(url)
         await peer.request("POST", raw["peer"]["allowed_base_url"] + "/sessions", {})
         assert received == [
             "Bearer first-private-token",

@@ -24,6 +24,10 @@ TARGET = Path(__file__).resolve().parents[1] / ".deploy/target"
 
 
 async def run(args):
+    path = args.output / (args.case + ".json")
+    receipt_path = args.output / (args.case + "-receipt.json")
+    if path.exists() or receipt_path.exists():
+        raise FileExistsError("Choose a new case name to preserve prior observations")
     target = TARGET
     source = json.loads((target / "layer1/config.json").read_text())
     # Reuse the pinned client trust settings without configuring a service self-peer.
@@ -51,9 +55,7 @@ async def run(args):
         offer = next(
             x for x in catalog["offers"] if x["contract"]["id"].endswith("/" + args.capability)
         )
-        definition = next(
-            x["definition"] for x in catalog["offers"] if x["offer_id"] == offer["offer_id"]
-        )
+        definition = await peer.definition(offer)
         if args.input_file:
             inputs = json.loads(args.input_file.read_text())
         elif args.tool_task:
@@ -107,20 +109,23 @@ async def run(args):
             body = {
                 "operation_id": "deployment-task-" + uuid4().hex,
                 "selection": {
-                    k: offer[k]
-                    for k in ["contract", "offer_id", "offer_revision", "catalog_view"]
-                    if k in offer
+                    "contract": offer["contract"],
+                    "offer_id": offer["offer_id"],
+                    "catalog_view": offer["catalog_view"],
+                    "offer_revision": offer["revision"],
                 },
                 "input": inputs,
                 "requested_limits": {
                     "budget": copy.deepcopy(offer["max_budget"]),
-                    "deadline": (datetime.now(UTC) + timedelta(seconds=240)).isoformat(),
+                    "deadline": (
+                        datetime.now(UTC)
+                        + timedelta(seconds=min(240, offer["max_budget"]["wall_time_ms"] / 1000))
+                    ).isoformat(),
                     "max_hops": offer["max_hops"],
                 },
-                "authorization_ref": "default",
+                "authorization_ref": offer["authorization_ref"],
                 "diagnostics": "content" if args.content or args.deny_content else "metadata",
             }
-            body["selection"]["offer_revision"] = offer["revision"]
             started = time.monotonic()
             receipt = await post(base + "/sessions/" + session["session_id"] + "/tasks", body)
             if args.deny_content:
@@ -136,17 +141,18 @@ async def run(args):
                 assert receipt.status_code == 202
                 url = receipt.headers["location"]
                 args.output.mkdir(parents=True, exist_ok=True)
-                (args.output / (args.case + "-receipt.json")).write_text(
-                    json.dumps(
-                        {
-                            "task_url": url,
-                            "operation_id": body["operation_id"],
-                            "session_id": session["session_id"],
-                        },
-                        indent=2,
+                with receipt_path.open("x") as evidence:
+                    evidence.write(
+                        json.dumps(
+                            {
+                                "task_url": url,
+                                "operation_id": body["operation_id"],
+                                "session_id": session["session_id"],
+                            },
+                            indent=2,
+                        )
+                        + "\n"
                     )
-                    + "\n"
-                )
                 async with asyncio.timeout(285):
                     while True:
                         response = await client.get(url)
@@ -218,14 +224,12 @@ async def run(args):
                     "children_via_parent": children,
                 }
             args.output.mkdir(parents=True, exist_ok=True)
-            path = args.output / (args.case + ".json")
-            if path.exists():
-                raise FileExistsError("Choose a new case name to preserve prior observations")
             text = json.dumps(report, indent=2) + "\n"
             secrets = [p.read_text().strip() for p in (target / "layer2").glob("*-token.txt")]
             secrets += [token_file.read_text().strip()]
             assert not any(value and value in text for value in secrets)
-            path.write_text(text)
+            with path.open("x") as evidence:
+                evidence.write(text)
             print(
                 json.dumps(
                     {

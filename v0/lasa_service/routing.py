@@ -7,6 +7,7 @@ from .capabilities import epoch, reference, require
 from .contracts import canonical, digest, parse_json
 from .errors import LasaError
 from .planning import check_plan
+from .preconditions import check_inputs, restrict
 
 
 def decide(local, peer, policy, *, configured, generic_available=False):
@@ -26,6 +27,22 @@ def decide(local, peer, policy, *, configured, generic_available=False):
     return "none"
 
 
+def fallback_input(definition, inputs, requirements, ids):
+    return {
+        "objective": "Attempt the supplied bounded outcome. Report unable if any required outcome or evidence cannot be produced.",
+        "requirements": [
+            {
+                "id": requirement["requirement_id"],
+                "description": requirement["description"],
+                "acceptance": [item["criterion"] for item in requirement["acceptance"]],
+            }
+            for requirement in requirements
+            if requirement["requirement_id"] in ids
+        ],
+        "context": canonical({"requested_contract": definition, "input": inputs}).decode(),
+    }
+
+
 class RoutingController:
     def __init__(self, coordinator):
         self.coordinator = coordinator
@@ -35,35 +52,15 @@ class RoutingController:
         if (
             offer["contract"] not in authority["allowed_delegated_contracts"]
             or offer["contract"] not in rule["delegated_contracts"]
+            or offer["authorization_ref"] != c.config.peer["authorization_ref"]
             or request["requested_limits"]["max_hops"] <= 0
         ):
             return "denied"
         try:
-            candidate = copy.deepcopy(authority)
-            candidate["resources"] = [
-                {
-                    "resource": r["resource"],
-                    "actions": sorted(
-                        set(r["actions"])
-                        & set(
-                            next(
-                                (
-                                    x["actions"]
-                                    for x in offer["restrictions"]["resources"]
-                                    if x["resource"] == r["resource"]
-                                ),
-                                [],
-                            )
-                        )
-                    ),
-                }
-                for r in authority["resources"]
-            ]
-            candidate["allowed_effects"] = sorted(
-                set(authority["allowed_effects"])
-                & set(rule["effects"])
-                & set(offer["restrictions"]["allowed_effects"])
-            )
+            terms = offer["restrictions"]
+            current = restrict(authority, rule["effects"], rule["resources"])
+            candidate = restrict(current, terms["allowed_effects"], terms["resources"])
+            candidate["limits"] = dict(authority["limits"])
             used = c.store.usage(task_id, reserved=True)
             reserve = c.config.document["limits"]["integration_reserve"]
             candidate["limits"]["budget"] = {
@@ -82,14 +79,20 @@ class RoutingController:
                 <= time.time()
             ):
                 return "unavailable"
-            from .preconditions import check_predicates
-
-            check_predicates(
+            artifacts = check_inputs(
+                c,
+                task_id,
                 c.registry.get(offer["contract"]),
                 inputs,
                 candidate,
-                offer["restrictions"]["additional_preconditions"],
+                terms["additional_preconditions"],
             )
+            if artifacts and (
+                len(canonical(inputs)) + len(canonical(artifacts))
+                > candidate["limits"]["budget"]["input_bytes"]
+            ):
+                return "unavailable"
+            await c.peer.definition(offer)
             state = await c.peer.availability(offer)
             return (
                 "matched"
@@ -109,6 +112,18 @@ class RoutingController:
         except TimeoutError:
             return "unknown"
 
+    async def match(self, candidates, task_id, request, inputs, authority, rule, count):
+        states = set()
+        for offer in candidates:
+            state = await self.suitability(task_id, request, offer, inputs, authority, rule, count)
+            if state == "matched":
+                return state, offer
+            states.add(state)
+        return next(
+            (state for state in ("busy", "denied", "unknown", "unavailable") if state in states),
+            "unknown",
+        ), None
+
     async def prepare(self, task_id, request):
         c = self.coordinator
         catalog = None
@@ -118,11 +133,17 @@ class RoutingController:
             except (LasaError, TimeoutError):
                 catalog = None
         requirements, proposals = await c.planner.propose(task_id, request, catalog)
-        if c.config.peer:
-            try:
-                catalog = await c.peer.discover(refresh=True)
-            except (LasaError, TimeoutError):
-                catalog = None
+        refreshed = {}
+
+        async def fresh(ref):
+            key = ref["digest"]
+            if key not in refreshed:
+                try:
+                    refreshed[key] = await c.peer.discover(refresh=True, contract=ref)
+                except (LasaError, TimeoutError):
+                    refreshed[key] = None
+            return refreshed[key]
+
         require(
             len(proposals) <= c.config.document["limits"]["max_plan_steps"],
             "capacity_exhausted",
@@ -136,15 +157,9 @@ class RoutingController:
         assessments = {}
         offers = {}
         for proposal in proposals:
-            ref = next(
-                (
-                    reference(x)
-                    for x in c.registry.current.values()
-                    if digest(x) == proposal["contract_digest"]
-                ),
-                None,
-            )
-            require(ref is not None and c.registry.supported(ref), "unsupported_contract", 422)
+            definition = c.registry.current.get(proposal["contract_digest"])
+            require(definition is not None, "unsupported_contract", 422)
+            ref = reference(definition)
             value = parse_json(proposal["input_json"])
             definition = c.registry.input(ref, value)
             binding = next((x for x in c.config.document["bindings"] if x["contract"] == ref), None)
@@ -158,11 +173,20 @@ class RoutingController:
             )
             if dependency != "available":
                 local = "insufficient"
+            local_failure = None
             if binding and ref in rule["contracts"]:
-                c.preconditions(task_id, definition, value, authority)
+                try:
+                    scoped = restrict(
+                        authority, binding["allowed_effects"], binding["approved_resources"]
+                    )
+                    check_inputs(c, task_id, definition, value, scoped)
+                except LasaError as exc:
+                    local = "insufficient"
+                    local_failure = exc
             state = "not_configured"
             matched = None
             generic = None
+            snapshot = None
             if c.config.peer:
                 permitted = (
                     c.config.peer["expected_service_id"] in authority["allowed_disclosure_services"]
@@ -170,34 +194,45 @@ class RoutingController:
                 )
                 if not permitted:
                     state = "denied"
-                elif catalog is None:
+                elif (snapshot := await fresh(ref)) is None:
                     state = "unknown"
-                else:
+                elif not snapshot["offers"]:
                     state = "not_claimed"
-                    candidates = [x for x in catalog["offers"] if x["contract"] == ref]
-                    generic = next(
-                        (
-                            x
-                            for x in catalog["offers"]
-                            if c.registry.supported(x["contract"])
-                            and c.registry.verifiers[digest(x["contract"])] == "task-attempt-v1"
-                            and x["contract"] in authority["allowed_delegated_contracts"]
-                            and x["contract"] in rule["delegated_contracts"]
-                        ),
-                        None,
+                else:
+                    state, matched = await self.match(
+                        (offer for offer in snapshot["offers"] if offer["contract"] == ref),
+                        task_id,
+                        request,
+                        value,
+                        authority,
+                        rule,
+                        len(proposals),
                     )
-                    if candidates:
-                        matched = candidates[0]
-                        state = await self.suitability(
-                            task_id, request, matched, value, authority, rule, len(proposals)
-                        )
-                        if (
-                            c.registry.verifiers[digest(ref)] == "task-attempt-v1"
-                            and local in {"insufficient", "unknown"}
-                            and state == "matched"
-                        ):
-                            state = "not_claimed" if local == "insufficient" else "unknown"
-                            matched = None
+            if (
+                local == "insufficient"
+                and state == "not_claimed"
+                and policy["unclaimed_peer_fallback"] == "attempt"
+            ):
+                attempt = fallback_input(
+                    definition, value, requirements, proposal["requirement_ids"]
+                )
+                options = []
+                for target in authority["allowed_delegated_contracts"]:
+                    if (
+                        target in rule["delegated_contracts"]
+                        and c.registry.verifiers.get(digest(target)) == "task-attempt-v1"
+                    ):
+                        alternative = await fresh(target)
+                        if alternative:
+                            options.extend(
+                                x for x in alternative["offers"] if x["contract"] == target
+                            )
+                if options:
+                    generic_state, generic = await self.match(
+                        options, task_id, request, attempt, authority, rule, len(proposals)
+                    )
+                    if generic is None:
+                        state = generic_state
             choice = decide(
                 local,
                 state,
@@ -205,31 +240,10 @@ class RoutingController:
                 configured=c.config.peer is not None,
                 generic_available=generic is not None,
             )
-            if choice == "attempt":
-                # Generic fallback has its own preconditions; it never overrides a specific unsuitable claim.
-                generic_input = {
-                    "objective": "Attempt the bounded required outcome.",
-                    "requirements": [
-                        {
-                            "id": r["requirement_id"],
-                            "description": r["description"],
-                            "acceptance": [a["criterion"] for a in r["acceptance"]],
-                        }
-                        for r in requirements
-                        if r["requirement_id"] in proposal["requirement_ids"]
-                    ],
-                    "context": canonical(
-                        {"requested_contract": definition, "input": value}
-                    ).decode(),
-                }
-                generic_state = await self.suitability(
-                    task_id, request, generic, generic_input, authority, rule, len(proposals)
-                )
-                if generic_state != "matched":
-                    choice = "none"
-                    state = generic_state
             selected = matched if choice == "peer" else generic if choice == "attempt" else None
             if choice == "local":
+                if local_failure:
+                    raise local_failure
                 require(
                     binding is not None and ref in rule["contracts"], "unsupported_contract", 422
                 )
@@ -263,7 +277,7 @@ class RoutingController:
                 "local_assessment": local,
                 "peer_assessment": state,
                 "assessment_summary": proposal["assessment_summary"],
-                "catalog_revision": catalog["revision"] if catalog else None,
+                "catalog_revision": snapshot["revision"] if snapshot else None,
                 "offer_revision": selected["revision"] if selected else None,
                 "authorization_decision_id": authority["decision_id"],
                 "policy": policy,

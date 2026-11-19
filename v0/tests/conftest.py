@@ -156,9 +156,6 @@ class FakeRuntime:
     async def recover(self, coordinator):
         pass
 
-    async def stop(self, task_id):
-        pass
-
     async def kill(self, task_id):
         pass
 

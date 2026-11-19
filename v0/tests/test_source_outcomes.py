@@ -11,7 +11,7 @@ import pytest
 from lasa_service.capabilities import reference
 from lasa_service.contracts import canonical, digest
 from lasa_service.errors import LasaError
-from lasa_service.outcomes import source_output
+from lasa_service.outcomes import assemble_source_outcome
 
 from .conftest import FakeRuntime, documents, example, settled, submit, task_request
 from .test_connector_transports import LIMITS, operation
@@ -72,7 +72,7 @@ async def read_workflow(context, *, wrong_argument=False, no_operation=False):
     if not no_operation:
         from lasa_service.connector_schema import validate
 
-        catalog = await context.coordinator.broker.tools(context.task_id)
+        catalog = context.coordinator.broker.tools(context.task_id)
         schema = next(tool["inputSchema"] for tool in catalog if tool["name"] == "documents_read")
         validate(schema, {"report_id": context.prompt["input"]["document_id"]})
         with pytest.raises(LasaError):
@@ -98,6 +98,44 @@ async def read_workflow(context, *, wrong_argument=False, no_operation=False):
     }
 
 
+def verified_document_receipt(payload):
+    evidence = payload["trusted_execution_evidence"]
+    checked = evidence["source_validation"]
+    assert checked["source"] == "receiver_deterministic_checks"
+    assert checked["profile"] == "documents-read-v1"
+    read = checked["document_read"]
+    output = payload["candidate_output"]
+    artifact = read["operation_result_artifact"]
+    verified_artifact = next(
+        item
+        for item in evidence["artifacts"]
+        if item["manifest"]["artifact_id"] == artifact["artifact_id"]
+    )
+    manifest = verified_artifact["manifest"]
+    artifact_text = verified_artifact["content"]["text"]
+    assert read["document_id"] == payload["input"]["document_id"] == output["document_id"]
+    assert read["source_uri"] == output["source_uri"] == "lasa-docs://" + read["document_id"]
+    assert (
+        read["document_content_utf8_sha256"]
+        == output["content_digest"]
+        == "sha256:" + hashlib.sha256(output["content"].encode("utf-8")).hexdigest()
+    )
+    assert (
+        artifact["canonical_json_sha256"]
+        == manifest["digest"]
+        == "sha256:" + hashlib.sha256(artifact_text.encode("utf-8")).hexdigest()
+    )
+    assert json.loads(artifact_text)["text"] == output["content"]
+    assert artifact["canonical_json_sha256"] != read["document_content_utf8_sha256"]
+    assert artifact["operation_id"] == manifest["provenance"]["operation_id"] == "source-read"
+    assert artifact["service_id"] == manifest["provenance"]["service_id"]
+    assert (
+        "Compare candidate_output.content_digest with document_content_utf8_sha256"
+        in (payload["instruction"])
+    )
+    return read
+
+
 @pytest.mark.parametrize(
     "mode", ["success", "wrong-document", "no-operation", "semantic-rejection"]
 )
@@ -117,10 +155,7 @@ async def test_source_receipts_exact_assembly_scope_and_independent_rejection(
 
     async def assess(task_id, purpose, payload, schema):
         if purpose == "verification":
-            checked = payload["trusted_execution_evidence"]["source_validation"]
-            assert checked["source"] == "receiver_deterministic_checks"
-            assert checked["output_digest"] == digest(payload["candidate_output"])
-            assert "UTF-8 content hashes" in checked["checks"]
+            verified_document_receipt(payload)
         return {"passed": mode != "semantic-rejection", "reason": "Controlled independent verdict."}
 
     c.planner.verifier = None
@@ -155,7 +190,7 @@ async def test_source_receipts_exact_assembly_scope_and_independent_rejection(
 async def test_parent_verifies_actual_child_source_artifact_bytes(services, tmp_path, tamper):
     child_raw = documents(tmp_path / "child", "layer2")
     register_read(child_raw)
-    child_client, child_app = await services(raw=child_raw, runtime=FakeRuntime(read_workflow))
+    _, child_app = await services(raw=child_raw, runtime=FakeRuntime(read_workflow))
     inner = httpx.ASGITransport(app=child_app)
 
     class Transport(httpx.AsyncBaseTransport):
@@ -169,7 +204,7 @@ async def test_parent_verifies_actual_child_source_artifact_bytes(services, tmp_
                 if body.get("status") == "completed" and "result" in body:
                     output = body["result"]["output"]
                     if tamper == "output-digest":
-                        output["content_digest"] = "sha256:" + "0" * 64
+                        output["content_digest"] = body["result"]["artifacts"][0]["digest"]
                     else:
                         output["content"] = "model-authored replacement"
                     content = json.dumps(body).encode()
@@ -180,6 +215,19 @@ async def test_parent_verifies_actual_child_source_artifact_bytes(services, tmp_
     raw = documents(tmp_path / "parent", peer=True)
     register_read(raw, local=False)
     client, app = await services(raw=raw, peer_transport=Transport())
+    verified = {}
+
+    def observe(coordinator):
+        async def assess(task_id, purpose, payload, schema):
+            assert purpose == "verification"
+            verified[coordinator.config.service_id] = verified_document_receipt(payload)
+            return {"passed": True, "reason": "Verified exact source fields."}
+
+        coordinator.planner.verifier = None
+        coordinator.models.ask = assess
+
+    observe(app.state.coordinator)
+    observe(child_app.state.coordinator)
     result = await settled(
         client,
         await submit(
@@ -201,6 +249,19 @@ async def test_parent_verifies_actual_child_source_artifact_bytes(services, tmp_
             == child_raw["service"]["id"]
         )
         assert app.state.coordinator.store.children(result["task_id"])
+        parent = verified[raw["service"]["id"]]
+        child = verified[child_raw["service"]["id"]]
+        assert parent["document_content_utf8_sha256"] == child["document_content_utf8_sha256"]
+        assert (
+            parent["operation_result_artifact"]["canonical_json_sha256"]
+            == child["operation_result_artifact"]["canonical_json_sha256"]
+        )
+        assert (
+            parent["operation_result_artifact"]["artifact_id"]
+            != child["operation_result_artifact"]["artifact_id"]
+        )
+    else:
+        assert raw["service"]["id"] not in verified
 
 
 def material(contract, inputs, values):
@@ -210,11 +271,13 @@ def material(contract, inputs, values):
         artifacts.append(
             {
                 "manifest": {
+                    "artifact_id": f"artifact-{sequence}",
                     "digest": digest(value),
                     "provenance": {
                         "kind": "operation-result",
                         "service_id": "https://source.example.net/lasa",
                         "sequence": sequence,
+                        "operation_id": f"operation-{sequence}",
                         "contract": contract,
                         "input_digest": digest(inputs),
                         "resource": resource,
@@ -250,7 +313,7 @@ def test_source_assembly_rejects_altered_missing_or_oversized_facts(alteration):
     else:
         artifact["manifest"].pop("provenance")
     with pytest.raises(LasaError, match="verification_failed"):
-        source_output("documents-read-v1", ref, inputs, proof)
+        assemble_source_outcome("documents-read-v1", ref, inputs, proof)
 
 
 def test_application_search_and_http_mcp_index_use_exact_recorded_values():
@@ -273,12 +336,12 @@ def test_application_search_and_http_mcp_index_use_exact_recorded_values():
             "html_url": "https://github.com/modelcontextprotocol/python-sdk/blob/main/reader.py",
         },
     ]
-    result = source_output(
+    result = assemble_source_outcome(
         "documents-search-v1",
         search_ref,
         inputs,
         material(search_ref, inputs, [("repository:python-sdk", entries)]),
-    )
+    ).output
     assert result["truncated"] and result["matches"][0]["document_id"] == "README.md"
     ref = reference(example("capability-repository-inspect"))
     inputs = {"repository": "modelcontextprotocol/python-sdk"}
@@ -294,7 +357,7 @@ def test_application_search_and_http_mcp_index_use_exact_recorded_values():
         inputs,
         [("repository:python-sdk", metadata), ("documentation:python-sdk", {"result": index})],
     )
-    result = source_output("repository-inspect-v1", ref, inputs, proof)
+    result = assemble_source_outcome("repository-inspect-v1", ref, inputs, proof).output
     assert (
         result["documentation_index"] == index and result["description"] == metadata["description"]
     )

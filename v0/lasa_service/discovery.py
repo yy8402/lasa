@@ -18,7 +18,7 @@ class Discovery:
     ):
         self.config, self.registry, self.publication = config, registry, publication
         self.authentication, self.authorization = authentication, authorization
-        self.historical = historical or (lambda principal, contract_digest: False)
+        self.historical = historical
         self._descriptor = None
 
     def descriptor(self):
@@ -154,7 +154,11 @@ class Discovery:
                 x["contract"]["digest"] == contract_digest
                 for x in self.publication.snapshot(p)["offers"]
             )
-            require(visible or self.historical(p, contract_digest), "not_found", 404)
+            require(
+                visible or (self.historical is not None and self.historical(p, contract_digest)),
+                "not_found",
+                404,
+            )
             return self.response(request, p, self.registry.by_digest(contract_digest), 300)
 
         if self.config.document["service"]["publish_api_catalog"]:

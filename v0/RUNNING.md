@@ -40,6 +40,8 @@ In `config.json`, set `executors[].model` to the model ID, `provider_base_url` t
 
 The bundled [prompts.json](lasa_service/prompts.json) contains all eight LASA-authored instruction templates used for planning, verification, execution, source retrieval, result integration, and fallback conversion. To customize them, copy that file to a private location and set the top-level `"prompts_file": "/absolute/path/to/prompts.json"` in `config.json`. LASA validates and loads the entire file when it starts. Keep all eight keys and the `{purpose}` placeholder in `assessment_developer`, then restart the service to apply edits. LASA supplies task inputs, contracts, and evidence at runtime. Codex App Server supplies its own built-in instructions.
 
+LASA registers the approved tools for each step as immediately callable Codex App Server functions. Workspace writes and readback use `workspace_write` and `workspace_read`. The broker checks current permission and remaining allocation when a function is called. Private MCP connectors remain upstream of the broker.
+
 ## Submitting work
 
 Submit work using a receiver-audience JWT in `LASA_ACCESS_TOKEN`:
@@ -60,6 +62,7 @@ To configure two layers, generate layer 2 with `--trusted-parent-id` and `--trus
 The private files have closed schemas in `design/private.schema.json`. One private `ConnectorPolicy.connectors` registry supports stdio MCP, Streamable HTTP MCP, and fixed HTTPS JSON GET application operations. Operations pin schemas and approved read-only resource effects. Binding `required_operations` defines both dependency readiness and the operation allowlist. The three source profiles assemble exact output fields from immutable operation-result artifacts before independent semantic verification. See [the connector design](design/connectors.md) and [managed connector verification](deployment/CONNECTORS.md). External-write bindings are rejected. Offer minimum budgets include required assessment/verification allocations; use smaller integration reserves for a leaf that only needs local verification. A generic attempt can report inability and does not claim expertise or missing access.
 
 After a lost acknowledgment, reuse the same operation ID and idempotency key. `GET /operations/{operation_id}` reconciles the original receipt without creating work. An uncertain terminal task remains immutable; `POST /tasks/{task_id}/reconcile` can append a resolution event. Do not resubmit uncertain effectful work as a new task automatically.
+The task client prints each operation ID before sending its request so you can look up either receipt after a lost acknowledgment.
 
 Verification commands:
 

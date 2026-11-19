@@ -11,6 +11,8 @@ dist/
 .workspaces/
 config/local*.json
 .deploy/
+.local-target/
+.evaluation-runs/
 
 # Generated evaluation environments and private receiver/runtime state.
 verification/package-env/

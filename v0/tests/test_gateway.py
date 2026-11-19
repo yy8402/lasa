@@ -1,7 +1,7 @@
 import pytest
 
 from lasa_service.errors import LasaError
-from lasa_service.gateway import validate_local_tools
+from lasa_service.gateway import EventStream, validate_local_tools
 
 
 @pytest.mark.parametrize(
@@ -39,11 +39,21 @@ def test_client_tool_search_is_allowed():
     )
 
 
-async def test_tool_operation_identity_is_scoped_to_app_server_execution():
-    from lasa_service.gateway import TaskGateway
+@pytest.mark.parametrize("newline", [b"\n", b"\r\n", b"\r"])
+def test_sse_frames_accept_split_line_endings_and_join_data(newline):
+    stream = EventStream()
+    raw = newline.join(
+        [b"\xef\xbb\xbf: comment", b"data: {", b'data:  "a": 1}', b"", b"data: [DONE]", b"", b""]
+    )
+    assert [event for char in raw for event in stream.feed(bytes([char]))] == [
+        b'{\n "a": 1}',
+        b"[DONE]",
+    ]
 
-    first = TaskGateway(None)
-    second = TaskGateway(None)
-    assert first.tool_operation_id("2") == first.tool_operation_id("2")
-    assert first.tool_operation_id("2") != second.tool_operation_id("2")
-    assert len(first.tool_operation_id("x" * 128)) <= 128
+
+def test_tool_operation_identity_is_scoped_to_app_server_thread():
+    from lasa_service.rpc import tool_operation_id
+
+    assert tool_operation_id("first", "2") == tool_operation_id("first", "2")
+    assert tool_operation_id("first", "2") != tool_operation_id("second", "2")
+    assert len(tool_operation_id("first", "x" * 128)) <= 128

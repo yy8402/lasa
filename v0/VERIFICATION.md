@@ -96,7 +96,7 @@ The frozen assessment corpus has three task-specific cases. It demonstrates cons
 
 ## Packaging and process ownership
 
-The distributable is rebuilt after final source/packaging edits. [package-check.json](verification/package-check.json) records clean-environment installation, imports from installed site-packages, packaged contract/resource loading, CLI help, source-versus-wheel code/contract hashes, archive hygiene, and the development provisioning smoke check. Runtime tests and this package check are distinct evidence.
+The [release validation procedure](deployment/DEPLOYMENT.md#release-upgrades-and-rollback) checks both archives against the checkout, verifies a clean installation, and can confirm that both managed hosts run the wheel. The [original package-check report](verification/package-check.json) records the historical 1.0.0 observations and hashes.
 
 [cleanup.json](verification/cleanup.json) records the final task-owned process/container check. The pinned image is retained as a reusable artifact. Test services/listeners, MCP fixtures, Codex clients, and task containers are closed.
 

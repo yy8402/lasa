@@ -36,7 +36,7 @@ v0/.venv/bin/python v0/run_task.py \
 
 Use `architecture.md` or `capabilities.md` for the other approved LASA documents. For the public integrations, select `documents.search` with `{"collection":"python-sdk-root","query":"read","limit":5}`, or `repository.inspect` with `{"repository":"modelcontextprotocol/python-sdk"}`. Content diagnostics require separate receiver permission; metadata diagnostics remain available without that content permission.
 
-`prepare_connectors.py` stages private policies and the approved document corpus. `deploy_connectors.py` checks for active work, preserves configuration backups and stores, installs the same wheel on both hosts, and restarts only the two owned backends. `run_service.py` imports the installed package in isolated Python mode. `verify_deployed.py` creates a session, submits a typed task, and records actual model/tool/child traces without starting fixtures or mocks. Existing evidence files are preserved under distinct case names.
+`prepare_connectors.py` staged the initial connector policies and approved document corpus. Use the [managed release tool](DEPLOYMENT.md#release-upgrades-and-rollback) to update both installed backends. `run_service.py` imports the installed package in isolated Python mode. `verify_deployed.py` creates a session, submits a typed task, and records actual model/tool/child traces. Use a distinct case name for each observation.
 
 ## Acceptance evidence
 

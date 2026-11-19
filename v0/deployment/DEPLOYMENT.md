@@ -44,6 +44,35 @@ The original live file task is retained as a real counterexample: broker write/r
 
 Use `v0/deployment/verify_deployed.py` for explicitly named new observations and `v0/deployment/set_profile.py` for controlled profiles. Verification tools refuse to overwrite existing named observations and refuse profile changes while tasks are active.
 
+## Release upgrades and rollback
+
+From the checkout root, build both archives in a fresh directory and verify them with an isolated installation.
+
+```sh
+release_dir=$(mktemp -d)
+uv build --project v0 --out-dir "$release_dir"
+uv venv --project v0 "$release_dir/venv"
+uv export --project v0 --locked --no-dev --no-emit-project --no-hashes \
+  --output-file "$release_dir/requirements.txt"
+uv pip install --python "$release_dir/venv/bin/python" \
+  --requirement "$release_dir/requirements.txt" "$release_dir"/*.whl
+"$release_dir/venv/bin/python" -I v0/deployment/check_release.py \
+  --wheel "$release_dir"/*.whl --sdist "$release_dir"/*.tar.gz
+```
+
+Stage and deploy the verified wheel from the Mac, then check installed file hashes and HTTPS readiness on both layers.
+
+```sh
+uv run --project v0 python v0/deployment/deploy_release.py \
+  --wheel "$release_dir"/*.whl
+uv run --project v0 python v0/deployment/inspect_release.py \
+  --wheel "$release_dir"/*.whl --output "$release_dir/installed-release.json"
+```
+
+The release tool verifies the wheel bytes and stages a separate Python environment on each host before stopping either backend. Stop order is Mac then air188. Start order is air188 then Mac, with authenticated HTTPS readiness and exact revision checked after each start. Rollback restores both previous environments and config files and checks their prior revisions over HTTPS. Task stores and workspaces stay at their configured paths throughout the rollout.
+
+Use `--rollback-drill` with the same command to exercise rollback after air188 passes its candidate readiness check. Both backends restart during the drill. The release slot on each host is under `.deploy/target/backups/<release>`. It holds the staged environment, original config copies and the previous environment once activated. If the controller is interrupted before reporting an outcome, keep the release slots for recovery.
+
 ## Acceptance matrix
 
 All work used the current checkout. No unrelated service was changed. The image was exported from the verified local build and loaded on air188; root filesystem layer digests match. Docker's two storage implementations expose different immutable image IDs, which are separately pinned in each runtime profile.

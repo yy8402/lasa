@@ -18,18 +18,18 @@ class Diagnostics:
         self.active_secrets.pop(task_id, None)
 
     def redact(self, value, task_id=None):
-        secrets = [
-            x
-            for x in [
+        secrets = sorted(
+            {
                 *self.coordinator.config.secrets.values(),
                 *self.active_secrets.get(task_id, ()),
-            ]
-            if x
-        ]
+            }
+            - {""},
+            key=lambda secret: (-len(secret), secret),
+        )
 
         def clean(node):
             if isinstance(node, str):
-                for secret in sorted(secrets, key=len, reverse=True):
+                for secret in secrets:
                     node = node.replace(secret, "[REDACTED]")
                 return node
             if isinstance(node, list):
@@ -56,7 +56,7 @@ class Diagnostics:
 
     def emit(self, task_id, kind, payload, content=None, parent=None):
         c = self.coordinator
-        row, task = c.store.task(task_id)
+        row, _ = c.store.task(task_id)
         sequence = c.store.db.execute(
             "SELECT COALESCE(MAX(sequence),0)+1 FROM events WHERE task_id=?", (task_id,)
         ).fetchone()[0]
@@ -79,19 +79,15 @@ class Diagnostics:
             and authority["content_diagnostics_allowed"]
         ):
             cleaned = canonical(self.redact(content, task_id))
-            used = c.store.db.execute(
-                "SELECT COALESCE(SUM(length(json_extract(document,'$.content.text'))),0) FROM events WHERE task_id=?",
-                (task_id,),
-            ).fetchone()[0]
-            if used + len(cleaned) <= 65536:
+            available = max(0, 65536 - c.store.diagnostic_bytes(task_id))
+            text = cleaned[: min(8192, available)].decode(errors="ignore")
+            if text:
                 event["content"] = {
                     "media_type": "application/json",
-                    "text": cleaned[:8192].decode(errors="ignore"),
+                    "text": text,
                 }
-                if isinstance(event["payload"], dict) and "payload_truncated" in event["payload"]:
-                    event["payload"]["payload_truncated"] = len(cleaned) > 8192
-            elif "payload_truncated" in event["payload"]:
-                event["payload"]["payload_truncated"] = True
+            if "payload_truncated" in event["payload"]:
+                event["payload"]["payload_truncated"] = len(text.encode()) < len(cleaned)
         c.config.contracts.validate("DiagnosticEvent", event)
         c.store.db.execute(
             "INSERT INTO events VALUES(?,?,?)", (task_id, sequence, canonical(event).decode())
@@ -146,7 +142,7 @@ class Diagnostics:
 
     def page(self, task_id, principal, after=0, limit=50):
         c = self.coordinator
-        row, task = c.store.task(task_id, principal["subject"])
+        row, _ = c.store.task(task_id, principal["subject"])
         try:
             allowed = c.authorization.rule(
                 principal, parse_json(row["request"])["authorization_ref"]
@@ -173,7 +169,7 @@ class Diagnostics:
         import asyncio
 
         c = self.coordinator
-        row, task = c.store.task(task_id, principal["subject"])
+        row, _ = c.store.task(task_id, principal["subject"])
         children = c.store.children(task_id)
         try:
             content = (

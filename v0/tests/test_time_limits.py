@@ -90,7 +90,6 @@ async def test_stalled_runtime_stops_at_allocation(services, tmp_path, boundary)
     response = await submit(client, app, request)
     async with asyncio.timeout(3):
         result = await settled(client, response)
-        await c.jobs[result["task_id"]]
     elapsed = time.monotonic() - started
     assert entered.is_set() and stopped.is_set()
     assert elapsed < (1.7 if boundary in {"task", "cleanup"} else 0.8)
@@ -108,6 +107,9 @@ async def test_stalled_runtime_stops_at_allocation(services, tmp_path, boundary)
         assert result["problem"]["retry"] == "reconcile"
         if boundary == "cleanup":
             assert cleanup_stopped.is_set() and not c.ready
+            await c.reconcile_internal(result["task_id"])
+            events = c.diagnostics.page(result["task_id"], {"subject": "alice"})["events"]
+            assert all(event["kind"] != "resolution" for event in events)
     else:
         assert result["status"] == "failed"
         assert result["problem"]["code"] == "deadline_exceeded"
@@ -165,7 +167,7 @@ async def test_stalled_gateway_model_obeys_operation_expiry(services, tmp_path, 
 
     def limited(*args):
         operation = begin(*args)
-        c.operation_expiries[(args[0], operation)] = asyncio.get_running_loop().time() + 0.1
+        c.operation_expiries[args[0]][operation] = asyncio.get_running_loop().time() + 0.1
         return operation
 
     c.begin_model = limited
@@ -175,7 +177,6 @@ async def test_stalled_gateway_model_obeys_operation_expiry(services, tmp_path, 
     response = await submit(client, app, request)
     async with asyncio.timeout(2):
         result = await settled(client, response)
-        await c.jobs[result["task_id"]]
     assert time.monotonic() - started < 1
     assert entered.is_set() and stopped.is_set()
     assert result["status"] == "failed" and result["problem"]["code"] == "deadline_exceeded"
@@ -221,7 +222,6 @@ async def test_stalled_model_request_is_cancelled(services, tmp_path, boundary):
     response = await submit(client, app, request)
     async with asyncio.timeout(2):
         result = await settled(client, response)
-        await c.jobs[result["task_id"]]
     assert time.monotonic() - started < 0.8
     assert entered.is_set() and stopped.is_set()
     assert result["status"] == ("rejected" if boundary == "assessment" else "failed")
@@ -247,8 +247,6 @@ async def test_stalled_tool_connector_is_cancelled_at_step_limit(services, tmp_p
 
     async def handler(context):
         c = context.coordinator
-        executor = c.config.executor(context.binding)["id"]
-        c.broker.executor_operations[executor] = {"approved.inspect"}
         context.binding["required_operations"] = ["approved.inspect"]
         c.broker.operations["approved.inspect"] = (
             Connector(),
@@ -275,7 +273,6 @@ async def test_stalled_tool_connector_is_cancelled_at_step_limit(services, tmp_p
     response = await submit(client, app, request)
     async with asyncio.timeout(2):
         result = await settled(client, response)
-        await c.jobs[result["task_id"]]
     assert time.monotonic() - started < 0.8
     assert entered.is_set() and stopped.is_set()
     assert result["status"] == "failed" and result["problem"]["code"] == "deadline_exceeded"

@@ -381,6 +381,43 @@ async def test_queue_is_bounded_and_cancelled_queued_work_is_not_executed(tmp_pa
             assert len(state["calls"]) == 2
 
 
+async def test_schema_refresh_precedes_queued_call_after_refresh_deadline(tmp_path, monkeypatch):
+    entered, release = asyncio.Event(), asyncio.Event()
+    calls = []
+
+    class Backend:
+        refreshes = 0
+
+        async def discover(self):
+            self.refreshes += 1
+            return {"reports.inspect": "available" if self.refreshes == 1 else "unavailable"}
+
+        async def call(self, operation, arguments, seconds):
+            calls.append(arguments["report_id"])
+            entered.set()
+            await release.wait()
+            return {"text": "First report"}
+
+    backend = Backend()
+
+    async def open_backend(self, stack):
+        return backend
+
+    monkeypatch.setattr(Connector, "_open", open_backend)
+    resource = {"id": "reports", "limits": LIMITS, "operations": [operation()]}
+    async with asyncio.timeout(2), actor(tmp_path, resource) as connector:
+        first = asyncio.create_task(connector.call("reports.inspect", {"report_id": "stall"}, 1))
+        await entered.wait()
+        queued = asyncio.create_task(connector.call("reports.inspect", {"report_id": "42"}, 1))
+        await asyncio.sleep(LIMITS["schema_refresh_seconds"] * 1.5)
+        assert connector.queue.qsize() == 1
+        release.set()
+        assert await first == {"text": "First report"}
+        with pytest.raises(LasaError, match="peer_unavailable"):
+            await queued
+        assert calls == ["stall"]
+
+
 @pytest.mark.parametrize("transport", ["mcp-stdio", "mcp-http"])
 async def test_oversized_frames_or_http_response_fail_within_bound(tmp_path, transport):
     if transport == "mcp-stdio":

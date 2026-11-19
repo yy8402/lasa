@@ -5,10 +5,20 @@ from pathlib import Path
 import httpx
 import pytest
 
+from lasa_service.capabilities import reference
 from lasa_service.contracts import canonical
 from lasa_service.routing import decide
 
-from .conftest import FakeRuntime, documents, settled, submit, task_request
+from .conftest import (
+    FakeRuntime,
+    deterministic_planner,
+    documents,
+    example,
+    new_session,
+    settled,
+    submit,
+    task_request,
+)
 
 
 @pytest.mark.parametrize("preference,expected", [("local", "local"), ("peer", "peer")])
@@ -23,6 +33,58 @@ def test_both_suitable_preference(preference, expected):
         )
         == expected
     )
+
+
+async def test_parent_reports_confirmed_child_workspace_write(services, tmp_path):
+    text = "Written on the child."
+
+    async def write(context):
+        broker = context.coordinator.broker
+        await broker.call(
+            context.task_id,
+            "child-write",
+            "workspace.write",
+            {"relative_path": "proof.txt", "text": text},
+        )
+        await broker.call(
+            context.task_id, "child-read", "workspace.read", {"relative_path": "proof.txt"}
+        )
+        result = await FakeRuntime().run(context)
+        result["output"]["summary"] = "Read back exactly " + text
+        return result
+
+    _, child = await services(
+        raw=documents(tmp_path / "child", "layer2"), runtime=FakeRuntime(write)
+    )
+    raw = documents(tmp_path / "parent", peer=True)
+    raw["routing"]["preferred_executor"] = "peer"
+    client, app = await services(raw=raw, peer_transport=httpx.ASGITransport(app=child))
+    c = app.state.coordinator
+    observed = []
+
+    async def assess(task_id, purpose, payload, schema):
+        assert purpose == "verification"
+        material = payload["trusted_execution_evidence"]
+        assert material["operations"] == [] and material["artifacts"] == []
+        (receipt,) = material["workspace_readbacks"]
+        assert receipt["source"] == "authenticated_child_result"
+        assert receipt["relative_path"] == "proof.txt" and receipt["quoted_text"] == text
+        assert receipt["write_operation_id"] == "child-write"
+        assert receipt["read_operation_id"] == "child-read"
+        observed.append(receipt)
+        return {"passed": True, "reason": "Verified the child readback receipt."}
+
+    c.planner.verifier = None
+    c.models.ask = assess
+    result = await settled(client, await submit(client, app, await task_request(client, app)))
+    assert len(observed) == 2
+    assert not c.runtime.prompts
+    assert result["status"] == "completed" and result["result"]["effect_disposition"] == "known"
+    delegate = c.store.children(result["task_id"])[0]
+    _, child_task = child.state.coordinator.store.task(delegate["task_id"])
+    assert child_task["result"]["effect_disposition"] == "known"
+    assert delegate["effect_disposition"] == "known"
+    assert result["result"]["workspace_readbacks"] == child_task["result"]["workspace_readbacks"]
 
 
 @pytest.mark.parametrize("preference", ["local", "peer"])
@@ -109,6 +171,140 @@ def publish_only_attempt(raw):
     return raw
 
 
+async def test_peer_pinned_authority_and_verified_predecessor_output(services, tmp_path):
+    child_raw = publish_only_attempt(documents(tmp_path / "child", "layer2"))
+    path = Path(child_raw["authorization"]["policy_file"])
+    policy = json.loads(path.read_text())
+    workload = next(p for p in policy["principals"] if p["subject"] == "peer-layer1")
+    workload["rules"].append({**workload["rules"][0], "authorization_ref": "alternate"})
+    path.write_text(json.dumps(policy))
+    runtime = FakeRuntime()
+    _, child = await services(raw=child_raw, runtime=runtime)
+
+    async def plan(c, task_id, request, peer_catalog, requirements):
+        review = (await review_plan(c, task_id, request, peer_catalog, requirements))["steps"][0]
+        main = (await deterministic_planner(c, task_id, request, peer_catalog, requirements))[
+            "steps"
+        ][0]
+        return {"steps": [review, {**main, "depends_on": ["step-review"]}]}
+
+    raw = documents(tmp_path / "parent", peer=True)
+    raw["routing"]["preferred_executor"] = "peer"
+    client, app = await services(
+        raw=raw, planner=plan, peer_transport=httpx.ASGITransport(app=child)
+    )
+    parent = app.state.coordinator
+    discover = parent.peer.discover
+
+    async def alternate_first(**kwargs):
+        catalog = await discover(**kwargs)
+        catalog["offers"].sort(key=lambda offer: offer["authorization_ref"] != "alternate")
+        return catalog
+
+    parent.peer.discover = alternate_first
+    result = await settled(client, await submit(client, app, await task_request(client, app)))
+    assert result["status"] == "completed", result
+    (receipt,) = parent.store.children(result["task_id"])
+    receiver = child.state.coordinator
+    request = receiver.request(receipt["task_id"])
+    assert request["authorization_ref"] == "default"
+    assert (
+        request["dependency_results"]
+        == runtime.prompts[0]["delegated_dependencies"]
+        == {
+            "step-review": {
+                "findings": [],
+                "coverage": [
+                    {
+                        "criterion_id": "criterion-accountability",
+                        "disposition": "reviewed",
+                        "evidence": "The parent verifies outcomes.",
+                    }
+                ],
+            },
+        }
+    )
+
+
+async def test_delegation_delivers_only_selected_session_artifact(services, tmp_path):
+    definition = example("capability-attempt")
+    definition["id"] = definition["id"].replace("task.attempt", "artifact.attempt")
+    schema = definition["input_schema"]
+    schema["properties"]["snapshot"] = {
+        "type": "object",
+        "properties": {"artifact_id": {"type": "string"}, "digest": {"type": "string"}},
+        "required": ["artifact_id", "digest"],
+        "additionalProperties": False,
+    }
+    schema["required"].append("snapshot")
+    ref = reference(definition)
+    predicate = {
+        "kind": "artifact_present",
+        "description": "Use the exact text snapshot.",
+        "input_field": "snapshot",
+        "media_type": "text/plain",
+    }
+
+    def configure(raw, child=False):
+        registry = Path(raw["contract_publishers"][0]["trusted_registry_file"])
+        registry.write_text(json.dumps([*json.loads(registry.read_text()), definition]))
+        binding = next(x for x in raw["bindings"] if x["contract"]["id"].endswith("/task.attempt"))
+        raw["bindings"].append({**binding, "binding_id": "artifact-attempt", "contract": ref})
+        raw["verifiers"].append({"contract": ref, "verifier_id": "task-attempt-v1"})
+        if child:
+            raw["published_contracts"] = [ref]
+        else:
+            raw["published_contracts"].append(ref)
+            raw["routing"]["preferred_executor"] = "peer"
+        path = Path(raw["authorization"]["policy_file"])
+        policy = json.loads(path.read_text())
+        for principal in policy["principals"]:
+            for rule in principal["rules"]:
+                if child:
+                    rule["offer_preconditions"] = [predicate]
+                rule["contracts"].append(ref)
+                rule["delegated_contracts"].append(ref)
+        path.write_text(json.dumps(policy))
+        return raw
+
+    async def create_snapshot(context):
+        result = await FakeRuntime().run(context)
+        for text in ("Use this snapshot.", "Keep this snapshot private."):
+            artifact = context.coordinator.snapshot_artifact(context.task_id, "text/plain", text)
+            result["artifact_ids"].append(artifact["artifact_id"])
+        return result
+
+    leaf = FakeRuntime()
+    _, child = await services(
+        raw=configure(documents(tmp_path / "child", "layer2"), True), runtime=leaf
+    )
+    client, app = await services(
+        raw=configure(documents(tmp_path / "parent", peer=True)),
+        runtime=FakeRuntime(create_snapshot),
+        peer_transport=httpx.ASGITransport(app=child),
+    )
+    session_id = await new_session(client, app)
+    first = await task_request(client, app)
+    source = await settled(client, await submit(client, app, first, session_id))
+    assert source["status"] == "completed", source
+    selected, private = source["result"]["artifacts"]
+    for snapshot in (selected, private):
+        assert snapshot["source_task_id"] == source["task_id"]
+    inputs = {
+        **first["input"],
+        "snapshot": {key: selected[key] for key in ("artifact_id", "digest")},
+    }
+    out_of_scope = await task_request(client, app, profile="artifact.attempt", inputs=inputs)
+    other = await settled(client, await submit(client, app, out_of_scope))
+    assert not app.state.coordinator.store.children(other["task_id"]) and not leaf.prompts
+    second = await task_request(client, app, profile="artifact.attempt", inputs=inputs)
+    completed = await settled(client, await submit(client, app, second, session_id))
+    assert completed["status"] == "completed", completed
+    assert leaf.prompts[0]["input_artifacts"] == [
+        {"manifest": selected, "text": "Use this snapshot."}
+    ]
+
+
 @pytest.mark.parametrize("preference", ["local", "peer"])
 async def test_two_service_http_preferences_and_diagnostics(services, tmp_path, preference):
     child_client, child_app = await services(raw=documents(tmp_path / "child", "layer2"))
@@ -120,6 +316,7 @@ async def test_two_service_http_preferences_and_diagnostics(services, tmp_path, 
     )
     result = await settled(client, await submit(client, app, await task_request(client, app)))
     assert result["status"] == "completed", result
+    assert result["result"]["effect_disposition"] == "none"
     children = app.state.coordinator.store.children(result["task_id"])
     assert bool(children) == (preference == "peer")
     events = (
@@ -249,7 +446,7 @@ async def test_parent_rejects_mismatched_child_or_corrupt_artifact(services, tmp
             "workspace.write",
             {"relative_path": "proof.txt", "text": "proof"},
         )
-        manifest = c.snapshot_artifact(context.task_id, "proof", "text/plain", "proof")
+        manifest = c.snapshot_artifact(context.task_id, "text/plain", "proof")
         result = await FakeRuntime().run(context)
         result["artifact_ids"] = [manifest["artifact_id"]]
         return result
@@ -285,7 +482,11 @@ async def test_parent_rejects_mismatched_child_or_corrupt_artifact(services, tmp
     raw["routing"]["preferred_executor"] = "peer"
     client, app = await services(raw=raw, peer_transport=TamperTransport())
     result = await settled(client, await submit(client, app, await task_request(client, app)))
-    assert result["status"] in {"failed", "indeterminate"} and "result" not in result
+    assert result["status"] == ("indeterminate" if tamper == "request" else "failed")
+    assert "result" not in result
+    assert result["problem"]["effect_disposition"] == (
+        "unknown" if tamper == "request" else "known"
+    )
 
 
 @pytest.mark.parametrize("tamper", ["loop", "digest", "sender"])

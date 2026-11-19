@@ -15,6 +15,8 @@ from .contracts import parse_json
 from .coordinator import Coordinator
 from .errors import LasaError
 
+MAX_AFTER_SEQUENCE = 9007199254740990
+
 
 def create_app(
     config, *, runtime=None, peer_transport=None, model_transport=None, planner=None, verifier=None
@@ -33,7 +35,7 @@ def create_app(
     )
 
     @asynccontextmanager
-    async def lifespan(app):
+    async def lifespan(_app):
         try:
             await c.start()
             yield
@@ -44,7 +46,7 @@ def create_app(
     app.state.coordinator = c
 
     @app.exception_handler(LasaError)
-    async def error(request, exc):
+    async def error(_request, exc):
         headers = {"Cache-Control": "no-store"}
         if exc.status == 401:
             headers["WWW-Authenticate"] = "Bearer"
@@ -56,7 +58,7 @@ def create_app(
         )
 
     @app.exception_handler(HTTPException)
-    async def http_error(request, exc):
+    async def http_error(_request, exc):
         error = LasaError(
             "not_found" if exc.status_code == 404 else "invalid_input", exc.status_code
         )
@@ -64,11 +66,11 @@ def create_app(
             error.public(),
             status_code=exc.status_code,
             media_type="application/problem+json",
-            headers={"Cache-Control": "no-store"},
+            headers={**(exc.headers or {}), "Cache-Control": "no-store"},
         )
 
     @app.exception_handler(Exception)
-    async def unexpected(request, exc):
+    async def unexpected(_request, _exc):
         return JSONResponse(
             LasaError("internal_error", 500).public(),
             status_code=500,
@@ -82,12 +84,21 @@ def create_app(
     def principal(request):
         return c.authentication.authenticate(request.headers.get("Authorization"))
 
+    def query_integer(request, name, default, minimum, maximum):
+        try:
+            value = int(request.query_params.get(name, default))
+        except ValueError:
+            raise LasaError("invalid_input") from None
+        require(minimum <= value <= maximum, "invalid_input")
+        return value
+
     async def mutation(request, schema):
         p = principal(request)
         key = request.headers.get("Idempotency-Key", "")
         require(re.fullmatch(r"[!-~]{1,128}", key) is not None, "invalid_input")
         require(
-            request.headers.get("content-type", "").split(";")[0] == "application/json",
+            request.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+            == "application/json",
             "invalid_input",
         )
         parts = []
@@ -204,11 +215,7 @@ def create_app(
 
     @app.get(prefix + "/tasks/{task_id}/delegations")
     async def delegations(task_id: str, request: Request):
-        try:
-            after = int(request.query_params.get("after_sequence", "0"))
-        except ValueError:
-            raise LasaError("invalid_input") from None
-        require(after >= 0, "invalid_input")
+        after = query_integer(request, "after_sequence", "0", 0, MAX_AFTER_SEQUENCE)
         return JSONResponse(
             await c.diagnostics.children_report(task_id, principal(request), after),
             headers={"Cache-Control": "no-store"},
@@ -216,12 +223,8 @@ def create_app(
 
     @app.get(prefix + "/tasks/{task_id}/events")
     async def events(task_id: str, request: Request):
-        try:
-            after = int(request.query_params.get("after_sequence", "0"))
-            limit = int(request.query_params.get("limit", "50"))
-        except ValueError:
-            raise LasaError("invalid_input") from None
-        require(after >= 0 and 1 <= limit <= 100, "invalid_input")
+        after = query_integer(request, "after_sequence", "0", 0, MAX_AFTER_SEQUENCE)
+        limit = query_integer(request, "limit", "50", 1, 100)
         return JSONResponse(
             c.diagnostics.page(task_id, principal(request), after, limit),
             headers={"Cache-Control": "no-store"},
@@ -237,8 +240,9 @@ def create_app(
         require(row is not None, "not_found", 404)
         data = bytes(row["content"])
         manifest = parse_json(row["manifest"])
+        checksum = hashlib.sha256(data)
         require(
-            "sha256:" + hashlib.sha256(data).hexdigest() == manifest["digest"],
+            "sha256:" + checksum.hexdigest() == manifest["digest"],
             "verification_failed",
             500,
         )
@@ -247,9 +251,7 @@ def create_app(
             media_type=manifest["media_type"],
             headers={
                 "Cache-Control": "no-store",
-                "Content-Digest": "sha-256=:"
-                + base64.b64encode(hashlib.sha256(data).digest()).decode()
-                + ":",
+                "Content-Digest": "sha-256=:" + base64.b64encode(checksum.digest()).decode() + ":",
             },
         )
 

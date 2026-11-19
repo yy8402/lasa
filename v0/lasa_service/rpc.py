@@ -2,12 +2,18 @@
 
 import asyncio
 import base64
+import hashlib
 import json
 
 import httpx
 
-from .contracts import parse_json
+from .capabilities import require
+from .contracts import canonical, parse_json
 from .errors import LasaError
+
+
+def tool_operation_id(thread_id, call_id):
+    return "tool-" + hashlib.sha256(canonical([thread_id, call_id])).hexdigest()
 
 
 class AppServerClient:
@@ -18,7 +24,6 @@ class AppServerClient:
         self.sequence = 0
         self.completed = asyncio.get_running_loop().create_future()
         self.thread_id = None
-        self.turn_id = None
         self.answer = None
         self.reader = asyncio.create_task(self._read())
         self.handlers = set()
@@ -60,9 +65,7 @@ class AppServerClient:
                 else:
                     params = message.get("params", {})
                     method = message["method"]
-                    if method == "turn/started":
-                        self.turn_id = params["turn"]["id"]
-                    elif method == "item/completed":
+                    if method == "item/completed":
                         item = params.get("item", {})
                         if item.get("type") == "agentMessage":
                             self.answer = item.get("text")
@@ -95,8 +98,6 @@ class AppServerClient:
         request_id = message["id"]
         try:
             permitted = {
-                ("GET", "/broker/tools"),
-                ("POST", "/broker/call"),
                 ("POST", "/model/responses"),
                 ("POST", "/model/responses/compact"),
             }
@@ -173,8 +174,8 @@ class AppServerClient:
                     )
                     answers[question["id"]] = {"answers": [answer["answer"]]}
                 result = {"answers": answers}
-            elif method == "mcpServer/elicitation/request":
-                result = {"action": "decline", "content": None}
+            elif method == "item/tool/call":
+                result = await self.tool_call(message["params"])
             else:
                 raise LasaError("verification_failed")
             await self.send({"jsonrpc": "2.0", "id": message["id"], "result": result})
@@ -190,6 +191,36 @@ class AppServerClient:
                 self.completed.set_exception(
                     exc if isinstance(exc, LasaError) else LasaError("verification_failed")
                 )
+
+    async def tool_call(self, params):
+        c = self.context.coordinator
+        call_id = params["callId"]
+        tool = params["tool"]
+        require(
+            params["threadId"] == self.thread_id
+            and params.get("namespace") is None
+            and isinstance(call_id, str)
+            and 0 < len(call_id) <= 128
+            and isinstance(tool, str),
+            "invalid_input",
+        )
+        try:
+            name = c.broker.tool_names.get(tool)
+            require(name is not None, "authority_denied", 403)
+            value = await c.broker.call(
+                self.context.task_id,
+                tool_operation_id(self.thread_id, call_id),
+                name,
+                params["arguments"],
+            )
+            success = True
+        except LasaError as exc:
+            value = {"error": exc.public()}
+            success = False
+        return {
+            "success": success,
+            "contentItems": [{"type": "inputText", "text": canonical(value).decode()}],
+        }
 
     async def close(self):
         for handler in self.handlers:

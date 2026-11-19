@@ -2,4 +2,3 @@
 !Dockerfile
 !lasa_service/
 !lasa_service/container_entry.py
-!lasa_service/mcp_bridge.py

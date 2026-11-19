@@ -6,6 +6,7 @@ import hashlib
 import time
 from dataclasses import dataclass
 from pathlib import Path
+from weakref import WeakValueDictionary
 
 from .auth import Authentication, Authorization
 from .capabilities import CapabilityRegistry, Publication, epoch, instant, require
@@ -13,8 +14,11 @@ from .contracts import canonical, digest, parse_json, request_digest, validate_d
 from .diagnostics import Diagnostics
 from .discovery import Discovery
 from .errors import LasaError
+from .evidence import release_readbacks
+from .maintenance import Maintenance
 from .peer import PeerClient
 from .planning import ModelService, Planner
+from .preconditions import check_inputs, input_size, request_input_size, restrict
 from .store import TERMINAL, Store, encode, identity, zero
 from .workspace import Workspace
 
@@ -113,6 +117,9 @@ class Coordinator:
         self.runtime_active = set()
         self.cleanup_expiries = {}
         self.questions = {}
+        self.reconcile_locks = WeakValueDictionary()
+        self.maintenance = Maintenance(self)
+        self.maintenance_job = None
         self.ready = False
         self.fault = None
         from .broker import Broker
@@ -124,29 +131,31 @@ class Coordinator:
         await self.peer.start()
         await self.runtime.recover(self)
         for task_id in self.store.active():
-            _, task = self.store.task(task_id)
+            uncertain = self.store.uncertain(task_id)
             self.fail(
                 task_id,
                 LasaError(
-                    "child_outcome_unknown" if self.store.uncertain(task_id) else "internal_error",
+                    "child_outcome_unknown" if uncertain else "internal_error",
                     503,
-                    effect="unknown" if self.store.uncertain(task_id) else "known",
+                    effect="unknown" if uncertain else "known",
                 ),
                 recovery=True,
             )
-        for row in self.store.db.execute(
-            "SELECT id FROM tasks WHERE state='indeterminate'"
-        ).fetchall():
-            await self.reconcile_internal(row["id"])
         await self.broker.start()
         await self.runtime.probe(self)
         self.ready = True
+        self.maintenance_job = asyncio.create_task(self.maintenance.run(), name="lasa-maintenance")
 
     async def close(self):
         self.ready = False
-        for job in self.jobs.values():
-            job.cancel()
-        await asyncio.gather(*self.jobs.values(), return_exceptions=True)
+        if self.maintenance_job is not None:
+            self.maintenance_job.cancel()
+            await asyncio.gather(self.maintenance_job, return_exceptions=True)
+        jobs = list(self.jobs.values())
+        for job in jobs:
+            if not job.cancelling():
+                job.cancel()
+        await asyncio.gather(*jobs, return_exceptions=True)
         await self.broker.close()
         await self.models.close()
         await self.peer.close()
@@ -173,9 +182,7 @@ class Coordinator:
         )
         if binding is None:
             return "unknown" if self.availability() == "available" else self.availability()
-        rule = self.authorization.rule(
-            principal, self.publication.authority_ref(principal, offer["offer_id"])
-        )
+        rule = self.authorization.rule(principal, offer["authorization_ref"])
         dependency = self.broker.binding_state(binding, rule)
         return self.availability() if dependency == "available" else dependency
 
@@ -206,7 +213,7 @@ class Coordinator:
             if task_id in self.step_expiries:
                 ends.append(self.step_expiries[task_id])
         if operation_id is not None:
-            ends.append(self.operation_expiries.get((task_id, operation_id), now))
+            ends.append(self.operation_expiries.get(task_id, {}).get(operation_id, now))
         return max(0.0, min(ends) - now)
 
     async def bounded_step(self, task_id, limits, operation):
@@ -334,7 +341,7 @@ class Coordinator:
         }
 
     def permits(self, task_id, effect, resource, action):
-        row, task = self.check_active(task_id)
+        row, _ = self.check_active(task_id)
         rule = self.authorization.rule(
             parse_json(row["principal"]), parse_json(row["request"])["authorization_ref"]
         )
@@ -417,8 +424,7 @@ class Coordinator:
             require(self.availability() == "available", "capacity_exhausted", 429)
             offer = self.publication.select(principal, body["selection"])
             require(
-                body["authorization_ref"]
-                == self.publication.authority_ref(principal, offer["offer_id"]),
+                body["authorization_ref"] == offer["authorization_ref"],
                 "authority_denied",
                 403,
             )
@@ -465,7 +471,7 @@ class Coordinator:
                 "UPDATE sessions SET document=? WHERE id=?", (encode(session), session_id)
             )
             amount = zero()
-            amount["input_bytes"] = len(canonical(body["input"]))
+            amount["input_bytes"] = request_input_size(body)
             self.store.reserve(
                 task_id, "initial-input", "input", amount, authority["limits"]["budget"]
             )
@@ -480,8 +486,19 @@ class Coordinator:
             received_monotonic
             + self.config.document["limits"]["assessment_budget"]["wall_time_ms"] / 1000,
         )
-        self.jobs[task_id] = asyncio.create_task(self.run(task_id), name="lasa:" + task_id)
+        job = asyncio.create_task(self.run(task_id), name="lasa:" + task_id)
+        self.jobs[task_id] = job
+        job.add_done_callback(lambda done: self.finish_job(task_id, done))
         return copy.deepcopy(document), 202
+
+    def finish_job(self, task_id, job):
+        self.jobs.pop(task_id)
+        self.expiries.pop(task_id)
+        self.assessment_expiries.pop(task_id)
+        self.operation_expiries.pop(task_id, None)
+        if job.cancelled():
+            # A cancellation before the coroutine starts cannot reach run's handler.
+            self.fail(task_id, LasaError("task_state_conflict", 409), cancel=True)
 
     def begin_model(self, task_id, body, purpose):
         row, task = self.check_active(task_id, evaluating=True)
@@ -544,7 +561,7 @@ class Coordinator:
                 amount,
                 {"purpose": purpose, "from_integration": from_integration},
             )
-        self.operation_expiries[(task_id, operation)] = (
+        self.operation_expiries.setdefault(task_id, {})[operation] = (
             asyncio.get_running_loop().time() + amount["wall_time_ms"] / 1000
         )
         queries = [
@@ -576,7 +593,9 @@ class Coordinator:
                 "SELECT * FROM allocations WHERE task_id=? AND operation_id=?", (task_id, operation)
             ).fetchone()
             self.store.settle(task_id, operation, usage)
-            if parse_json(allocation["details"]).get("from_integration"):
+            if allocation["state"] != "finished" and parse_json(allocation["details"]).get(
+                "from_integration"
+            ):
                 pool = self.store.db.execute(
                     "SELECT * FROM allocations WHERE task_id=? AND operation_id='integration-reserve' AND state='reserved'",
                     (task_id,),
@@ -602,15 +621,18 @@ class Coordinator:
             content={"output": output},
         )
 
-    def preconditions(self, task_id, definition, inputs, authority, additional=()):
-        from .preconditions import check_predicates
-
-        check_predicates(definition, inputs, authority, additional)
-
     async def execute_step(self, task_id, step, inputs, completed):
+        dependencies = {key: completed[key]["output"] for key in step["depends_on"]}
+        prior_artifacts = {
+            item for key in step["depends_on"] for item in completed[key]["artifact_ids"]
+        }
         if step["executor"] == "peer":
             return await self.bounded_step(
-                task_id, step["allocation"], lambda: self.delegation.execute(task_id, step, inputs)
+                task_id,
+                step["allocation"],
+                lambda: self.delegation.execute(
+                    task_id, step, inputs, dependencies, prior_artifacts
+                ),
             )
         definition = self.registry.get(step["contract"])
         binding = next(
@@ -623,6 +645,25 @@ class Coordinator:
             & set(binding["allowed_effects"])
             & set(definition["max_effects"])
         )
+        scoped = restrict(authority, effects, binding["approved_resources"])
+        scoped["limits"] = step["allocation"]
+        offer = authority["selected_offer"]
+        additional = [
+            predicate
+            for predicate in offer["restrictions"]["additional_preconditions"]
+            if offer["contract"] == step["contract"] and predicate["kind"] == "artifact_present"
+        ]
+        artifacts = check_inputs(
+            self, task_id, definition, inputs, scoped, additional, prior_artifacts=prior_artifacts
+        )
+        envelope = self.request(task_id)
+        delegated_dependencies = envelope.get("dependency_results", {})
+        require(
+            input_size(inputs, dependencies, delegated_dependencies, artifacts)
+            <= scoped["limits"]["budget"]["input_bytes"],
+            "capacity_exhausted",
+            429,
+        )
         context = ExecutionContext(
             self,
             task_id,
@@ -632,7 +673,9 @@ class Coordinator:
                 "contract": step["contract"],
                 "input": inputs,
                 "requirements": step["requirement_ids"],
-                "dependency_results": {key: completed[key] for key in step["depends_on"]},
+                "dependency_results": dependencies,
+                "delegated_dependencies": delegated_dependencies,
+                "input_artifacts": artifacts,
             },
             step["allocation"],
             binding,
@@ -660,7 +703,7 @@ class Coordinator:
         profile = self.registry.source_profile(step["contract"])
         if profile:
             from .evidence import verification_material
-            from .outcomes import source_output
+            from .outcomes import assemble_source_outcome
 
             require(
                 result["output"] == {"ready_for_verification": True}, "verification_failed", 422
@@ -668,7 +711,9 @@ class Coordinator:
             material = verification_material(
                 self, task_id, step_id=step["step_id"], artifact_ids=result["artifact_ids"]
             )
-            result["output"] = source_output(profile, step["contract"], inputs, material)
+            result["output"] = assemble_source_outcome(
+                profile, step["contract"], inputs, material
+            ).output
         return result
 
     async def run(self, task_id):
@@ -685,7 +730,7 @@ class Coordinator:
                         422,
                     )
                     self.routing.allocate(task_id, request, private_plan)
-                row, task = self.check_active(task_id, evaluating=True)
+                _, task = self.check_active(task_id, evaluating=True)
                 offer = self.publication.revalidate(
                     self.principal(task_id), self.authority(task_id)["selected_offer"]
                 )
@@ -696,7 +741,8 @@ class Coordinator:
                     self.registry,
                     deadline_ceiling=self.authority(task_id)["limits"]["deadline"],
                 )
-                self.preconditions(
+                check_inputs(
+                    self,
                     task_id,
                     self.registry.get(request["selection"]["contract"]),
                     request["input"],
@@ -738,6 +784,9 @@ class Coordinator:
                     self.store.save_task(task)
                 self.hit("after_admission", task_id)
                 completed = {}
+                prerequisite_steps = {
+                    dependency for step in plan["steps"] for dependency in step["depends_on"]
+                }
                 pending = list(plan["steps"])
                 while pending:
                     step = next(
@@ -761,6 +810,20 @@ class Coordinator:
                         result["output"],
                         result["evidence"],
                     )
+                    if step["executor"] == "local" and step["step_id"] in prerequisite_steps:
+                        require(
+                            await self.planner.verify(
+                                task_id,
+                                self.registry.get(step["contract"]),
+                                private_plan["inputs"][step["step_id"]],
+                                result["output"],
+                                result["evidence"],
+                                artifact_ids=result["artifact_ids"],
+                                step_id=step["step_id"],
+                            ),
+                            "verification_failed",
+                            422,
+                        )
                     completed[step["step_id"]] = result
                     pending.remove(step)
                 with self.store.transaction():
@@ -772,7 +835,7 @@ class Coordinator:
                     final = completed[plan["steps"][0]["step_id"]]
                 elif self.registry.source_profile(request["selection"]["contract"]):
                     from .evidence import verification_material
-                    from .outcomes import source_output
+                    from .outcomes import assemble_source_outcome
 
                     artifacts = list(
                         dict.fromkeys(
@@ -783,12 +846,12 @@ class Coordinator:
                     )
                     material = verification_material(self, task_id, artifact_ids=artifacts)
                     final = {
-                        "output": source_output(
+                        "output": assemble_source_outcome(
                             self.registry.source_profile(request["selection"]["contract"]),
                             request["selection"]["contract"],
                             request["input"],
                             material,
-                        ),
+                        ).output,
                         "artifact_ids": artifacts,
                         "evidence": [
                             {
@@ -805,10 +868,10 @@ class Coordinator:
                 else:
                     _, task = self.store.task(task_id)
                     definition = self.registry.get(request["selection"]["contract"])
+                    baseline = self.store.usage(task_id, reserved=True)
                     left = {
-                        key: authority["limits"]["budget"][key]
-                        - self.store.usage(task_id, reserved=True)[key]
-                        for key in zero()
+                        key: authority["limits"]["budget"][key] - spent
+                        for key, spent in baseline.items()
                     }
                     context = ExecutionContext(
                         self,
@@ -829,7 +892,7 @@ class Coordinator:
                         None,
                         [],
                         self.workspace(task["session_id"]),
-                        self.store.usage(task_id, reserved=True),
+                        baseline,
                     )
                     final = await self.run_runtime(context)
                     final["artifact_ids"] = list(
@@ -926,6 +989,8 @@ class Coordinator:
         amount = zero()
         amount["output_bytes"] = len(canonical(final["output"]))
         with self.store.transaction():
+            effect = self.store.effect_disposition(task_id)
+            require(effect != "unknown", "child_outcome_unknown", 503)
             self.store.reserve(
                 task_id,
                 "released-output",
@@ -940,14 +1005,12 @@ class Coordinator:
                 "request_digest": request_digest(request),
                 "output": final["output"],
                 "usage": self.store.usage(task_id),
-                "effect_disposition": "known"
-                if self.store.db.execute(
-                    "SELECT 1 FROM actions WHERE task_id=? AND effect!='none'", (task_id,)
-                ).fetchone()
-                else "none",
+                "effect_disposition": effect,
                 "artifacts": artifacts,
                 "evidence": final["evidence"],
             }
+            if readbacks := release_readbacks(self, task_id, final["output"]):
+                task["result"]["workspace_readbacks"] = readbacks
             self.config.contracts.validate("Task", task)
             self.store.save_task(task)
             for artifact in artifacts:
@@ -968,10 +1031,11 @@ class Coordinator:
         self.hit("after_release", task_id)
 
     def fail(self, task_id, error, *, cancel=False, recovery=False):
-        row, task = self.store.task(task_id)
+        _, task = self.store.task(task_id)
         if task["status"] in TERMINAL:
             return
-        unknown = error.effect == "unknown" or self.store.uncertain(task_id)
+        effect = self.store.effect_disposition(task_id)
+        unknown = error.effect == "unknown" or effect == "unknown"
         codes = self.config.contracts.schemas["Problem"]["properties"]["code"]["enum"]
         if error.code not in codes:
             error = LasaError("internal_error", 500, effect="unknown" if unknown else "known")
@@ -982,22 +1046,25 @@ class Coordinator:
             else ("cancelled" if cancel else ("rejected" if "admission" not in task else "failed"))
         )
         task["problem"] = error.public()
-        task["problem"]["effect_disposition"] = "unknown" if unknown else error.effect
+        task["problem"]["effect_disposition"] = (
+            "unknown" if unknown else "known" if effect == "known" else error.effect
+        )
         if unknown:
             task["problem"]["retry"] = "reconcile"
-        self.store.save_task(task)
-        self.store.db.execute(
-            "UPDATE artifacts SET released=-1 WHERE task_id=? AND released<=0", (task_id,)
-        )
-        self.store.db.execute(
-            "UPDATE allocations SET state='finished',usage=? WHERE task_id=? AND kind IN ('integration','future-child') AND state='reserved'",
-            (encode(zero()), task_id),
-        )
-        self.store.event(
-            task_id,
-            "recovery" if recovery else "failure",
-            {"code": error.code, "status": task["status"]},
-        )
+        with self.store.transaction():
+            self.store.save_task(task)
+            self.store.db.execute(
+                "UPDATE artifacts SET released=-1 WHERE task_id=? AND released<=0", (task_id,)
+            )
+            self.store.db.execute(
+                "UPDATE allocations SET state='finished',usage=? WHERE task_id=? AND kind IN ('integration','future-child') AND state='reserved'",
+                (encode(zero()), task_id),
+            )
+            self.store.event(
+                task_id,
+                "recovery" if recovery else "failure",
+                {"code": error.code, "status": task["status"]},
+            )
 
     async def request_input(self, task_id, message):
         row, task = self.check_active(task_id)
@@ -1010,6 +1077,7 @@ class Coordinator:
             "answer_schema": {"type": "string", "minLength": 1, "maxLength": 8192},
             "expires_at": instant(time.time() + self.remaining_seconds(task_id)),
         }
+        self.contracts.validate("Question", question, "verification_failed", 422)
         prior = task["status"]
         task["status"] = "awaiting_input"
         task["question"] = question
@@ -1026,11 +1094,13 @@ class Coordinator:
     def mutation(self, principal, task_id, body, key, route, if_match, kind):
         owner = principal["subject"]
         request_hash = digest(body)
+        answer = None
+        cancel = None
         with self.store.transaction():
             replay = self.store.replay(owner, route, key, request_hash, body["operation_id"])
             if replay:
                 return self.store.task(task_id, owner)[1], 202
-            row, task = self.store.task(task_id, owner)
+            _, task = self.store.task(task_id, owner)
             require(if_match is not None, "precondition_required", 428)
             require(if_match == '"' + str(task["revision"]) + '"', "stale_revision", 412)
             if kind == "input":
@@ -1040,6 +1110,7 @@ class Coordinator:
                     409,
                 )
                 question, future = self.questions[task_id]
+                require(not future.done(), "task_state_conflict", 409)
                 require(
                     body["question_id"] == question["question_id"]
                     and body["question_revision"] == question["revision"],
@@ -1047,18 +1118,26 @@ class Coordinator:
                     412,
                 )
                 validate_data(question["answer_schema"], body["answer"])
-                future.set_result(body["answer"])
-            elif task["status"] not in TERMINAL:
+                amount = zero()
+                amount["input_bytes"] = len(canonical(body["answer"]))
+                self.reserve(task_id, question["question_id"], "input", amount)
+                self.store.settle(task_id, question["question_id"], amount)
+                answer = future
+            elif task["status"] not in TERMINAL and task["status"] != "cancelling":
                 task.pop("question", None)
                 task["status"] = "cancelling"
                 self.store.save_task(task)
-                self.jobs[task_id].cancel()
+                cancel = self.jobs[task_id]
             self.store.operation(
                 owner, route, key, request_hash, body["operation_id"], task_id, "task", 202
             )
+        if answer is not None:
+            answer.set_result(body["answer"])
+        if cancel is not None:
+            cancel.cancel()
         return self.store.task(task_id, owner)[1], 202
 
-    def snapshot_artifact(self, task_id, name, media_type, text, *, provenance=None):
+    def snapshot_artifact(self, task_id, media_type, text, *, provenance=None):
         self.check_active(task_id)
         data = text.encode()
         artifact_id = identity("artifact")
@@ -1110,7 +1189,7 @@ class Coordinator:
                     (encode(result), task_id, action["operation_id"]),
                 )
                 self.store.settle(task_id, action["operation_id"], amount)
-        if not self.store.uncertain(task_id):
+        if task_id not in self.runtime_active and not self.store.uncertain(task_id):
             receipt = digest(
                 {
                     "children": self.store.children(task_id),
@@ -1141,14 +1220,20 @@ class Coordinator:
                 )
 
     async def reconcile(self, principal, task_id, body, key, route):
-        self.store.task(task_id, principal["subject"])
+        owner = principal["subject"]
+        self.store.task(task_id, owner)
         hashed = digest(body)
-        replay = self.store.replay(principal["subject"], route, key, hashed, body["operation_id"])
-        if replay:
-            return self.store.task(task_id, principal["subject"])[1], 202
-        await self.reconcile_internal(task_id)
-        with self.store.transaction():
-            self.store.operation(
-                principal["subject"], route, key, hashed, body["operation_id"], task_id, "task", 202
-            )
-        return self.store.task(task_id, principal["subject"])[1], 202
+        operation_id = body["operation_id"]
+        async with self.reconcile_locks.setdefault(task_id, asyncio.Lock()):
+            if not self.store.replay(owner, route, key, hashed, operation_id):
+                await self.reconcile_internal(task_id)
+                with self.store.transaction():
+                    if not self.store.replay(owner, route, key, hashed, operation_id):
+                        self.store.operation(
+                            owner, route, key, hashed, operation_id, task_id, "task", 202
+                        )
+        return self.store.task(task_id, owner)[1], 202
+
+    async def reconcile_background(self, task_id):
+        async with self.reconcile_locks.setdefault(task_id, asyncio.Lock()):
+            await self.reconcile_internal(task_id)

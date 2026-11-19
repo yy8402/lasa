@@ -336,7 +336,7 @@ async def main():
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
-    stdout, stderr = await process.communicate()
+    stdout, _ = await process.communicate()
     if process.returncode:
         raise ValueError("Build the configured immutable Codex image before evaluation")
     runtime_image = stdout.decode().strip()

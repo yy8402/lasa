@@ -18,7 +18,7 @@ Read in this order:
 Machine-readable artifacts (also packaged for the runtime):
 
 - [Public and internal contracts](contracts.schema.json), [private configuration](config.schema.json), [private policy/runtime/tools schemas](private.schema.json), and [OpenAPI 3.2.1](api.openapi.json).
-- [Examples](examples/manifest.json), including two capability definitions, caller-visible discovery, local configuration, a task and delegation, admission, results, and diagnostics.
+- [Examples](examples/manifest.json), including five capability definitions, caller-visible discovery, local configuration, a task and delegation, admission, results, and diagnostics.
 - [Design validator](validate.py) and [validation evidence](VALIDATION.md).
 
 Protocol target: `lasa/1.1`. This is a LASA design version, not a claim of conformance to an external LASA specification. JSON examples use reserved example domains and contain no usable credentials. Normative MUST/SHALL statements are LASA requirements; standards references are identified separately. Shapes and behavioral invariants both apply. A discrepancy is a design defect to resolve, not implementation discretion.

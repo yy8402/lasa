@@ -63,7 +63,6 @@ async def test_container_blocks_host_files_processes_and_network(tmp_path, runti
             home=home,
             protected=protected,
             token="task-only-handle",
-            lifetime=60,
             role="hold",
         )
         await boundary.run("start", container_id)

@@ -1,8 +1,8 @@
-"""Per-task model/tool gateway outside the networkless Codex enclosure."""
+"""Per-task model gateway outside the networkless Codex enclosure."""
 
 import asyncio
-import hashlib
 import hmac
+import re
 import secrets
 import socket
 import time
@@ -16,6 +16,38 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from .capabilities import require
 from .contracts import canonical, parse_json
 from .errors import LasaError
+
+
+class EventStream:
+    """Read SSE data frames while the original bytes continue to the client."""
+
+    line_end = re.compile(rb"\r\n?|\n")
+
+    def __init__(self):
+        self.partial = bytearray()
+        self.data = []
+        self.trailing_cr = False
+        self.first_line = True
+
+    def feed(self, chunk):
+        if not chunk:
+            return
+        start = int(self.trailing_cr and chunk.startswith(b"\n"))
+        self.trailing_cr = chunk.endswith(b"\r")
+        for separator in self.line_end.finditer(chunk, start):
+            self.partial.extend(chunk[start : separator.start()])
+            start = separator.end()
+            line = self.partial
+            self.partial = bytearray()
+            if self.first_line:
+                line = line.removeprefix(b"\xef\xbb\xbf")
+                self.first_line = False
+            if line.startswith(b"data:"):
+                self.data.append(bytes(line[5:]).removeprefix(b" "))
+            elif not line and self.data:
+                yield b"\n".join(self.data)
+                self.data.clear()
+        self.partial.extend(chunk[start:])
 
 
 def validate_local_tools(value):
@@ -73,16 +105,12 @@ class TaskGateway:
     def __init__(self, context):
         self.context = context
         self.token = secrets.token_urlsafe(32)
-        self.execution_id = secrets.token_hex(16)
         self.failure = asyncio.get_running_loop().create_future()
         self.server = None
         self.worker = None
         self.sockets = []
         self.client = None
         self.url = None
-
-    def tool_operation_id(self, action_id):
-        return "tool-" + hashlib.sha256((self.execution_id + ":" + action_id).encode()).hexdigest()
 
     def fail(self, error):
         if not self.failure.done():
@@ -118,37 +146,9 @@ class TaskGateway:
             return parse_json(b"".join(parts))
 
         @app.exception_handler(LasaError)
-        async def error(request, exc):
+        async def error(_request, exc):
             self.fail(exc)
             return JSONResponse(exc.public(), status_code=exc.status)
-
-        @app.get("/broker/tools")
-        async def tools(request: Request):
-            authenticate(request)
-            return {"tools": await c.broker.tools(task_id)}
-
-        @app.post("/broker/call")
-        async def call(request: Request):
-            authenticate(request)
-            value = await body(request)
-            require(
-                isinstance(value, dict)
-                and set(value) == {"name", "action_id", "arguments"}
-                and isinstance(value["action_id"], str)
-                and len(value["action_id"]) <= 128,
-                "invalid_input",
-            )
-            names = {name.replace(".", "_"): name for name in c.broker._authorized(task_id)}
-            require(value["name"] in names, "authority_denied", 403)
-            try:
-                return await c.broker.call(
-                    task_id,
-                    self.tool_operation_id(value["action_id"]),
-                    names[value["name"]],
-                    value["arguments"],
-                )
-            except LasaError as exc:
-                return JSONResponse({"error": exc.public()})
 
         async def model(request, suffix):
             authenticate(request)
@@ -185,16 +185,15 @@ class TaskGateway:
             if upstream.status_code != 200:
                 await upstream.aclose()
                 raise LasaError("peer_unavailable", 503)
-            content_type = upstream.headers.get("Content-Type", "").split(";")[0]
-            require(
-                content_type in {"text/event-stream", "application/json"},
-                "verification_failed",
-                502,
-            )
+            content_type = upstream.headers.get("Content-Type", "").split(";", 1)[0].strip().lower()
+            if content_type not in {"text/event-stream", "application/json"}:
+                await upstream.aclose()
+                raise LasaError("verification_failed", 502)
 
             async def stream():
                 total = 0
-                buffer = b""
+                parser = EventStream() if content_type == "text/event-stream" else None
+                buffer = bytearray()
                 finished = False
                 try:
                     async with asyncio.timeout(
@@ -204,37 +203,33 @@ class TaskGateway:
                             c.check_active(task_id)
                             total += len(chunk)
                             require(total <= 2097152, "capacity_exhausted", 429)
-                            buffer += chunk
-                            if content_type == "text/event-stream":
-                                while b"\n\n" in buffer:
-                                    block, buffer = buffer.split(b"\n\n", 1)
-                                    data = b"\n".join(
-                                        line[5:].strip()
-                                        for line in block.splitlines()
-                                        if line.startswith(b"data:")
-                                    )
-                                    if data and data != b"[DONE]":
-                                        event = parse_json(data)
-                                        if event.get("type") == "response.completed":
-                                            response = event["response"]
-                                            visible = [
-                                                item
-                                                for item in response.get("output", [])
-                                                if item.get("type")
-                                                in {"message", "function_call", "custom_tool_call"}
-                                            ]
-                                            c.finish_model(
-                                                task_id,
-                                                operation,
-                                                response.get("usage", {}),
-                                                int((time.monotonic() - started) * 1000),
-                                                {"output": visible},
-                                            )
-                                            finished = True
-                                    yield block + b"\n\n"
-                            else:
+                            if parser is None:
+                                buffer.extend(chunk)
                                 continue
-                        if content_type == "application/json":
+                            for data in parser.feed(chunk):
+                                if not data or data == b"[DONE]":
+                                    continue
+                                event = parse_json(data)
+                                require(isinstance(event, dict), "verification_failed", 502)
+                                if event.get("type") == "response.completed":
+                                    require(not finished, "verification_failed", 502)
+                                    response = event["response"]
+                                    visible = [
+                                        item
+                                        for item in response.get("output", [])
+                                        if item.get("type")
+                                        in {"message", "function_call", "custom_tool_call"}
+                                    ]
+                                    c.finish_model(
+                                        task_id,
+                                        operation,
+                                        response.get("usage", {}),
+                                        int((time.monotonic() - started) * 1000),
+                                        {"output": visible},
+                                    )
+                                    finished = True
+                            yield chunk
+                        if parser is None:
                             response = parse_json(buffer)
                             c.finish_model(
                                 task_id,
@@ -244,7 +239,7 @@ class TaskGateway:
                                 {"status": response.get("status")},
                             )
                             finished = True
-                            yield buffer
+                            yield bytes(buffer)
                         require(finished, "verification_failed", 502)
                 except TimeoutError:
                     self.fail(LasaError("deadline_exceeded", 422))

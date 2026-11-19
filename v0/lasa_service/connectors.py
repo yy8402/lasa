@@ -437,17 +437,18 @@ class Connector:
                         self._ready()
                         refresh_at = time.monotonic() + self.limits["schema_refresh_seconds"]
                         while not self.closed:
-                            try:
-                                async with asyncio.timeout(
-                                    max(0.001, refresh_at - time.monotonic())
-                                ):
-                                    operation_id, arguments, end, future = await self.queue.get()
-                            except TimeoutError:
+                            until_refresh = refresh_at - time.monotonic()
+                            if until_refresh <= 0:
                                 async with asyncio.timeout(self.limits["request_timeout_seconds"]):
                                     self.states = await backend.discover()
                                 refresh_at = (
                                     time.monotonic() + self.limits["schema_refresh_seconds"]
                                 )
+                                continue
+                            try:
+                                async with asyncio.timeout(until_refresh):
+                                    operation_id, arguments, end, future = await self.queue.get()
+                            except TimeoutError:
                                 continue
                             if future.cancelled():
                                 continue

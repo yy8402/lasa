@@ -11,7 +11,7 @@ from datetime import UTC, datetime
 
 from jsonschema import Draft202012Validator
 
-from .contracts import Contracts, canonical, digest, parse_json, validate_data
+from .contracts import canonical, digest, parse_json, protocol_contracts, validate_data
 from .errors import LasaError
 from .outcomes import SOURCE_PROFILES
 
@@ -48,7 +48,7 @@ def nodes(value):
 
 
 def validate_definition(definition):
-    Contracts().validate("CapabilityDefinition", definition)
+    protocol_contracts().validate("CapabilityDefinition", definition)
     for key in ("input_schema", "output_schema"):
         schema = definition[key]
         Draft202012Validator.check_schema(schema)
@@ -248,6 +248,7 @@ class Publication:
                         7:39
                     ],
                     "catalog_view": view,
+                    "authorization_ref": rule["authorization_ref"],
                     "contract": ref,
                     "restrictions": {
                         "allowed_effects": allowed,
@@ -256,7 +257,10 @@ class Publication:
                             rule.get("offer_preconditions", [])
                         ),
                     },
-                    "max_budget": rule["budget"],
+                    "max_budget": {
+                        key: min(limit, self.config.document["limits"]["max_task_budget"][key])
+                        for key, limit in rule["budget"].items()
+                    },
                     "max_hops": min(rule["max_hops"], self.config.document["limits"]["max_hops"]),
                     "valid_until": expires,
                 }
@@ -287,23 +291,6 @@ class Publication:
         }
         self.snapshots[principal["subject"]] = snapshot
         return snapshot
-
-    def authority_ref(self, principal, offer_id):
-        for rule in self.rules(principal):
-            for ref in rule["contracts"]:
-                candidate = (
-                    "offer-"
-                    + digest(
-                        {
-                            "subject": principal["subject"],
-                            "authority": rule["authorization_ref"],
-                            "contract": ref,
-                        }
-                    )[7:39]
-                )
-                if candidate == offer_id:
-                    return rule["authorization_ref"]
-        raise LasaError("not_found", 404)
 
     def catalog(self, principal, *, cursor=None, contract_id=None, contract_version=None):
         require(bool(contract_id) == bool(contract_version), "invalid_input")

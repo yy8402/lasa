@@ -517,6 +517,11 @@
           "type": "string",
           "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
         },
+        "authorization_ref": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
         "contract": {
           "$ref": "#/$defs/CapabilityRef"
         },
@@ -573,6 +578,7 @@
         "offer_id",
         "revision",
         "catalog_view",
+        "authorization_ref",
         "contract",
         "restrictions",
         "max_budget",
@@ -1113,8 +1119,15 @@
         "disclosed_artifacts": {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/ArtifactManifest"
-          }
+            "type": "object",
+            "properties": {
+              "manifest": {"$ref": "#/$defs/ArtifactManifest"},
+              "text": {"type": "string"}
+            },
+            "required": ["manifest", "text"],
+            "additionalProperties": false
+          },
+          "maxItems": 16
         },
         "authority_ceiling": {
           "$ref": "#/$defs/AuthorityCeiling"
@@ -1147,6 +1160,13 @@
           "$ref": "#/$defs/OfferSelection"
         },
         "input": {},
+        "dependency_results": {
+          "type": "object",
+          "maxProperties": 64,
+          "propertyNames": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
+          }
+        },
         "requested_limits": {
           "$ref": "#/$defs/ExecutionLimits"
         },
@@ -1386,6 +1406,58 @@
       ],
       "additionalProperties": false
     },
+    "WorkspaceReadback": {
+      "type": "object",
+      "properties": {
+        "service_id": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://",
+          "maxLength": 2048
+        },
+        "task_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
+        },
+        "relative_path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "write_operation_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
+        },
+        "read_operation_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
+        },
+        "content_digest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 262144
+        },
+        "quoted_text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        }
+      },
+      "required": [
+        "service_id",
+        "task_id",
+        "relative_path",
+        "write_operation_id",
+        "read_operation_id",
+        "content_digest",
+        "bytes"
+      ],
+      "additionalProperties": false
+    },
     "TaskResult": {
       "type": "object",
       "properties": {
@@ -1414,6 +1486,15 @@
             "$ref": "#/$defs/ArtifactManifest"
           },
           "maxItems": 64,
+          "uniqueItems": true
+        },
+        "workspace_readbacks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/WorkspaceReadback"
+          },
+          "minItems": 1,
+          "maxItems": 8,
           "uniqueItems": true
         },
         "evidence": {

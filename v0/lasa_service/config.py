@@ -7,7 +7,7 @@ from importlib.resources import files
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
-from .contracts import Contracts, digest, parse_json
+from .contracts import digest, parse_json, protocol_contracts
 
 
 def require(condition, message):
@@ -52,7 +52,6 @@ class Configuration:
     prompts: dict[str, str] = field(repr=False)
     secrets: dict = field(default_factory=dict, repr=False)
     connectors: dict = field(default_factory=dict, repr=False)
-    executor_operations: dict = field(default_factory=dict, repr=False)
 
     @classmethod
     def load(cls, path, *, environ=None):
@@ -61,12 +60,13 @@ class Configuration:
     @classmethod
     def from_document(cls, document, *, environ=None):
         document = copy.deepcopy(document)
-        contracts = Contracts()
+        contracts = protocol_contracts()
         contracts.validate("Config", document)
         validate_url(document["service"]["base_url"])
         require(
-            within_url(document["service"]["descriptor_url"], document["service"]["base_url"]),
-            "Descriptor escaped base URL",
+            document["service"]["descriptor_url"]
+            == document["service"]["base_url"].rstrip("/") + "/descriptor",
+            "Descriptor URL must be the protocol base URL followed by /descriptor",
         )
         require(
             Path(document["storage"]["data_root"]).is_absolute()
@@ -100,6 +100,7 @@ class Configuration:
         executor_ids = [x["id"] for x in document["executors"]]
         require(len(executor_ids) == len(set(executor_ids)), "Duplicate executor IDs")
         operation_owners = {}
+        executor_operations = {}
         from .connector_schema import check_schema
 
         for executor in document["executors"]:
@@ -168,7 +169,9 @@ class Configuration:
                         schemas.append(operation["upstream_output_schema"])
                     for schema in schemas:
                         check_schema(schema)
-            config.executor_operations[executor["id"]] = operations
+            executor_operations[executor["id"]] = operations
+        bindings = {digest(binding["contract"]) for binding in document["bindings"]}
+        require(len(bindings) == len(document["bindings"]), "Duplicate contract bindings")
         for binding in document["bindings"]:
             require(binding["executor_id"] in executor_ids, "Unknown executor binding")
             require(
@@ -177,7 +180,7 @@ class Configuration:
             )
             for op_id in binding["required_operations"]:
                 require(
-                    op_id in config.executor_operations[binding["executor_id"]],
+                    op_id in executor_operations[binding["executor_id"]],
                     "Binding requires an unregistered operation",
                 )
                 connector = config.connectors[operation_owners[op_id]]
@@ -199,7 +202,7 @@ class Configuration:
 
     @property
     def contracts(self):
-        return Contracts()
+        return protocol_contracts()
 
     @property
     def revision(self):
@@ -215,8 +218,7 @@ class Configuration:
 
     def secret(self, reference):
         self.check_secret_reference(reference)
-        kind, separator, name = reference.partition(":")
-        require(separator and kind in {"env", "file"}, "Unsupported secret reference")
+        kind, _, name = reference.partition(":")
         if kind == "file" or reference not in self.secrets:
             value = self.environ.get(name) if kind == "env" else Path(name).read_text().strip()
             require(isinstance(value, str) and bool(value), "Missing secret")
@@ -230,7 +232,7 @@ class Configuration:
         require(kind != "file" or Path(name).is_absolute(), "Secret file path must be absolute")
 
     def read_private(self, name, path):
-        return Contracts().validate(name, parse_json(Path(path).read_bytes()))
+        return self.contracts.validate(name, parse_json(Path(path).read_bytes()))
 
     def policy(self):
         policy = self.read_private(

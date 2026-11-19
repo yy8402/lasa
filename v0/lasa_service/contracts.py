@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+from functools import cache
 from importlib.resources import files
 
 import rfc8785
@@ -29,7 +30,7 @@ def parse_json(value):
         result = json.loads(value, object_pairs_hook=_pairs, parse_constant=_nonfinite)
         rfc8785.dumps(result)
         return result
-    except (ValueError, UnicodeError, rfc8785.CanonicalizationError) as exc:
+    except (ValueError, RecursionError, rfc8785.CanonicalizationError) as exc:
         raise LasaError("invalid_input") from exc
 
 
@@ -92,3 +93,8 @@ class Contracts:
             return value
 
         return expand(self.schemas[name])
+
+
+@cache
+def protocol_contracts():
+    return Contracts()

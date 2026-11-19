@@ -39,6 +39,8 @@ def main():
     parser.add_argument("--diagnostics", choices=["metadata", "content"], default="metadata")
     parser.add_argument("--timeout", type=int, default=240)
     args = parser.parse_args()
+    if args.timeout <= 0:
+        parser.error("--timeout must be positive")
     from ssl import create_default_context
 
     from lasa_service.config import within_url
@@ -100,9 +102,6 @@ def main():
             response.raise_for_status()
             return response
 
-        session = post(
-            base + "/sessions", {"operation_id": "session-" + uuid4().hex, "label": "CLI task"}
-        ).json()
         inputs = (
             parse_json(args.input_json.read_bytes())
             if args.input_json
@@ -119,6 +118,12 @@ def main():
                 ],
             }
         )
+        session_operation_id = "session-" + uuid4().hex
+        print("Session operation: " + session_operation_id, flush=True)
+        session = post(
+            base + "/sessions", {"operation_id": session_operation_id, "label": "CLI task"}
+        ).json()
+        print("Session: " + session["session_id"], flush=True)
         seconds = min(args.timeout, offer["max_budget"]["wall_time_ms"] / 1000)
         body = {
             "operation_id": "task-" + uuid4().hex,
@@ -137,9 +142,9 @@ def main():
             "authorization_ref": args.authorization_ref,
             "diagnostics": args.diagnostics,
         }
+        print("Task operation: " + body["operation_id"], flush=True)
         response = post(base + "/sessions/" + session["session_id"] + "/tasks", body)
         task_url = response.headers["Location"]
-        print("Session: " + session["session_id"])
         print("Task: " + response.json()["task_id"])
         until = time.monotonic() + seconds + 10
         while time.monotonic() < until:

@@ -142,16 +142,34 @@ async def test_jwt_disallows_algorithm_and_remote_keys(tmp_path):
 async def test_real_http_peer_contract_discovery_and_boundary(tmp_path):
     cfg, reg, auth, app, pub = await discovery_service(tmp_path / "peer")
     parent = configuration(documents(tmp_path / "parent", peer=True))
-    peer = PeerClient(parent, transport=httpx.ASGITransport(app=app))
+    paths = []
+
+    class RecordDiscovery(httpx.ASGITransport):
+        async def handle_async_request(self, request):
+            paths.append(request.url.path.removeprefix("/prefix/lasa/v1"))
+            response = await super().handle_async_request(request)
+            if paths[-1] == "/openapi.json" and response.status_code == 200:
+                await response.aread()
+                document = response.json()
+                document["info"]["version"] = "9.8.7"
+                return httpx.Response(200, json=document, headers={"cache-control": "max-age=60"})
+            return response
+
+    peer = PeerClient(parent, transport=RecordDiscovery(app=app))
     await peer.start()
     try:
         catalog = await peer.discover()
-        assert (
-            len(catalog["offers"]) == 2 and catalog["next_cursor"]
-            if "next_cursor" in catalog
-            else len(catalog["offers"]) == 2
-        )
-        assert await peer.availability(catalog["offers"][0]) == "available"
+        assert len(catalog["offers"]) == 2 and "next_cursor" not in catalog
+        assert paths.count("/capabilities") == 2
+        assert not any(path.startswith("/contracts/") for path in paths)
+        offer = catalog["offers"][0]
+        paths.clear()
+        assert (await peer.definition(offer))["id"] == offer["contract"]["id"]
+        assert paths == ["/contracts/" + offer["contract"]["digest"]]
+        paths.clear()
+        assert (await peer.refresh_offer(offer))["offer_id"] == offer["offer_id"]
+        detail = "/capabilities/" + offer["offer_id"]
+        assert paths == [detail, detail + "/availability"]
         with pytest.raises(LasaError):
             await peer.get("https://attacker.example/keys")
         peer.settings["expected_service_id"] = "https://identity.example.net/services/other"

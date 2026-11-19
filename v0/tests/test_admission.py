@@ -174,7 +174,8 @@ async def test_clarification_revision_and_idempotent_answer(services):
         return await FakeRuntime().run(context)
 
     client, app = await services(runtime=FakeRuntime(handler))
-    response = await submit(client, app, await task_request(client, app))
+    request = await task_request(client, app)
+    response = await submit(client, app, request)
     for _ in range(100):
         current = await client.get(response.headers["Location"])
         if current.json()["status"] == "awaiting_input":
@@ -191,9 +192,18 @@ async def test_clarification_revision_and_idempotent_answer(services):
     missing = await client.post(url, json=body, headers={"Idempotency-Key": "answer-key"})
     assert missing.status_code == 428
     headers = {"Idempotency-Key": "answer-key", "If-Match": current.headers["etag"]}
-    answer = await client.post(url, json=body, headers=headers)
+    duplicate = {**body, "operation_id": "other-answer"}
+    answer, concurrent = await asyncio.gather(
+        client.post(url, json=body, headers=headers),
+        client.post(url, json=duplicate, headers={**headers, "Idempotency-Key": "other-answer"}),
+    )
     assert answer.status_code == 202
-    assert (await settled(client, response))["status"] == "completed"
+    assert concurrent.status_code in {409, 412}
+    result = await settled(client, response)
+    assert result["status"] == "completed"
+    assert result["result"]["usage"]["input_bytes"] == len(canonical(request["input"])) + len(
+        canonical("Ada")
+    )
     replay = await client.post(url, json=body, headers=headers)
     assert replay.status_code == 202
 
@@ -287,7 +297,7 @@ async def test_active_step_cannot_spend_sibling_or_integration_budget(
                 )
         else:
             with pytest.raises(LasaError, match="capacity_exhausted"):
-                context.coordinator.snapshot_artifact(context.task_id, "blocked", "text/plain", "x")
+                context.coordinator.snapshot_artifact(context.task_id, "text/plain", "x")
         calls.append(True)
         return await FakeRuntime().run(context)
 

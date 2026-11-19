@@ -43,9 +43,7 @@ async def test_dispatch_attenuates_newly_narrowed_effects_and_resources(services
 @pytest.mark.parametrize("tamper", ["task_id", "underreported_artifacts", "cumulative_artifacts"])
 async def test_child_linkage_and_observed_cumulative_artifact_budget(services, tmp_path, tamper):
     async def child_handler(context):
-        manifest = context.coordinator.snapshot_artifact(
-            context.task_id, "proof", "text/plain", "abc"
-        )
+        manifest = context.coordinator.snapshot_artifact(context.task_id, "text/plain", "abc")
         result = await FakeRuntime().run(context)
         result["artifact_ids"] = [manifest["artifact_id"]]
         return result
@@ -108,7 +106,7 @@ async def test_content_diagnostics_redact_and_keep_operation_headers_when_trunca
 
     async def handler(context):
         c = context.coordinator
-        for i in range(5):
+        for i in range(12):
             c.diagnostics.call(
                 context.task_id,
                 "trace-" + str(i),
@@ -116,7 +114,7 @@ async def test_content_diagnostics_redact_and_keep_operation_headers_when_trunca
                 "finished",
                 {"query": "x" * 20000},
                 content={
-                    "query": "x" * 20000,
+                    "query": "€" * 7000,
                     "api_key": "test-model-key",
                     "reflection": "test-model-key",
                 },
@@ -130,15 +128,30 @@ async def test_content_diagnostics_redact_and_keep_operation_headers_when_trunca
     result = await settled(client, response)
     events = (await client.get(response.headers["Location"] + "/events")).json()["events"]
     calls = [x for x in events if x["kind"] == "call"]
-    assert result["status"] == "completed" and len(calls) == 5
+    assert result["status"] == "completed" and len(calls) == 12
     assert all(
         x["payload"]["operation_id"].startswith("trace-") and x["payload"]["payload_truncated"]
         for x in calls
     )
     assert "test-model-key" not in json.dumps(events)
+    sizes = [len(x["content"]["text"].encode()) for x in calls if "content" in x]
+    total = app.state.coordinator.store.diagnostic_bytes(result["task_id"])
+    assert all(size <= 8192 for size in sizes)
+    assert 65534 <= sum(sizes) == total <= 65536
     policy["principals"][0]["rules"][0]["content_diagnostics"] = False
     path.write_text(json.dumps(policy))
     assert all(
         "content" not in x
         for x in (await client.get(response.headers["Location"] + "/events")).json()["events"]
     )
+
+
+async def test_diagnostic_cursor_rejects_values_outside_the_wire_range(services):
+    client, app = await services()
+    response = await submit(client, app, await task_request(client, app))
+    await settled(client, response)
+    for suffix in ("/events", "/delegations"):
+        page = await client.get(
+            response.headers["Location"] + suffix, params={"after_sequence": 2**63}
+        )
+        assert page.status_code == 400 and page.json()["code"] == "invalid_input"

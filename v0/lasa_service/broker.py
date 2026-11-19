@@ -18,11 +18,12 @@ SCHEMAS = {
     "workspace.read": object_schema({"relative_path": PATH}),
     "workspace.write": object_schema({"relative_path": PATH, "text": TEXT}),
     "workspace.list": object_schema({"relative_path": PATH}, []),
-    "lasa.request_input": object_schema({"message": TEXT}),
+    "lasa.request_input": object_schema(
+        {"message": {"type": "string", "minLength": 1, "maxLength": 8192}}
+    ),
     "lasa.export_text": object_schema(
         {
             "relative_path": PATH,
-            "name": PATH,
             "media_type": {"enum": ["text/plain", "text/markdown", "application/json"]},
         }
     ),
@@ -34,23 +35,19 @@ class Broker:
         self.coordinator = coordinator
         self.connectors = {}
         self.operations = {}
-        self.executor_operations = {}
+        self.tool_names = {name.replace(".", "_"): name for name in SCHEMAS}
         self.locks = {}
 
     async def start(self):
         c = self.coordinator
-        self.executor_operations = c.config.executor_operations
         for resource in c.config.connectors.values():
             connector = Connector(c.config, resource, c.root)
             self.connectors[resource["id"]] = connector
             for operation in resource["operations"]:
                 name = operation["operation_id"]
-                require(name not in SCHEMAS and name not in self.operations, "invalid_input")
-                require(
-                    name.replace(".", "_")
-                    not in {key.replace(".", "_") for key in [*SCHEMAS, *self.operations]},
-                    "invalid_input",
-                )
+                tool = name.replace(".", "_")
+                require(tool not in self.tool_names, "invalid_input")
+                self.tool_names[tool] = name
                 self.operations[name] = (connector, operation)
         await asyncio.gather(*(connector.start() for connector in self.connectors.values()))
 
@@ -101,19 +98,17 @@ class Broker:
                 allowed.add(name)
         if "delegation" in c.request(task_id):
             allowed.discard("lasa.request_input")
-        for name, (_connector, operation) in self.operations.items():
-            if (
-                name
-                in self.executor_operations.get(c.config.executor(context.binding)["id"], set())
-                and name in context.binding["required_operations"]
-                and c.permits(task_id, operation["effect"], operation["resource"], "read")
-            ):
+        for name in context.binding["required_operations"]:
+            _, operation = self.operations[name]
+            if c.permits(task_id, operation["effect"], operation["resource"], "read"):
                 allowed.add(name)
         return allowed
 
-    async def tools(self, task_id):
+    def tools(self, task_id):
         return [
             {
+                "type": "function",
+                "deferLoading": False,
                 "name": name.replace(".", "_"),
                 "description": self.operations[name][1]["description"]
                 if name in self.operations
@@ -256,7 +251,6 @@ class Broker:
                 elif name == "lasa.export_text":
                     value = c.snapshot_artifact(
                         task_id,
-                        arguments["name"],
                         arguments["media_type"],
                         workspace.read(arguments["relative_path"]),
                     )
@@ -279,7 +273,6 @@ class Broker:
                     ).fetchone()[0]
                     manifest = c.snapshot_artifact(
                         task_id,
-                        "source-operation-result",
                         "application/json",
                         canonical(value).decode(),
                         provenance={

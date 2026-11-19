@@ -2,15 +2,18 @@
 
 import asyncio
 import copy
+import hashlib
+import re
 import ssl
 import time
+from collections import OrderedDict
 
 import httpx
 
-from . import PROTOCOL_VERSION, __version__
-from .capabilities import epoch, require, validate_definition
+from . import PROTOCOL_VERSION
+from .capabilities import epoch, offer_terms, require, validate_definition
 from .config import within_url
-from .contracts import Contracts, digest, parse_json
+from .contracts import digest, parse_json
 from .errors import LasaError
 
 
@@ -18,10 +21,10 @@ class PeerClient:
     def __init__(self, config, *, transport=None):
         self.config = config
         self.settings = config.peer
-        self.contracts = Contracts()
+        self.contracts = config.contracts
         self.transport = transport
         self.client = None
-        self.cache = {}
+        self.cache = OrderedDict()
         self.descriptor = None
         self.base = None
 
@@ -46,7 +49,11 @@ class PeerClient:
             await self.client.aclose()
 
     def authentication_headers(self):
-        return {"Authorization": "Bearer " + self.config.secret(self.settings["credential_ref"])}
+        try:
+            token = self.config.secret(self.settings["credential_ref"])
+        except (OSError, ValueError):
+            raise LasaError("peer_unavailable", 503, retry="readmission") from None
+        return {"Authorization": "Bearer " + token}
 
     async def request(self, method, url, body=None, key=None, etag=None):
         require(
@@ -76,13 +83,16 @@ class PeerClient:
         except (httpx.HTTPError, ValueError):
             raise LasaError("peer_unavailable", 503, retry="readmission") from None
 
-    async def get(self, url, *, refresh=False):
+    async def get(self, url, *, refresh=False, missing_offer=False):
         require(within_url(url, self.settings["allowed_base_url"]), "incompatible_protocol", 502)
-        entry = self.cache.get(url)
+        headers = self.authentication_headers()
+        key = (url, hashlib.sha256(headers["Authorization"].encode()).digest())
+        entry = self.cache.get(key)
+        if entry:
+            self.cache.move_to_end(key)
         if entry and not refresh and entry["expires"] > time.time():
             return copy.deepcopy(entry["body"])
-        headers = self.authentication_headers()
-        if entry:
+        if entry and entry["etag"]:
             headers["If-None-Match"] = entry["etag"]
         try:
             async with self.client.stream("GET", url, headers=headers) as response:
@@ -98,6 +108,8 @@ class PeerClient:
                         epoch(entry["body"].get("valid_until", "9999-01-01T00:00:00Z")),
                     )
                     return copy.deepcopy(entry["body"])
+                if missing_offer and response.status_code == 404:
+                    raise LasaError("offer_changed", 409)
                 require(response.status_code == 200, "peer_unavailable", 503)
                 chunks = []
                 size = 0
@@ -106,6 +118,7 @@ class PeerClient:
                     require(size <= 1048576, "incompatible_protocol", 502)
                     chunks.append(chunk)
                 value = parse_json(b"".join(chunks))
+                require(isinstance(value, dict), "incompatible_protocol", 502)
                 if "valid_until" in value:
                     require(epoch(value["valid_until"]) > time.time(), "peer_unavailable", 503)
                 expiry = epoch(value["valid_until"]) if "valid_until" in value else time.time() + 60
@@ -114,21 +127,27 @@ class PeerClient:
                     time.time()
                     + self.config.document["discovery_cache"]["catalog_max_age_seconds"],
                 )
-                self.cache[url] = {
+                self.cache[key] = {
                     "body": value,
                     "etag": response.headers.get("etag", ""),
                     "expires": expiry,
                 }
+                self.cache.move_to_end(key)
+                if len(self.cache) > 256:
+                    self.cache.popitem(last=False)
                 return copy.deepcopy(value)
+        except (ValueError, TypeError):
+            raise LasaError("incompatible_protocol", 502) from None
         except httpx.HTTPError:
             raise LasaError("peer_unavailable", 503, retry="readmission") from None
 
-    async def discover(self, *, refresh=False):
+    async def discover(self, *, refresh=False, contract=None):
         async with asyncio.timeout(self.settings["request_timeout_seconds"]):
-            return await self._discover(refresh=refresh)
+            await self.negotiate()
+            return await self.catalog(refresh=refresh, contract=contract)
 
-    async def _discover(self, *, refresh=False):
-        descriptor = await self.get(self.settings["descriptor_url"], refresh=refresh)
+    async def negotiate(self):
+        descriptor = await self.get(self.settings["descriptor_url"])
         self.contracts.validate("ServiceDescriptor", descriptor, "incompatible_protocol", 502)
         require(
             descriptor["service_id"] == self.settings["expected_service_id"],
@@ -167,21 +186,33 @@ class PeerClient:
             "incompatible_protocol",
             502,
         )
-        wire = await self.get(
-            protocol["base_url"].rstrip("/") + "/contracts.schema.json", refresh=refresh
-        )
+        wire = await self.get(protocol["base_url"].rstrip("/") + "/contracts.schema.json")
         require(digest(wire) == protocol["wire_schema_digest"], "incompatible_protocol", 502)
-        api = await self.get(protocol["openapi_url"], refresh=refresh)
+        api = await self.get(protocol["openapi_url"])
         require(
-            api.get("openapi") == "3.2.1" and api.get("info", {}).get("version") == __version__,
+            isinstance(api.get("openapi"), str) and re.fullmatch(r"3\.2\.\d+", api["openapi"]),
             "incompatible_protocol",
             502,
         )
-        for path in ["/sessions", "/sessions/{session_id}/tasks", "/tasks/{task_id}"]:
-            require(path in api.get("paths", {}), "incompatible_protocol", 502)
+        paths = api.get("paths", {})
+        require(isinstance(paths, dict), "incompatible_protocol", 502)
+        for path, method in [
+            ("/sessions", "post"),
+            ("/sessions/{session_id}/tasks", "post"),
+            ("/tasks/{task_id}", "get"),
+        ]:
+            resource = paths.get(path)
+            require(isinstance(resource, dict) and method in resource, "incompatible_protocol", 502)
         self.base = protocol["base_url"].rstrip("/")
         self.descriptor = descriptor
-        url = descriptor["catalog_url"]
+
+    async def catalog(self, *, refresh, contract=None):
+        descriptor = self.descriptor
+        params = {}
+        if contract is not None:
+            params = {"contract_id": contract["id"], "contract_version": contract["version"]}
+        endpoint = httpx.URL(descriptor["catalog_url"]).copy_merge_params(params)
+        url = str(endpoint)
         offers = []
         revision = None
         view = None
@@ -203,32 +234,14 @@ class PeerClient:
                     "catalog_changed",
                     409,
                 )
-                definition_url = descriptor["contract_url_template"].replace(
-                    "{digest}", offer["contract"]["digest"]
-                )
-                definition = await self.get(definition_url, refresh=refresh)
-                validate_definition(definition)
-                require(
-                    digest(definition) == offer["contract"]["digest"]
-                    and definition["id"] == offer["contract"]["id"]
-                    and definition["version"] == offer["contract"]["version"],
-                    "unsupported_contract",
-                    502,
-                )
-                require(
-                    any(
-                        definition["id"].startswith(x["namespace"])
-                        for x in self.config.document["contract_publishers"]
-                    ),
-                    "unsupported_contract",
-                    502,
-                )
-                require(
-                    set(offer["restrictions"]["allowed_effects"]) <= set(definition["max_effects"]),
-                    "unsupported_contract",
-                    502,
-                )
-                offers.append({**offer, "definition": definition})
+                if contract is not None:
+                    require(
+                        offer["contract"]["id"] == contract["id"]
+                        and offer["contract"]["version"] == contract["version"],
+                        "incompatible_protocol",
+                        502,
+                    )
+                offers.append(offer)
             cursor = page["next_cursor"]
             if cursor is None:
                 require(len({x["offer_id"] for x in offers}) == len(offers), "catalog_changed", 409)
@@ -242,8 +255,27 @@ class PeerClient:
             require(cursor not in cursors, "catalog_changed", 409)
             cursors.add(cursor)
             # Cursors are data, never arbitrary URLs.
-            url = str(httpx.URL(descriptor["catalog_url"]).copy_merge_params({"cursor": cursor}))
+            url = str(endpoint.copy_merge_params({"cursor": cursor}))
         raise LasaError("catalog_changed", 409)
+
+    async def definition(self, offer):
+        ref = offer["contract"]
+        url = self.descriptor["contract_url_template"].replace("{digest}", ref["digest"])
+        definition = await self.get(url)
+        validate_definition(definition)
+        require(
+            digest(definition) == ref["digest"]
+            and definition["id"] == ref["id"]
+            and definition["version"] == ref["version"]
+            and any(
+                definition["id"].startswith(publisher["namespace"])
+                for publisher in self.config.document["contract_publishers"]
+            )
+            and set(offer["restrictions"]["allowed_effects"]) <= set(definition["max_effects"]),
+            "unsupported_contract",
+            502,
+        )
+        return definition
 
     async def availability(self, offer):
         url = self.base + "/capabilities/" + offer["offer_id"] + "/availability"
@@ -257,12 +289,13 @@ class PeerClient:
         return value["state"]
 
     async def refresh_offer(self, pinned):
-        from .capabilities import offer_terms
-
-        catalog = await self.discover(refresh=True)
-        current = next((x for x in catalog["offers"] if x["offer_id"] == pinned["offer_id"]), None)
+        await self.negotiate()
+        current = await self.get(
+            self.base + "/capabilities/" + pinned["offer_id"], refresh=True, missing_offer=True
+        )
+        self.contracts.validate("CapabilityOffer", current, "incompatible_protocol", 502)
         require(
-            current is not None and offer_terms(current) == offer_terms(pinned),
+            offer_terms(current) == offer_terms(pinned),
             "offer_changed",
             409,
         )

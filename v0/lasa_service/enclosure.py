@@ -12,7 +12,6 @@ from .errors import LasaError
 class Enclosure:
     def __init__(self):
         self.docker = shutil.which("docker")
-        self.last_error = ""
 
     async def run(self, *arguments, check=True, limit_seconds=20):
         if self.docker is None:
@@ -31,7 +30,6 @@ class Enclosure:
             await process.wait()
             raise
         if check and process.returncode:
-            self.last_error = stderr.decode(errors="replace")[:8192]
             raise LasaError("internal_error", 503)
         return process.returncode, stdout, stderr
 
@@ -73,7 +71,6 @@ class Enclosure:
         home,
         protected,
         token,
-        lifetime,
         role="serve",
         workspace_readonly=False,
     ):
@@ -136,11 +133,7 @@ class Enclosure:
                 "--mount",
                 f"type=bind,source={source},target={target}" + (",readonly" if readonly else ""),
             ]
-        for key, value in {
-            "LASA_GATEWAY_TOKEN": token,
-            "LASA_GATEWAY_TIMEOUT": str(lifetime),
-        }.items():
-            args += ["--env", f"{key}={value}"]
+        args += ["--env", "LASA_GATEWAY_TOKEN=" + token]
         _, stdout, _ = await self.run(*args, image, role, executable)
         container_id = stdout.decode().strip()
         if len(container_id) != 64 or any(c not in "0123456789abcdef" for c in container_id):

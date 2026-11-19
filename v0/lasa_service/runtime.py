@@ -95,7 +95,7 @@ class CodexRuntime:
         (protected / "empty-file").touch()
         return root, home, protected
 
-    def configuration(self, executor, settings, remaining):
+    def configuration(self, executor):
         return {
             "model": executor["model"],
             "model_provider": "lasa",
@@ -122,30 +122,24 @@ class CodexRuntime:
                     "stream_idle_timeout_ms": 60000,
                 }
             },
-            "mcp_servers": {
-                "lasa": {
-                    "command": "/usr/local/bin/python3",
-                    "args": ["-I", "-S", "/opt/lasa/mcp_bridge.py"],
-                    "env_vars": ["LASA_GATEWAY_URL", "LASA_GATEWAY_TOKEN", "LASA_GATEWAY_TIMEOUT"],
-                    "default_tools_approval_mode": "approve",
-                    "required": True,
-                    "startup_timeout_sec": settings["startup_timeout_ms"] / 1000,
-                    "tool_timeout_sec": remaining + 1,
-                }
-            },
         }
 
     async def probe(self, c):
-        executor = c.config.executor()
-        settings = c.config.read_private("RuntimeProfile", executor["runtime_profile_file"])
-        await self.enclosure.verify_image(
-            settings["image"], settings["executable"], settings["expected_version"]
-        )
+        verified_images = set()
+        for executor in c.config.document["executors"]:
+            settings = c.config.read_private("RuntimeProfile", executor["runtime_profile_file"])
+            image = (settings["image"], settings["executable"], settings["expected_version"])
+            if image not in verified_images:
+                await self.enclosure.verify_image(*image)
+                verified_images.add(image)
+            await self.probe_executor(c, executor, settings)
+
+    async def probe_executor(self, c, executor, settings):
         task_id = identity("probe")
         root, home, protected = self.directories(c, task_id)
         workspace = root / "workspace"
         workspace.mkdir()
-        (home / "config.toml").write_text(tomli_w.dumps(self.configuration(executor, settings, 30)))
+        (home / "config.toml").write_text(tomli_w.dumps(self.configuration(executor)))
         container = None
         try:
             container = await self.enclosure.create(
@@ -157,7 +151,6 @@ class CodexRuntime:
                 home=home,
                 protected=protected,
                 token="readiness-only",
-                lifetime=30,
                 role="config-check",
             )
             await self.enclosure.run("start", "--attach", container)
@@ -172,10 +165,7 @@ class CodexRuntime:
         executor = c.config.executor(context.binding)
         settings = c.config.read_private("RuntimeProfile", executor["runtime_profile_file"])
         root, home, protected = self.directories(c, context.task_id)
-        remaining = max(0.001, c.remaining_seconds(context.task_id))
-        (home / "config.toml").write_text(
-            tomli_w.dumps(self.configuration(executor, settings, remaining))
-        )
+        (home / "config.toml").write_text(tomli_w.dumps(self.configuration(executor)))
         gateway = TaskGateway(context)
         handle = RuntimeHandle(c, gateway)
         self.handles[context.task_id] = handle
@@ -195,7 +185,6 @@ class CodexRuntime:
             home=home,
             protected=protected,
             token=gateway.token,
-            lifetime=remaining,
             workspace_readonly=True,
         )
         c.store.db.execute(
@@ -225,7 +214,7 @@ class CodexRuntime:
                 "initialize",
                 {
                     "clientInfo": {"name": "lasa-service", "version": __version__},
-                    "capabilities": {"experimentalApi": False},
+                    "capabilities": {"experimentalApi": True},
                 },
             )
             await client.send({"jsonrpc": "2.0", "method": "initialized"})
@@ -238,7 +227,10 @@ class CodexRuntime:
                     "ephemeral": True,
                     "sandbox": "workspace-write",
                     "approvalPolicy": "never",
-                    "developerInstructions": c.config.prompts["execution_developer"],
+                    "dynamicTools": c.broker.tools(context.task_id),
+                    "developerInstructions": c.config.prompts["execution_developer"]
+                    + "\n\nLASA tools available to this step are callable functions registered "
+                    "on this thread. Use their advertised names and arguments.",
                 },
             )
             client.thread_id = thread["thread"]["id"]
@@ -266,7 +258,7 @@ class CodexRuntime:
         }
         if source_profile:
             prompt["source_execution"] = c.config.prompts["source_execution"]
-        turn = await client.request(
+        await client.request(
             "turn/start",
             {
                 "threadId": client.thread_id,
@@ -274,16 +266,12 @@ class CodexRuntime:
                 "outputSchema": provider_schema(output_schema),
             },
         )
-        client.turn_id = turn["turn"]["id"]
         done, _ = await asyncio.wait(
             [client.completed, gateway.failure], return_when=asyncio.FIRST_COMPLETED
         )
         if gateway.failure in done:
             raise gateway.failure.result()
         return await client.completed
-
-    async def stop(self, task_id):
-        await self.kill(task_id)
 
     async def kill(self, task_id):
         handle = self.handles.get(task_id)
