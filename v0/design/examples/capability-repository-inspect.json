@@ -1,0 +1,115 @@
+{
+  "definition_format": "lasa-capability/1.0",
+  "id": "https://contracts.example.net/capabilities/repository.inspect",
+  "version": "1.0.0",
+  "title": "Inspect repository metadata and documentation index",
+  "outcome": "Return repository identity, description and default branch from the approved metadata source and the exact documentation index from the approved documentation source. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.",
+  "non_guarantees": [
+    "Does not cover unapproved collections or assert that source-provided content is universally correct."
+  ],
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "repository": {
+        "const": "modelcontextprotocol/python-sdk"
+      }
+    },
+    "required": [
+      "repository"
+    ],
+    "additionalProperties": false
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "repository": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 4096
+      },
+      "description": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "maxLength": 4096
+      },
+      "default_branch": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 4096
+      },
+      "documentation_index": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 8192
+      },
+      "sources": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "minItems": 2,
+        "maxItems": 2
+      }
+    },
+    "required": [
+      "repository",
+      "description",
+      "default_branch",
+      "documentation_index",
+      "sources"
+    ],
+    "additionalProperties": false
+  },
+  "preconditions": [
+    {
+      "kind": "input_schema",
+      "description": "Inputs select an approved read-only collection."
+    },
+    {
+      "kind": "resource_authorized",
+      "description": "Read authority for the approved source is required.",
+      "resource": "repository:python-sdk",
+      "actions": [
+        "read"
+      ]
+    },
+    {
+      "kind": "resource_authorized",
+      "description": "Read authority for the documentation source is required.",
+      "resource": "documentation:python-sdk",
+      "actions": [
+        "read"
+      ]
+    }
+  ],
+  "max_effects": [
+    "external.read"
+  ],
+  "postconditions": [
+    {
+      "id": "verified-source-content",
+      "criterion": "Return repository identity, description and default branch from the approved metadata source and the exact documentation index from the approved documentation source. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.",
+      "method": "semantic_review",
+      "evidence_required": [
+        "Receiver-generated successful source-operation receipts and digest-verified source artifacts."
+      ]
+    }
+  ],
+  "failures": [
+    {
+      "code": "source_unavailable",
+      "meaning": "A required approved source is unavailable, denied, or outside the allocation.",
+      "retry": "readmission",
+      "effect_disposition": "known"
+    }
+  ],
+  "effect_safety": {
+    "external_write_commit_evidence_required": false,
+    "unknown_commit_possible": false,
+    "retry_rule": "readmit_if_no_uncertain_effect"
+  }
+}

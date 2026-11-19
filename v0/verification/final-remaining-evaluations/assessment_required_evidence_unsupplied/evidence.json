@@ -1,0 +1,181 @@
+{
+  "case": "assessment_required_evidence_unsupplied",
+  "runtime_image": "sha256:4f09ec491ffad8efe8311b968e627308888f42912319da2744f16101d438f16e",
+  "passed": true,
+  "expected_status": "completed",
+  "assessment_expectation": {
+    "id": "required_evidence_unsupplied",
+    "objective": "Decide whether a production rollout is safe using its actual rollout report. The report is not included, its location is unknown, and its contents must not be assumed.",
+    "context": "No rollout report or observations are present in the supplied input.",
+    "requirement_id": "requirement-rollout-evidence",
+    "requirement": "Ground the safety decision in the actual rollout report.",
+    "acceptance": "Cite real report evidence; do not invent facts about an unsupplied report.",
+    "expected_local_assessment": [
+      "unknown",
+      "insufficient"
+    ],
+    "expected_task_status": [
+      "rejected"
+    ]
+  },
+  "actual_model_assessments": [
+    {
+      "assessment_summary": "The request contract directly matches the requested bounded attempt, but the mandatory requirement cannot be fulfilled with the approved local bindings and supplied resources because no rollout report, report location, or report observations are provided. Local access is limited to workspace:self read/create/update; the actual report is not identified there, and peer offers do not grant additional permission. A compliant execution would likely need to report unable rather than decide safety without real report evidence.",
+      "contract_digest": "sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23",
+      "local_assessment": "insufficient",
+      "requirement_ids": [
+        "requirement-rollout-evidence"
+      ],
+      "step_id": "step-1-attempt-rollout-safety-decision"
+    }
+  ],
+  "task": {
+    "operation_id": "operation-0a3671117638405e800048dcee21a6e1",
+    "problem": {
+      "code": "unsupported_contract",
+      "detail": "The operation could not satisfy the service contract.",
+      "effect_disposition": "none",
+      "instance": "urn:lasa:request",
+      "retry": "never",
+      "status": 422,
+      "title": "Unsupported contract",
+      "type": "https://errors.lasa.example/unsupported-contract"
+    },
+    "received_at": "2026-11-18T11:21:10.129Z",
+    "request_digest": "sha256:a12d0ab29c1ea15e2b40988338fa901aa2b2844af19ee05c1a002a91057af527",
+    "revision": 2,
+    "selection": {
+      "catalog_view": "view-8ae478c78dccc4a105f19a77eb25a9a3",
+      "contract": {
+        "digest": "sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23",
+        "id": "https://contracts.example.net/capabilities/task.attempt",
+        "version": "1.0.0"
+      },
+      "offer_id": "offer-c4806a9bd86e8c75484041fe650e4481",
+      "offer_revision": "offer-a3d85d5069a29bd03941c144a79d08c1"
+    },
+    "service_id": "https://identity.example.net/services/layer1",
+    "session_id": "session-802ba72bca5744e896ec32e1add7ea70",
+    "status": "rejected",
+    "task_id": "task-ac453652b5a74e34a649d4475e8ef5a6",
+    "updated_at": "2026-11-18T11:21:24.568Z"
+  },
+  "layer1_events": [
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-5fc7007c52e549648a103ee918e309a9",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 17393,
+        "input_digest": "sha256:e123c48af252a6cb830a705627c01111995c7ac3d24dabfa9a5ee735122f55ad",
+        "operation_id": "model-086ab53e12744cf2844fb3feb3cecfdf",
+        "output_bytes": 0,
+        "output_digest": null,
+        "payload_truncated": false,
+        "phase": "started",
+        "purpose": "planning",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 22409,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 60000
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        }
+      },
+      "redacted": true,
+      "sequence": 1,
+      "service_id": "https://identity.example.net/services/layer1",
+      "task_id": "task-ac453652b5a74e34a649d4475e8ef5a6",
+      "timestamp": "2026-11-18T11:21:10.329Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-c5a612e5027b478495563dc917b20fdc",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 57,
+        "input_digest": "sha256:6eac2d2cca148aa7cc01d343b76224bd110c6f8816c80924dcfec2c5742f30ff",
+        "operation_id": "model-086ab53e12744cf2844fb3feb3cecfdf",
+        "output_bytes": 1328,
+        "output_digest": "sha256:53206ad7b5a77abd2ba8a7073b51c90442109a42d8899778224dff4f026a4011",
+        "payload_truncated": false,
+        "phase": "finished",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 4637,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 14187
+        }
+      },
+      "redacted": true,
+      "sequence": 2,
+      "service_id": "https://identity.example.net/services/layer1",
+      "task_id": "task-ac453652b5a74e34a649d4475e8ef5a6",
+      "timestamp": "2026-11-18T11:21:24.521Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-7fc7924889394f0da316607d200c043f",
+      "kind": "routing",
+      "payload": {
+        "assessment_summary": "The request contract directly matches the requested bounded attempt, but the mandatory requirement cannot be fulfilled with the approved local bindings and supplied resources because no rollout report, report location, or report observations are provided. Local access is limited to workspace:self read/create/update; the actual report is not identified there, and peer offers do not grant additional permission. A compliant execution would likely need to report unable rather than decide safety without real report evidence.",
+        "authorization_decision_id": "authority-023885e187787029baa61d953519a098",
+        "catalog_revision": "catalog-6ecb3e43171b37b90dac3aeed71463ef",
+        "contract": {
+          "digest": "sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23",
+          "id": "https://contracts.example.net/capabilities/task.attempt",
+          "version": "1.0.0"
+        },
+        "decision_reason": "Verified local=insufficient, peer=not_claimed; selected none.",
+        "local_assessment": "insufficient",
+        "offer_revision": null,
+        "peer_assessment": "not_claimed",
+        "policy": {
+          "preferred_executor": "local",
+          "unclaimed_peer_fallback": "reject"
+        },
+        "requirement_ids": [
+          "requirement-rollout-evidence"
+        ],
+        "selected_executor": "none",
+        "step_id": "step-1-attempt-rollout-safety-decision"
+      },
+      "redacted": true,
+      "sequence": 3,
+      "service_id": "https://identity.example.net/services/layer1",
+      "task_id": "task-ac453652b5a74e34a649d4475e8ef5a6",
+      "timestamp": "2026-11-18T11:21:24.561Z"
+    }
+  ],
+  "layer2": [],
+  "execution": "actual Codex App Server, actual gpt-5.5 API inference, real isolated HTTPS sockets; no planner/verifier/model mocks"
+}

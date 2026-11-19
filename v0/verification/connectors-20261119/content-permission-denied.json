@@ -1,0 +1,22 @@
+{
+  "case": "content-permission-denied",
+  "passed": true,
+  "http_status": 403,
+  "problem": {
+    "type": "https://errors.lasa.example/disclosure-denied",
+    "title": "Disclosure denied",
+    "status": 403,
+    "detail": "The operation could not satisfy the service contract.",
+    "instance": "urn:lasa:request",
+    "code": "disclosure_denied",
+    "retry": "never",
+    "effect_disposition": "none"
+  },
+  "session": {
+    "session_id": "session-b30e9f9378104c12b6c4bc22abf53e40",
+    "service_id": "https://localhost:8443/lasa",
+    "created_at": "2026-11-19T02:21:49.872Z",
+    "retention_until": "2026-11-26T02:21:49.872Z",
+    "active_task_id": null
+  }
+}

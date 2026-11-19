@@ -1,0 +1,1431 @@
+{
+  "openapi": "3.2.1",
+  "info": {
+    "title": "LASA proposed task and delegation API",
+    "version": "1.1.0",
+    "description": "Design only. LASA 1.0 transport; normative behavioral requirements are in this design package."
+  },
+  "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
+  "servers": [
+    {
+      "url": "https://layer2.example.net/lasa/v1"
+    }
+  ],
+  "security": [
+    {
+      "workloadBearer": []
+    }
+  ],
+  "paths": {
+    "/descriptor": {
+      "get": {
+        "operationId": "getDescriptor",
+        "summary": "Read authenticated service descriptor",
+        "parameters": [
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "description": "Return 304 when the current authority-scoped representation is unchanged."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Read authenticated service descriptor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "contracts.schema.json#/$defs/ServiceDescriptor"
+                }
+              }
+            },
+            "headers": {
+              "ETag": {
+                "description": "Strong representation tag; task mutations use If-Match.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Private, policy-scoped discovery cache directives; task data is no-store.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Typed failure. Retry advice cannot authorize replay of uncertain effects.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "contracts.schema.json#/$defs/Problem"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified in the same authenticated authority context.",
+            "headers": {
+              "ETag": {
+                "description": "Strong representation tag; task mutations use If-Match.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Private, policy-scoped discovery cache directives; task data is no-store.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/capabilities": {
+      "get": {
+        "operationId": "listOffers",
+        "summary": "Read one consistent caller-visible catalog page",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            },
+            "description": ""
+          },
+          {
+            "name": "contract_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            },
+            "description": "Exact contract filter, paired with contract_version."
+          },
+          {
+            "name": "contract_version",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+            },
+            "description": "Exact version filter, paired with contract_id."
+          },
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "description": "Return 304 when the current authority-scoped representation is unchanged."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Read one consistent caller-visible catalog page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "contracts.schema.json#/$defs/OfferCatalog"
+                }
+              }
+            },
+            "headers": {
+              "ETag": {
+                "description": "Strong representation tag; task mutations use If-Match.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Private, policy-scoped discovery cache directives; task data is no-store.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Typed failure. Retry advice cannot authorize replay of uncertain effects.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "contracts.schema.json#/$defs/Problem"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified in the same authenticated authority context.",
+            "headers": {
+              "ETag": {
+                "description": "Strong representation tag; task mutations use If-Match.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Private, policy-scoped discovery cache directives; task data is no-store.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/capabilities/{offer_id}": {
+      "get": {
+        "operationId": "getOffer",
+        "summary": "Read a caller-visible offer",
+        "parameters": [
+          {
+            "name": "offer_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
+            },
+            "description": ""
+          },
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "description": "Return 304 when the current authority-scoped representation is unchanged."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Read a caller-visible offer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "contracts.schema.json#/$defs/CapabilityOffer"
+                }
+              }
+            },
+            "headers": {
+              "ETag": {
+                "description": "Strong representation tag; task mutations use If-Match.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Private, policy-scoped discovery cache directives; task data is no-store.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Typed failure. Retry advice cannot authorize replay of uncertain effects.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "contracts.schema.json#/$defs/Problem"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified in the same authenticated authority context.",
+            "headers": {
+              "ETag": {
+                "description": "Strong representation tag; task mutations use If-Match.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Private, policy-scoped discovery cache directives; task data is no-store.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/capabilities/{offer_id}/availability": {
+      "get": {
+        "operationId": "getAvailability",
+        "summary": "Read short-lived capacity observation",
+        "parameters": [
+          {
+            "name": "offer_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
+            },
+            "description": ""
+          },
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "description": "Return 304 when the current authority-scoped representation is unchanged."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Read short-lived capacity observation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "contracts.schema.json#/$defs/Availability"
+                }
+              }
+            },
+            "headers": {
+              "ETag": {
+                "description": "Strong representation tag; task mutations use If-Match.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Private, policy-scoped discovery cache directives; task data is no-store.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Typed failure. Retry advice cannot authorize replay of uncertain effects.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "contracts.schema.json#/$defs/Problem"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified in the same authenticated authority context.",
+            "headers": {
+              "ETag": {
+                "description": "Strong representation tag; task mutations use If-Match.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Private, policy-scoped discovery cache directives; task data is no-store.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/contracts/{digest}": {
+      "get": {
+        "operationId": "getContract",
+        "summary": "Read immutable definition by canonical digest",
+        "parameters": [
+          {
+            "name": "digest",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^sha256:[a-f0-9]{64}$"
+            },
+            "description": ""
+          },
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "description": "Return 304 when the current authority-scoped representation is unchanged."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Read immutable definition by canonical digest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "contracts.schema.json#/$defs/CapabilityDefinition"
+                }
+              }
+            },
+            "headers": {
+              "ETag": {
+                "description": "Strong representation tag; task mutations use If-Match.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Private, policy-scoped discovery cache directives; task data is no-store.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Typed failure. Retry advice cannot authorize replay of uncertain effects.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "contracts.schema.json#/$defs/Problem"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified in the same authenticated authority context.",
+            "headers": {
+              "ETag": {
+                "description": "Strong representation tag; task mutations use If-Match.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Private, policy-scoped discovery cache directives; task data is no-store.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/openapi.json": {
+      "get": {
+        "operationId": "getOpenAPI",
+        "summary": "Read this protocol OpenAPI document",
+        "parameters": [
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "description": "Return 304 when the current authority-scoped representation is unchanged."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Read this protocol OpenAPI document",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "OpenAPI 3.2.1 document; validated against the pinned OAS meta-schema."
+                }
+              }
+            },
+            "headers": {
+              "ETag": {
+                "description": "Strong representation tag; task mutations use If-Match.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Private, policy-scoped discovery cache directives; task data is no-store.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Typed failure. Retry advice cannot authorize replay of uncertain effects.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "contracts.schema.json#/$defs/Problem"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified in the same authenticated authority context.",
+            "headers": {
+              "ETag": {
+                "description": "Strong representation tag; task mutations use If-Match.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Private, policy-scoped discovery cache directives; task data is no-store.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sessions": {
+      "post": {
+        "operationId": "createSession",
+        "summary": "Create a service-owned workspace session",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "description": "Stable key for this principal, method, and concrete route."
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Create a service-owned workspace session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "contracts.schema.json#/$defs/Session"
+                }
+              }
+            },
+            "headers": {
+              "ETag": {
+                "description": "Strong representation tag; task mutations use If-Match.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Private, policy-scoped discovery cache directives; task data is no-store.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Location": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Created resource URL."
+              }
+            }
+          },
+          "default": {
+            "description": "Typed failure. Retry advice cannot authorize replay of uncertain effects.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "contracts.schema.json#/$defs/Problem"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "contracts.schema.json#/$defs/CreateSession"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sessions/{session_id}": {
+      "get": {
+        "operationId": "getSession",
+        "summary": "Read an authorized session without exposing its workspace path",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
+            },
+            "description": ""
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Read an authorized session without exposing its workspace path",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "contracts.schema.json#/$defs/Session"
+                }
+              }
+            },
+            "headers": {
+              "ETag": {
+                "description": "Strong representation tag; task mutations use If-Match.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Private, policy-scoped discovery cache directives; task data is no-store.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Typed failure. Retry advice cannot authorize replay of uncertain effects.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "contracts.schema.json#/$defs/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sessions/{session_id}/tasks": {
+      "post": {
+        "operationId": "submitTask",
+        "summary": "Durably receive work for evaluation; acceptance occurs later",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
+            },
+            "description": ""
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "description": "Stable key for this principal, method, and concrete route."
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Durably receive work for evaluation; acceptance occurs later",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "contracts.schema.json#/$defs/Task"
+                }
+              }
+            },
+            "headers": {
+              "ETag": {
+                "description": "Strong representation tag; task mutations use If-Match.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Private, policy-scoped discovery cache directives; task data is no-store.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Location": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Created resource URL."
+              }
+            }
+          },
+          "default": {
+            "description": "Typed failure. Retry advice cannot authorize replay of uncertain effects.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "contracts.schema.json#/$defs/Problem"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "contracts.schema.json#/$defs/TaskRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tasks/{task_id}": {
+      "get": {
+        "operationId": "getTask",
+        "summary": "Read durable task state and released outcome",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
+            },
+            "description": ""
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Read durable task state and released outcome",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "contracts.schema.json#/$defs/Task"
+                }
+              }
+            },
+            "headers": {
+              "ETag": {
+                "description": "Strong representation tag; task mutations use If-Match.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Private, policy-scoped discovery cache directives; task data is no-store.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Typed failure. Retry advice cannot authorize replay of uncertain effects.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "contracts.schema.json#/$defs/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tasks/{task_id}/inputs": {
+      "post": {
+        "operationId": "answerQuestion",
+        "summary": "Answer the current clarification and resume bounded work",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
+            },
+            "description": ""
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "description": "Stable key for this principal, method, and concrete route."
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "description": "Current task strong ETag; 428 missing, 412 stale."
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Answer the current clarification and resume bounded work",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "contracts.schema.json#/$defs/Task"
+                }
+              }
+            },
+            "headers": {
+              "ETag": {
+                "description": "Strong representation tag; task mutations use If-Match.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Private, policy-scoped discovery cache directives; task data is no-store.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Typed failure. Retry advice cannot authorize replay of uncertain effects.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "contracts.schema.json#/$defs/Problem"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "contracts.schema.json#/$defs/TaskInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tasks/{task_id}/cancel": {
+      "post": {
+        "operationId": "cancelTask",
+        "summary": "Request cancellation without promising rollback",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
+            },
+            "description": ""
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "description": "Stable key for this principal, method, and concrete route."
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "description": "Current task strong ETag; 428 missing, 412 stale."
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Request cancellation without promising rollback",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "contracts.schema.json#/$defs/Task"
+                }
+              }
+            },
+            "headers": {
+              "ETag": {
+                "description": "Strong representation tag; task mutations use If-Match.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Private, policy-scoped discovery cache directives; task data is no-store.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Typed failure. Retry advice cannot authorize replay of uncertain effects.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "contracts.schema.json#/$defs/Problem"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "contracts.schema.json#/$defs/CancelTask"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tasks/{task_id}/events": {
+      "get": {
+        "operationId": "getEvents",
+        "summary": "Read authorized redacted task events",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
+            },
+            "description": ""
+          },
+          {
+            "name": "after_sequence",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "description": ""
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            },
+            "description": ""
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Read authorized redacted task events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "contracts.schema.json#/$defs/EventPage"
+                }
+              }
+            },
+            "headers": {
+              "ETag": {
+                "description": "Strong representation tag; task mutations use If-Match.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Private, policy-scoped discovery cache directives; task data is no-store.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Typed failure. Retry advice cannot authorize replay of uncertain effects.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "contracts.schema.json#/$defs/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tasks/{task_id}/artifacts/{artifact_id}": {
+      "get": {
+        "operationId": "getArtifact",
+        "summary": "Read authorized released artifact bytes; verify digest from manifest",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
+            },
+            "description": ""
+          },
+          {
+            "name": "artifact_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
+            },
+            "description": ""
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Released artifact bytes with no-store caching.",
+            "headers": {
+              "Content-Digest": {
+                "description": "RFC 9530 sha-256 digest of representation bytes.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Private, policy-scoped discovery cache directives; task data is no-store.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "contentMediaType": "application/octet-stream"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Typed failure. Retry advice cannot authorize replay of uncertain effects.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "contracts.schema.json#/$defs/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/.well-known/api-catalog": {
+      "get": {
+        "operationId": "getAPICatalog",
+        "summary": "Optional origin bootstrap; served separately from the protocol base URL",
+        "servers": [
+          {
+            "url": "https://layer2.example.net"
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "RFC 9727 API catalog",
+            "content": {
+              "application/linkset+json": {
+                "schema": {
+                  "$ref": "contracts.schema.json#/$defs/BootstrapCatalog"
+                }
+              }
+            }
+          }
+        }
+      },
+      "head": {
+        "operationId": "headAPICatalog",
+        "summary": "Optional RFC 9727 origin bootstrap metadata",
+        "servers": [
+          {
+            "url": "https://layer2.example.net"
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Catalog Link header without a response body",
+            "headers": {
+              "Link": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "api-catalog relation points to the canonical catalog URI"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/contracts.schema.json": {
+      "get": {
+        "operationId": "getWireSchema",
+        "summary": "Read the immutable negotiated wire schema bundle",
+        "responses": {
+          "200": {
+            "description": "JSON Schema 2020-12 bundle matching descriptor wire_schema_digest",
+            "content": {
+              "application/schema+json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/operations/{operation_id}": {
+      "get": {
+        "operationId": "getOperation",
+        "summary": "Reconcile original receipt without resubmitting uncertain work",
+        "parameters": [
+          {
+            "name": "operation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 128
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Caller-owned immutable operation receipt",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "contracts.schema.json#/$defs/OperationReceipt"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Typed failure. Retry advice cannot authorize replay of uncertain effects.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "contracts.schema.json#/$defs/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tasks/{task_id}/reconcile": {
+      "post": {
+        "operationId": "reconcileTask",
+        "summary": "Append bounded resolution evidence without rewriting terminal state or replaying work",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
+            },
+            "description": ""
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "contracts.schema.json#/$defs/ReconcileTask"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Original immutable task state; inspect resolution events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "contracts.schema.json#/$defs/Task"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Typed failure. Retry advice cannot authorize replay of uncertain effects.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "contracts.schema.json#/$defs/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tasks/{task_id}/delegations": {
+      "get": {
+        "operationId": "getDelegationDiagnostics",
+        "summary": "Read owner-authorized child metadata and redacted events through the parent",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
+            },
+            "description": ""
+          },
+          {
+            "name": "after_sequence",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Immediate child reports; no peer credentials are exposed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "contracts.schema.json#/$defs/DelegationReport"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Typed failure. Retry advice cannot authorize replay of uncertain effects.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "contracts.schema.json#/$defs/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "workloadBearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Receiver validates preconfigured issuer, audience, subject, expiry and algorithm. Discovery does not grant task authority."
+      }
+    },
+    "schemas": {
+      "CapabilityRef": {
+        "$ref": "contracts.schema.json#/$defs/CapabilityRef"
+      },
+      "Budget": {
+        "$ref": "contracts.schema.json#/$defs/Budget"
+      },
+      "ExecutionLimits": {
+        "$ref": "contracts.schema.json#/$defs/ExecutionLimits"
+      },
+      "ResourceRule": {
+        "$ref": "contracts.schema.json#/$defs/ResourceRule"
+      },
+      "VerificationCriterion": {
+        "$ref": "contracts.schema.json#/$defs/VerificationCriterion"
+      },
+      "Precondition": {
+        "$ref": "contracts.schema.json#/$defs/Precondition"
+      },
+      "CapabilityFailure": {
+        "$ref": "contracts.schema.json#/$defs/CapabilityFailure"
+      },
+      "CapabilityDefinition": {
+        "$ref": "contracts.schema.json#/$defs/CapabilityDefinition"
+      },
+      "CapabilityOffer": {
+        "$ref": "contracts.schema.json#/$defs/CapabilityOffer"
+      },
+      "OfferCatalog": {
+        "$ref": "contracts.schema.json#/$defs/OfferCatalog"
+      },
+      "Availability": {
+        "$ref": "contracts.schema.json#/$defs/Availability"
+      },
+      "ProtocolEndpoint": {
+        "$ref": "contracts.schema.json#/$defs/ProtocolEndpoint"
+      },
+      "ServiceDescriptor": {
+        "$ref": "contracts.schema.json#/$defs/ServiceDescriptor"
+      },
+      "BootstrapCatalog": {
+        "$ref": "contracts.schema.json#/$defs/BootstrapCatalog"
+      },
+      "OfferSelection": {
+        "$ref": "contracts.schema.json#/$defs/OfferSelection"
+      },
+      "ArtifactManifest": {
+        "$ref": "contracts.schema.json#/$defs/ArtifactManifest"
+      },
+      "DelegationEnvelope": {
+        "$ref": "contracts.schema.json#/$defs/DelegationEnvelope"
+      },
+      "TaskRequest": {
+        "$ref": "contracts.schema.json#/$defs/TaskRequest"
+      },
+      "CreateSession": {
+        "$ref": "contracts.schema.json#/$defs/CreateSession"
+      },
+      "Session": {
+        "$ref": "contracts.schema.json#/$defs/Session"
+      },
+      "Question": {
+        "$ref": "contracts.schema.json#/$defs/Question"
+      },
+      "TaskInput": {
+        "$ref": "contracts.schema.json#/$defs/TaskInput"
+      },
+      "CancelTask": {
+        "$ref": "contracts.schema.json#/$defs/CancelTask"
+      },
+      "Admission": {
+        "$ref": "contracts.schema.json#/$defs/Admission"
+      },
+      "Evidence": {
+        "$ref": "contracts.schema.json#/$defs/Evidence"
+      },
+      "TaskResult": {
+        "$ref": "contracts.schema.json#/$defs/TaskResult"
+      },
+      "Problem": {
+        "$ref": "contracts.schema.json#/$defs/Problem"
+      },
+      "Task": {
+        "$ref": "contracts.schema.json#/$defs/Task"
+      },
+      "RoutingPolicy": {
+        "$ref": "contracts.schema.json#/$defs/RoutingPolicy"
+      },
+      "RoutingEvidence": {
+        "$ref": "contracts.schema.json#/$defs/RoutingEvidence"
+      },
+      "CallEvidence": {
+        "$ref": "contracts.schema.json#/$defs/CallEvidence"
+      },
+      "VerificationEvidence": {
+        "$ref": "contracts.schema.json#/$defs/VerificationEvidence"
+      },
+      "ResolutionEvidence": {
+        "$ref": "contracts.schema.json#/$defs/ResolutionEvidence"
+      },
+      "DiagnosticEvent": {
+        "$ref": "contracts.schema.json#/$defs/DiagnosticEvent"
+      },
+      "EventPage": {
+        "$ref": "contracts.schema.json#/$defs/EventPage"
+      },
+      "ReconcileTask": {
+        "$ref": "contracts.schema.json#/$defs/ReconcileTask"
+      },
+      "OperationReceipt": {
+        "$ref": "contracts.schema.json#/$defs/OperationReceipt"
+      },
+      "DelegationReport": {
+        "$ref": "contracts.schema.json#/$defs/DelegationReport"
+      },
+      "AuthorityCeiling": {
+        "$ref": "contracts.schema.json#/$defs/AuthorityCeiling"
+      }
+    }
+  }
+}

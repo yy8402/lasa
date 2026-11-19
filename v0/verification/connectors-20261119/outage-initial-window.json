@@ -1,0 +1,7 @@
+{
+  "outcome": "observation timeout; owned entry automatically restored",
+  "observation_window_seconds": 45,
+  "configured_schema_refresh_seconds": 60,
+  "diagnosis": "Idle MCP disconnection is observed by the bounded discovery refresh; the first observation window was shorter than that interval. A subsequent read-only process check found the original entry restored and one filesystem server process.",
+  "next_window_seconds": 100
+}

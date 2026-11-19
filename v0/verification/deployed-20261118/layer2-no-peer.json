@@ -1,0 +1,392 @@
+{
+  "case": "layer2-no-peer",
+  "passed": true,
+  "execution": "managed deployed services, real HTTPS, actual Codex App Server and gpt-5.5 inference",
+  "elapsed_seconds": 23.74,
+  "descriptor": {
+    "descriptor_version": "1.0",
+    "service_id": "https://192.168.0.188/lasa",
+    "deployment_revision": "target-20261118-80dc90e5-layer2",
+    "revision": "descriptor-a0ef8922f1c59c7a64e4073ccfc56c1c",
+    "valid_until": "2026-11-18T12:40:12.555Z",
+    "protocols": [
+      {
+        "version": "lasa/1.0",
+        "base_url": "https://192.168.0.188/lasa/v1",
+        "openapi_url": "https://192.168.0.188/lasa/v1/openapi.json",
+        "wire_schema_digest": "sha256:9d64d7fc4df6e4f0d7504d1c2a3d6e1696816dccbf10b7edfe5df1dcc6135999",
+        "features": [
+          "metadata-diagnostics",
+          "content-diagnostics",
+          "clarification",
+          "artifacts",
+          "bounded-delegation"
+        ],
+        "required_features": [
+          "metadata-diagnostics",
+          "bounded-delegation"
+        ]
+      }
+    ],
+    "authentication": {
+      "issuer": "https://192.168.0.188/lasa/development-issuer",
+      "audience": "https://192.168.0.188/lasa"
+    },
+    "catalog_url": "https://192.168.0.188/lasa/v1/capabilities",
+    "contract_url_template": "https://192.168.0.188/lasa/v1/contracts/{digest}",
+    "idempotency_retention_seconds": 604800
+  },
+  "catalog_revision": "catalog-ba29aa1cd13b676a957d2267b33566df",
+  "session": {
+    "session_id": "session-e75f54a26cf54f1b87a1b3a3bc438c4e",
+    "service_id": "https://192.168.0.188/lasa",
+    "created_at": "2026-11-18T12:39:43.074Z",
+    "retention_until": "2026-11-25T12:39:43.074Z",
+    "active_task_id": null
+  },
+  "task": {
+    "admission": {
+      "accepted_at": "2026-11-18T12:39:43.274Z",
+      "authorization_decision_id": "authority-722895bcacd04e5174d7854bc8460c3c",
+      "contract": {
+        "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce",
+        "id": "https://contracts.example.net/capabilities/design.review",
+        "version": "1.0.0"
+      },
+      "effective_limits": {
+        "budget": {
+          "artifact_bytes": 128000,
+          "delegations": 2,
+          "input_bytes": 128000,
+          "model_calls": 16,
+          "model_tokens": 500000,
+          "output_bytes": 32000,
+          "tool_calls": 12,
+          "wall_time_ms": 300000
+        },
+        "deadline": "2026-11-18T12:43:40.834Z",
+        "max_hops": 2
+      },
+      "plan_digest": "sha256:774c087b618d2dd0e4baa72b9322666b258395f728c3481509864be92ff6784f",
+      "request_digest": "sha256:d3d59ec1c60c6b0c07f929e649fc0ac2223e4deebaa5428e5b74f55bdcebeab0"
+    },
+    "operation_id": "deployment-task-1a01ac00bc89437e8059568f86bcb051",
+    "received_at": "2026-11-18T12:39:43.101Z",
+    "request_digest": "sha256:d3d59ec1c60c6b0c07f929e649fc0ac2223e4deebaa5428e5b74f55bdcebeab0",
+    "result": {
+      "artifacts": [],
+      "contract": {
+        "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce",
+        "id": "https://contracts.example.net/capabilities/design.review",
+        "version": "1.0.0"
+      },
+      "effect_disposition": "none",
+      "evidence": [
+        {
+          "artifact_ids": [],
+          "criterion_id": "criterion-coverage",
+          "disposition": "passed",
+          "summary": "Every supplied criterion has a coverage entry, grounded in the supplied design text."
+        }
+      ],
+      "output": {
+        "coverage": [
+          {
+            "criterion_id": "criterion-accountability",
+            "disposition": "reviewed",
+            "evidence": "The supplied design explicitly states that the parent \"checks returned evidence against the original criteria\" and \"retains responsibility for final completion.\" This directly supports that the parent remains accountable for completion rather than delegating final responsibility to the child."
+          }
+        ],
+        "findings": [
+          {
+            "criterion_id": "criterion-accountability",
+            "observation": "The design says the parent accepts the caller objective, sends bounded child work, checks returned evidence against original criteria, and retains responsibility for final completion. The child operates only within its own workspace.",
+            "recommendation": "Keep this accountability boundary explicit in implementation docs and APIs: child results should be treated as evidence for parent review, not as final completion authority.",
+            "severity": "info"
+          }
+        ]
+      },
+      "request_digest": "sha256:d3d59ec1c60c6b0c07f929e649fc0ac2223e4deebaa5428e5b74f55bdcebeab0",
+      "usage": {
+        "artifact_bytes": 0,
+        "delegations": 0,
+        "input_bytes": 430,
+        "model_calls": 2,
+        "model_tokens": 9450,
+        "output_bytes": 912,
+        "tool_calls": 0,
+        "wall_time_ms": 20845
+      }
+    },
+    "revision": 4,
+    "selection": {
+      "catalog_view": "view-622b41fed77482b0b2897aa2fd39e545",
+      "contract": {
+        "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce",
+        "id": "https://contracts.example.net/capabilities/design.review",
+        "version": "1.0.0"
+      },
+      "offer_id": "offer-4b3b2f5d6e6e97b764d3ea9e44f31f1f",
+      "offer_revision": "offer-1b301db4f7e28ee0fe31134bedc511b2"
+    },
+    "service_id": "https://192.168.0.188/lasa",
+    "session_id": "session-e75f54a26cf54f1b87a1b3a3bc438c4e",
+    "status": "completed",
+    "task_id": "task-9dd6cee14460406f993adb70ccf7b01f",
+    "updated_at": "2026-11-18T12:40:06.534Z"
+  },
+  "events": [
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-80eb2f0235d34fe486c4973b59e1d0d4",
+      "kind": "routing",
+      "payload": {
+        "assessment_summary": "No peer is configured; the approved local binding is the only execution path.",
+        "authorization_decision_id": "authority-722895bcacd04e5174d7854bc8460c3c",
+        "catalog_revision": null,
+        "contract": {
+          "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce",
+          "id": "https://contracts.example.net/capabilities/design.review",
+          "version": "1.0.0"
+        },
+        "decision_reason": "No peer is configured; routing settings are ignored.",
+        "local_assessment": "sufficient",
+        "offer_revision": null,
+        "peer_assessment": "not_configured",
+        "policy": {
+          "preferred_executor": "local",
+          "unclaimed_peer_fallback": "reject"
+        },
+        "requirement_ids": [
+          "criterion-coverage"
+        ],
+        "selected_executor": "local",
+        "step_id": "step-local"
+      },
+      "redacted": true,
+      "sequence": 1,
+      "service_id": "https://192.168.0.188/lasa",
+      "task_id": "task-9dd6cee14460406f993adb70ccf7b01f",
+      "timestamp": "2026-11-18T12:39:43.193Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-b2c8fd94e2a641629900e25f85bde2fd",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 4917,
+        "input_digest": "sha256:e58db7bd69b9dbefd05f7d3c7ca9f1f563e1398a54541664a26b88cfd924dc32",
+        "operation_id": "model-d8ed4cf78a094367a9f95aa4b3840352",
+        "output_bytes": 0,
+        "output_digest": null,
+        "payload_truncated": false,
+        "phase": "started",
+        "purpose": "execution",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 44167,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 60000
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        }
+      },
+      "redacted": true,
+      "sequence": 2,
+      "service_id": "https://192.168.0.188/lasa",
+      "task_id": "task-9dd6cee14460406f993adb70ccf7b01f",
+      "timestamp": "2026-11-18T12:39:44.977Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-238eb879fbbd43d99c30a577ccab5145",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 57,
+        "input_digest": "sha256:a71c22ca94d968e77f1493d38139349d78cfcfa8a42de0ec87fbe424f660b6e0",
+        "operation_id": "model-d8ed4cf78a094367a9f95aa4b3840352",
+        "output_bytes": 1638,
+        "output_digest": "sha256:ca25b6dbfc68fcfad323902c91c243c4247938d21628b94fc36c4dc208f12800",
+        "payload_truncated": false,
+        "phase": "finished",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 7978,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 14270
+        }
+      },
+      "redacted": true,
+      "sequence": 3,
+      "service_id": "https://192.168.0.188/lasa",
+      "task_id": "task-9dd6cee14460406f993adb70ccf7b01f",
+      "timestamp": "2026-11-18T12:39:59.269Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-21d1ff0da4914f1ebb9aa7eb211349fb",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 5691,
+        "input_digest": "sha256:6a71db549d8e2c4152e501bc9cb7552d9fda1b9bfe8e093217ed849d2b9f7edf",
+        "operation_id": "model-bd06b60cbc0c4a599ec52ac76e66eb8f",
+        "output_bytes": 0,
+        "output_digest": null,
+        "payload_truncated": false,
+        "phase": "started",
+        "purpose": "verification",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 10221,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 60000
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        }
+      },
+      "redacted": true,
+      "sequence": 4,
+      "service_id": "https://192.168.0.188/lasa",
+      "task_id": "task-9dd6cee14460406f993adb70ccf7b01f",
+      "timestamp": "2026-11-18T12:39:59.839Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-d139e6fb9e41476e994246e6fddbf9df",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 57,
+        "input_digest": "sha256:f23e7c0088d6e73a395f448a5c2533dd3333bef4b950b05839b00c8b0e2f2942",
+        "operation_id": "model-bd06b60cbc0c4a599ec52ac76e66eb8f",
+        "output_bytes": 503,
+        "output_digest": "sha256:825449ed167a537d7822efd613fcc614e33599a6617ad4f281da4f168ff52ded",
+        "payload_truncated": false,
+        "phase": "finished",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 1472,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 6575
+        }
+      },
+      "redacted": true,
+      "sequence": 5,
+      "service_id": "https://192.168.0.188/lasa",
+      "task_id": "task-9dd6cee14460406f993adb70ccf7b01f",
+      "timestamp": "2026-11-18T12:40:06.438Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-58056b52d8294256b9fde1211df88b4e",
+      "kind": "verification",
+      "payload": {
+        "checks": [
+          {
+            "artifact_ids": [],
+            "criterion_id": "criterion-coverage",
+            "disposition": "passed",
+            "summary": "The input contains one supplied criterion (criterion-accountability), and the candidate output includes a coverage entry for that criterion. The evidence and finding are directly grounded in the supplied design text, which explicitly says the parent checks returned evidence against original criteria and retains responsibility for final completion. The required postcondition that every supplied criterion has coverage and findings cite supplied design evidence is satisfied."
+          }
+        ],
+        "contract": {
+          "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce",
+          "id": "https://contracts.example.net/capabilities/design.review",
+          "version": "1.0.0"
+        },
+        "release": "accepted",
+        "request_digest": "sha256:d3d59ec1c60c6b0c07f929e649fc0ac2223e4deebaa5428e5b74f55bdcebeab0",
+        "step_id": "semantic-verification"
+      },
+      "redacted": true,
+      "sequence": 6,
+      "service_id": "https://192.168.0.188/lasa",
+      "task_id": "task-9dd6cee14460406f993adb70ccf7b01f",
+      "timestamp": "2026-11-18T12:40:06.476Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-3c39e5427e3440b096a779c836b15894",
+      "kind": "verification",
+      "payload": {
+        "checks": [
+          {
+            "artifact_ids": [],
+            "criterion_id": "criterion-coverage",
+            "disposition": "passed",
+            "summary": "Every supplied criterion has a coverage entry, grounded in the supplied design text."
+          }
+        ],
+        "contract": {
+          "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce",
+          "id": "https://contracts.example.net/capabilities/design.review",
+          "version": "1.0.0"
+        },
+        "release": "accepted",
+        "request_digest": "sha256:d3d59ec1c60c6b0c07f929e649fc0ac2223e4deebaa5428e5b74f55bdcebeab0",
+        "step_id": "final-release"
+      },
+      "redacted": true,
+      "sequence": 7,
+      "service_id": "https://192.168.0.188/lasa",
+      "task_id": "task-9dd6cee14460406f993adb70ccf7b01f",
+      "timestamp": "2026-11-18T12:40:06.539Z"
+    }
+  ],
+  "children_via_parent": []
+}

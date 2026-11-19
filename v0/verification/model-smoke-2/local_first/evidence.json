@@ -1,0 +1,178 @@
+{
+  "case": "local_first",
+  "passed": false,
+  "expected_status": "completed",
+  "task": {
+    "admission": {
+      "accepted_at": "2026-11-18T10:29:41.553Z",
+      "authorization_decision_id": "authority-6d2c42b7555903826bb4b06a0f498521",
+      "contract": {
+        "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce",
+        "id": "https://contracts.example.net/capabilities/design.review",
+        "version": "1.0.0"
+      },
+      "effective_limits": {
+        "budget": {
+          "artifact_bytes": 128000,
+          "delegations": 2,
+          "input_bytes": 128000,
+          "model_calls": 16,
+          "model_tokens": 500000,
+          "output_bytes": 32000,
+          "tool_calls": 8,
+          "wall_time_ms": 300000
+        },
+        "deadline": "2026-11-18T10:33:31.412210+00:00",
+        "max_hops": 2
+      },
+      "plan_digest": "sha256:edf541cec451b038aa725e47f4469328ccd2f457bb60827459bdb09318521148",
+      "request_digest": "sha256:776788c69603359c6770804e2bc89b1354852192aaa02b1baa5ed3777a255592"
+    },
+    "operation_id": "operation-1c77df35edad4d77850ec42fdf0c6a9f",
+    "problem": {
+      "code": "internal_error",
+      "detail": "The operation could not satisfy the service contract.",
+      "effect_disposition": "known",
+      "instance": "urn:lasa:request",
+      "retry": "never",
+      "status": 500,
+      "title": "Internal error",
+      "type": "https://errors.lasa.example/internal-error"
+    },
+    "received_at": "2026-11-18T10:29:31.441Z",
+    "request_digest": "sha256:776788c69603359c6770804e2bc89b1354852192aaa02b1baa5ed3777a255592",
+    "revision": 4,
+    "selection": {
+      "catalog_view": "view-b1891dfbbaf0f80dd1ce90c0cd87ed58",
+      "contract": {
+        "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce",
+        "id": "https://contracts.example.net/capabilities/design.review",
+        "version": "1.0.0"
+      },
+      "offer_id": "offer-64e5fa51fd40cc76f274b05869ea6194",
+      "offer_revision": "offer-b2f10f39d13f7ef14946dd25a75d8e38"
+    },
+    "service_id": "https://identity.example.net/services/layer1",
+    "session_id": "session-4f6f7b6c987d40cda9b6beb4cb3a1f75",
+    "status": "failed",
+    "task_id": "task-6ca92781eab14fdab90e95627b654b1b",
+    "updated_at": "2026-11-18T10:29:42.679Z"
+  },
+  "layer1_events": [
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-de4508b1e0604053a90220c96a28d8fe",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 16708,
+        "input_digest": "sha256:b008503e9c8558a6aa7b29fc039f32defff8b470036e31b0d623636627c0af91",
+        "operation_id": "model-312885b5ff4d4e70b2821667c28a6c63",
+        "output_bytes": 0,
+        "output_digest": null,
+        "payload_truncated": false,
+        "phase": "started",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 21724,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 60000
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        }
+      },
+      "redacted": true,
+      "sequence": 1,
+      "service_id": "https://identity.example.net/services/layer1",
+      "task_id": "task-6ca92781eab14fdab90e95627b654b1b",
+      "timestamp": "2026-11-18T10:29:31.593Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-1d3b615d2ad540e59e358f7f206515b0",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 57,
+        "input_digest": "sha256:bc67ddcc20b994e9556d89988dc2318e2e83b5feb016789573d5ace5fc587544",
+        "operation_id": "model-312885b5ff4d4e70b2821667c28a6c63",
+        "output_bytes": 1026,
+        "output_digest": "sha256:10167d370e0e407727e209e0d6bafdfc30b75fc343959d0b57015b87b2e329e7",
+        "payload_truncated": false,
+        "phase": "finished",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 3937,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 9895
+        }
+      },
+      "redacted": true,
+      "sequence": 2,
+      "service_id": "https://identity.example.net/services/layer1",
+      "task_id": "task-6ca92781eab14fdab90e95627b654b1b",
+      "timestamp": "2026-11-18T10:29:41.492Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-429ef6bd7c44415f9b4d5bee435d4631",
+      "kind": "routing",
+      "payload": {
+        "assessment_summary": "The requested outcome is directly expressed by the design.review contract. Local approved binding permits workspace.read for this contract, matching its max_effects. The input supplies both design text and one explicit criterion, satisfying the contract preconditions and preserving the derived requirement ID criterion-coverage.",
+        "authorization_decision_id": "authority-6d2c42b7555903826bb4b06a0f498521",
+        "catalog_revision": "catalog-beaa20315445118c7aa4fa1dda84138b",
+        "contract": {
+          "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce",
+          "id": "https://contracts.example.net/capabilities/design.review",
+          "version": "1.0.0"
+        },
+        "decision_reason": "Both suitable; configured preference selects local",
+        "local_assessment": "sufficient",
+        "offer_revision": null,
+        "peer_assessment": "matched",
+        "policy": {
+          "preferred_executor": "local",
+          "unclaimed_peer_fallback": "reject"
+        },
+        "requirement_ids": [
+          "criterion-coverage"
+        ],
+        "selected_executor": "local",
+        "step_id": "step-1"
+      },
+      "redacted": true,
+      "sequence": 3,
+      "service_id": "https://identity.example.net/services/layer1",
+      "task_id": "task-6ca92781eab14fdab90e95627b654b1b",
+      "timestamp": "2026-11-18T10:29:41.530Z"
+    }
+  ],
+  "layer2": [],
+  "execution": "actual Codex App Server, actual gpt-5.5 API inference, real isolated HTTPS sockets; no planner/verifier/model mocks"
+}

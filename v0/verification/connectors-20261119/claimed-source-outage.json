@@ -1,0 +1,203 @@
+{
+  "case": "claimed-source-outage",
+  "passed": true,
+  "execution": "managed deployed services, real HTTPS, actual Codex App Server and gpt-5.5 inference",
+  "elapsed_seconds": 14.481,
+  "descriptor": {
+    "descriptor_version": "1.0",
+    "service_id": "https://localhost:8443/lasa",
+    "deployment_revision": "connectors-20261119-45e5f26c1b1a-steady",
+    "revision": "descriptor-a95d9fe2c314dc608f48be4998ec5d51",
+    "valid_until": "2026-11-19T02:24:06.301Z",
+    "protocols": [
+      {
+        "version": "lasa/1.1",
+        "base_url": "https://localhost:8443/lasa/v1",
+        "openapi_url": "https://localhost:8443/lasa/v1/openapi.json",
+        "wire_schema_digest": "sha256:7e7b4b8f638c579f5951f3efd4fdb29986c35c4edf899a653c11121286ce652b",
+        "features": [
+          "metadata-diagnostics",
+          "content-diagnostics",
+          "clarification",
+          "artifacts",
+          "bounded-delegation"
+        ],
+        "required_features": [
+          "metadata-diagnostics",
+          "bounded-delegation"
+        ]
+      }
+    ],
+    "authentication": {
+      "issuer": "https://localhost:8443/lasa/development-issuer",
+      "audience": "https://localhost:8443/lasa"
+    },
+    "catalog_url": "https://localhost:8443/lasa/v1/capabilities",
+    "contract_url_template": "https://localhost:8443/lasa/v1/contracts/{digest}",
+    "idempotency_retention_seconds": 604800
+  },
+  "catalog_revision": "catalog-93092ce3c691f0684d2e67a6cc46c4e3",
+  "session": {
+    "session_id": "session-e35292e235fe4778bd781bbfaa1ad1b1",
+    "service_id": "https://localhost:8443/lasa",
+    "created_at": "2026-11-19T02:23:36.583Z",
+    "retention_until": "2026-11-26T02:23:36.583Z",
+    "active_task_id": null
+  },
+  "task": {
+    "operation_id": "deployment-task-48c743c35ba0424da1523cb2d66e05c9",
+    "problem": {
+      "code": "peer_unavailable",
+      "detail": "The operation could not satisfy the service contract.",
+      "effect_disposition": "none",
+      "instance": "urn:lasa:request",
+      "retry": "never",
+      "status": 503,
+      "title": "Peer unavailable",
+      "type": "https://errors.lasa.example/peer-unavailable"
+    },
+    "received_at": "2026-11-19T02:23:36.592Z",
+    "request_digest": "sha256:09ea2f8da0ac0dfcf1e231a4d5d8fa3def5eeb3b339164bb5f8e913fc74b9875",
+    "revision": 2,
+    "selection": {
+      "catalog_view": "view-b90175aef3b2113b543a1a84dd689a92",
+      "contract": {
+        "digest": "sha256:e45b5a4209e4deb4d503ee162b4416fa48881e7c74058d231247d83b581a431d",
+        "id": "https://contracts.example.net/capabilities/documents.read",
+        "version": "1.0.0"
+      },
+      "offer_id": "offer-ea105b301d4bb7c0707f9b198b299319",
+      "offer_revision": "offer-6a94d0cc8f8a695d6c695dbc051c06f6"
+    },
+    "service_id": "https://localhost:8443/lasa",
+    "session_id": "session-e35292e235fe4778bd781bbfaa1ad1b1",
+    "status": "rejected",
+    "task_id": "task-029e128fc4e34077b2c2e78abe937c81",
+    "updated_at": "2026-11-19T02:23:50.721Z"
+  },
+  "events": [
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"input\":[{\"content\":[{\"text\":\"{\\\"contracts\\\":{\\\"sha256:2a6bd42b305d7b416da9131965228c3c9d8de2a6fa524e8d6561bc2a5b215f12\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"readmit_if_no_uncertain_effect\\\",\\\"unknown_commit_possible\\\":false},\\\"failures\\\":[{\\\"code\\\":\\\"source_unavailable\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"A required approved source is unavailable, denied, or outside the allocation.\\\",\\\"retry\\\":\\\"readmission\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/documents.search\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"collection\\\":{\\\"const\\\":\\\"python-sdk-root\\\"},\\\"limit\\\":{\\\"maximum\\\":10,\\\"minimum\\\":1,\\\"type\\\":\\\"integer\\\"},\\\"query\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"collection\\\",\\\"query\\\",\\\"limit\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"external.read\\\"],\\\"non_guarantees\\\":[\\\"Does not cover unapproved collections or assert that source-provided content is universally correct.\\\"],\\\"outcome\\\":\\\"Return the first limit matching Markdown filenames from the approved top-level repository index, sorted by filename; query matching is case-insensitive substring matching. Set truncated according to the observed matching count.\\\",\\\"output_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"matches\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"document_id\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"source_uri\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"document_id\\\",\\\"source_uri\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":10,\\\"type\\\":\\\"array\\\"},\\\"truncated\\\":{\\\"type\\\":\\\"boolean\\\"}},\\\"required\\\":[\\\"matches\\\",\\\"truncated\\\"],\\\"type\\\":\\\"object\\\"},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Return the first limit matching Markdown filenames from the approved top-level repository index, sorted by filename; query matching is case-insensitive substring matching. Set truncated according to the observed matching count.\\\",\\\"evidence_required\\\":[\\\"Receiver-generated successful source-operation receipts and digest-verified source artifacts.\\\"],\\\"id\\\":\\\"verified-source-content\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"Inputs select an approved read-only collection.\\\",\\\"kind\\\":\\\"input_schema\\\"},{\\\"actions\\\":[\\\"read\\\"],\\\"description\\\":\\\"Read authority for the approved source is required.\\\",\\\"kind\\\":\\\"resource_authorized\\\",\\\"resource\\\":\\\"repository:python-sdk\\\"}],\\\"title\\\":\\\"Search approved repository document names\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"sha256:4c305684d20521d2f72628d5606a3537338691fc5f201177eca55b3aed1f5239\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"readmit_if_no_uncertain_effect\\\",\\\"unknown_commit_possible\\\":false},\\\"failures\\\":[{\\\"code\\\":\\\"source_unavailable\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"A required approved source is unavailable, denied, or outside the allocation.\\\",\\\"retry\\\":\\\"readmission\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/repository.inspect\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"repository\\\":{\\\"const\\\":\\\"modelcontextprotocol/python-sdk\\\"}},\\\"required\\\":[\\\"repository\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"external.read\\\"],\\\"non_guarantees\\\":[\\\"Does not cover unapproved collections or assert that source-provided content is universally correct.\\\"],\\\"outcome\\\":\\\"Return repository identity, description and default branch from the approved metadata source and the exact documentation index from the approved documentation source. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"output_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"default_branch\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"description\\\":{\\\"maxLength\\\":4096,\\\"type\\\":[\\\"string\\\",\\\"null\\\"]},\\\"documentation_index\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"repository\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"sources\\\":{\\\"items\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"maxItems\\\":2,\\\"minItems\\\":2,\\\"type\\\":\\\"array\\\"}},\\\"required\\\":[\\\"repository\\\",\\\"description\\\",\\\"default_branch\\\",\\\"documentation_index\\\",\\\"sources\\\"],\\\"type\\\":\\\"object\\\"},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Return repository identity, description and default branch from the approved metadata source and the exact documentation index from the approved documentation source. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"evidence_required\\\":[\\\"Receiver-generated successful source-operation receipts and digest-verified source artifacts.\\\"],\\\"id\\\":\\\"verified-source-content\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"Inputs select an approved read-only collection.\\\",\\\"kind\\\":\\\"input_schema\\\"},{\\\"actions\\\":[\\\"read\\\"],\\\"description\\\":\\\"Read authority for the approved source is required.\\\",\\\"kind\\\":\\\"resource_authorized\\\",\\\"resource\\\":\\\"repository:python-sdk\\\"},{\\\"actions\\\":[\\\"read\\\"],\\\"description\\\":\\\"Read authority for the documentation source is required.\\\",\\\"kind\\\":\\\"resource_authorized\\\",\\\"resource\\\":\\\"documentation:python-sdk\\\"}],\\\"title\\\":\\\"Inspect repository metadata and documentation index\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"readmit_if_no_uncertain_effect\\\",\\\"unknown_commit_possible\\\":false},\\\"failures\\\":[{\\\"code\\\":\\\"insufficient_input\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"The supplied design does not contain enough information to review the requested criteria.\\\",\\\"retry\\\":\\\"readmission\\\"},{\\\"code\\\":\\\"evaluation_failed\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"The bounded review could not be completed.\\\",\\\"retry\\\":\\\"readmission\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/design.review\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"criteria\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"description\\\":{\\\"maxLength\\\":2048,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"id\\\",\\\"description\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"design\\\":{\\\"maxLength\\\":32000,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"design\\\",\\\"criteria\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"workspace.read\\\"],\\\"non_guarantees\\\":[\\\"Does not prove correctness or inspect resources not supplied in the request.\\\"],\\\"outcome\\\":\\\"Return criterion coverage and actionable findings grounded in the supplied design.\\\",\\\"output_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"coverage\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"criterion_id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"disposition\\\":{\\\"enum\\\":[\\\"reviewed\\\",\\\"insufficient_input\\\"]},\\\"evidence\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"criterion_id\\\",\\\"disposition\\\",\\\"evidence\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"findings\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"criterion_id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"observation\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"recommendation\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"severity\\\":{\\\"enum\\\":[\\\"info\\\",\\\"warning\\\",\\\"error\\\"]}},\\\"required\\\":[\\\"criterion_id\\\",\\\"severity\\\",\\\"observation\\\",\\\"recommendation\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":128,\\\"type\\\":\\\"array\\\"}},\\\"required\\\":[\\\"findings\\\",\\\"coverage\\\"],\\\"type\\\":\\\"object\\\"},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Every supplied criterion has a coverage entry; findings cite supplied design evidence.\\\",\\\"evidence_required\\\":[\\\"coverage and supporting observations\\\"],\\\"id\\\":\\\"criterion-cov"
+      },
+      "event_id": "event-3ab90b78f42a458cbc745f45cd07c849",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 37203,
+        "input_digest": "sha256:200aed3d45f4b43c40000bd83aaef9ef338c09245e3171df9f9fc3dc78070602",
+        "operation_id": "model-3e27acdfae834f37a082b38eaada7863",
+        "output_bytes": 0,
+        "output_digest": null,
+        "payload_truncated": true,
+        "phase": "started",
+        "purpose": "planning",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 42219,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 58545
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        }
+      },
+      "redacted": true,
+      "sequence": 1,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-029e128fc4e34077b2c2e78abe937c81",
+      "timestamp": "2026-11-19T02:23:38.060Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"output\":{\"steps\":[{\"assessment_summary\":\"The request contract directly expresses the needed outcome and the input conforms to its schema. However, approved LOCAL bindings do not include documents.read, and local approved resources do not grant read access to documents:lasa. A peer offer exists for this contract, but peer claims are not local permission, so local resources are insufficient to fulfill this step.\",\"contract_digest\":\"sha256:e45b5a4209e4deb4d503ee162b4416fa48881e7c74058d231247d83b581a431d\",\"depends_on\":[],\"input_json\":\"{\\\"collection\\\":\\\"lasa-docs\\\",\\\"document_id\\\":\\\"README.md\\\"}\",\"local_assessment\":\"insufficient\",\"requirement_ids\":[\"verified-source-content\"],\"step_id\":\"read_lasa_readme\"}]}}"
+      },
+      "event_id": "event-16921a30da10443e86e49fa8ed3ea6bf",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 57,
+        "input_digest": "sha256:558eb5db9a21cc62bb2e36da8a226aa6c7d3bcffb04399508b04b1a74fe5697e",
+        "operation_id": "model-3e27acdfae834f37a082b38eaada7863",
+        "output_bytes": 702,
+        "output_digest": "sha256:b03fcbcd3917989c541bee0819c29625f39dd681f2792015886aab1e0683c7b9",
+        "payload_truncated": false,
+        "phase": "finished",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 8554,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 11464
+        }
+      },
+      "redacted": true,
+      "sequence": 2,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-029e128fc4e34077b2c2e78abe937c81",
+      "timestamp": "2026-11-19T02:23:49.532Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-d8b69a125b31473cb574ad8644cb593b",
+      "kind": "routing",
+      "payload": {
+        "assessment_summary": "The request contract directly expresses the needed outcome and the input conforms to its schema. However, approved LOCAL bindings do not include documents.read, and local approved resources do not grant read access to documents:lasa. A peer offer exists for this contract, but peer claims are not local permission, so local resources are insufficient to fulfill this step.",
+        "authorization_decision_id": "authority-1f658e6fe9f2eb19f8160338916e78e8",
+        "catalog_revision": "catalog-b0921bd23994ab9a227454cb2451d228",
+        "contract": {
+          "digest": "sha256:e45b5a4209e4deb4d503ee162b4416fa48881e7c74058d231247d83b581a431d",
+          "id": "https://contracts.example.net/capabilities/documents.read",
+          "version": "1.0.0"
+        },
+        "decision_reason": "Verified local=insufficient, peer=unavailable; selected none.",
+        "local_assessment": "insufficient",
+        "offer_revision": null,
+        "peer_assessment": "unavailable",
+        "policy": {
+          "preferred_executor": "peer",
+          "unclaimed_peer_fallback": "attempt"
+        },
+        "requirement_ids": [
+          "verified-source-content"
+        ],
+        "selected_executor": "none",
+        "step_id": "read_lasa_readme"
+      },
+      "redacted": true,
+      "sequence": 3,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-029e128fc4e34077b2c2e78abe937c81",
+      "timestamp": "2026-11-19T02:23:50.701Z"
+    }
+  ],
+  "children_via_parent": []
+}

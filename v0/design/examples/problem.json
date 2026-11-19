@@ -1,0 +1,10 @@
+{
+  "type": "https://errors.example.net/lasa/child-outcome-unknown",
+  "title": "Child outcome is unknown",
+  "status": 503,
+  "detail": "The submitted child operation could not be reconciled before the bounded timeout. Its allocation remains reserved.",
+  "instance": "/lasa/v1/tasks/task-root-001",
+  "code": "child_outcome_unknown",
+  "retry": "reconcile",
+  "effect_disposition": "unknown"
+}

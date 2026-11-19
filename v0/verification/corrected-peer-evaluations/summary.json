@@ -1,0 +1,15 @@
+{
+  "passed": false,
+  "cases": [
+    {
+      "case": "delegate_first",
+      "passed": false,
+      "error_type": "LasaError"
+    },
+    {
+      "case": "fallback_enabled",
+      "passed": false,
+      "error_type": "LasaError"
+    }
+  ]
+}

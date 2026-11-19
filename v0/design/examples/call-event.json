@@ -1,0 +1,40 @@
+{
+  "event_id": "event-call-001",
+  "service_id": "https://identity.example.net/services/layer1",
+  "task_id": "task-root-001",
+  "sequence": 2,
+  "timestamp": "2026-11-18T08:00:00Z",
+  "causal_parent_event_id": "event-routing-001",
+  "kind": "call",
+  "payload": {
+    "operation_id": "op-child-review-001",
+    "call_type": "child",
+    "phase": "finished",
+    "input_digest": "sha256:f1be4bd1d08d9cd7ea73fdec23ecd74aa6c71f265d52874d64e5ec45bed8bb45",
+    "input_bytes": 252,
+    "output_digest": "sha256:80095459264e4943a0cbe844372473625716b97a22451cd2374bc528760b3cc4",
+    "output_bytes": 848,
+    "reserved": {
+      "model_tokens": 8000,
+      "model_calls": 2,
+      "tool_calls": 0,
+      "delegations": 0,
+      "wall_time_ms": 60000,
+      "input_bytes": 32000,
+      "output_bytes": 12000,
+      "artifact_bytes": 0
+    },
+    "usage": {
+      "model_tokens": 1200,
+      "model_calls": 1,
+      "tool_calls": 0,
+      "delegations": 0,
+      "wall_time_ms": 10000,
+      "input_bytes": 252,
+      "output_bytes": 199,
+      "artifact_bytes": 0
+    },
+    "payload_truncated": true
+  },
+  "redacted": true
+}

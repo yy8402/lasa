@@ -1,0 +1,41 @@
+{
+  "decision_id": "authz-child-001",
+  "authorization_ref": "receiver-policy:trusted-layer1-review",
+  "principal_id": "https://identity.example.net/services/layer1",
+  "receiver_service_id": "https://identity.example.net/services/layer2",
+  "request_digest": "sha256:f1be4bd1d08d9cd7ea73fdec23ecd74aa6c71f265d52874d64e5ec45bed8bb45",
+  "contract": {
+    "id": "https://contracts.example.net/capabilities/design.review",
+    "version": "1.0.0",
+    "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce"
+  },
+  "valid_until": "2026-11-18T08:01:00Z",
+  "resources": [
+    {
+      "resource": "workspace:self",
+      "actions": [
+        "read"
+      ]
+    }
+  ],
+  "allowed_effects": [
+    "workspace.read"
+  ],
+  "allowed_disclosure_services": [],
+  "allowed_delegated_contracts": [],
+  "limits": {
+    "budget": {
+      "model_tokens": 8000,
+      "model_calls": 2,
+      "tool_calls": 0,
+      "delegations": 0,
+      "wall_time_ms": 60000,
+      "input_bytes": 32000,
+      "output_bytes": 12000,
+      "artifact_bytes": 0
+    },
+    "deadline": "2026-11-18T08:01:00Z",
+    "max_hops": 0
+  },
+  "content_diagnostics_allowed": false
+}

@@ -1,0 +1,124 @@
+{
+  "captured_at": "2026-11-19T00:47:39.522207+00:00",
+  "caller_view": "layer1 workload principal",
+  "endpoint": "https://192.168.0.188/lasa/v1/capabilities",
+  "pages": [
+    {
+      "http_status": 200,
+      "etag": "\"e540645796529e13393b77823cde3311b2c0b9d76f40fc18d9af04b1ec6eb078\"",
+      "cache_control": "private, max-age=30, must-revalidate",
+      "body": {
+        "service_id": "https://192.168.0.188/lasa",
+        "catalog_view": "view-084a4143422211950c4760ebc0fc57db",
+        "revision": "catalog-5f42574f59366c49dee88d6f8668d05c",
+        "valid_until": "2026-11-19T00:48:09.875Z",
+        "offers": [
+          {
+            "offer_id": "offer-84644d0b985505668cc412af52f2330f",
+            "revision": "offer-cdedef50660dd6b2ee3855277f96bb8e",
+            "catalog_view": "view-084a4143422211950c4760ebc0fc57db",
+            "contract": {
+              "id": "https://contracts.example.net/capabilities/task.attempt",
+              "version": "1.0.0",
+              "digest": "sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23"
+            },
+            "restrictions": {
+              "allowed_effects": [
+                "workspace.read",
+                "workspace.write"
+              ],
+              "resources": [
+                {
+                  "resource": "workspace:self",
+                  "actions": [
+                    "read",
+                    "create",
+                    "update"
+                  ]
+                }
+              ],
+              "additional_preconditions": [
+                {
+                  "kind": "budget_minimum",
+                  "description": "Minimum receiver assessment, execution, and verification allocation.",
+                  "resource": "model_calls",
+                  "minimum": 3
+                },
+                {
+                  "kind": "budget_minimum",
+                  "description": "Minimum receiver assessment, execution, and verification allocation.",
+                  "resource": "model_tokens",
+                  "minimum": 50000
+                }
+              ]
+            },
+            "max_budget": {
+              "model_tokens": 500000,
+              "model_calls": 16,
+              "tool_calls": 12,
+              "delegations": 2,
+              "wall_time_ms": 300000,
+              "input_bytes": 128000,
+              "output_bytes": 32000,
+              "artifact_bytes": 128000
+            },
+            "max_hops": 2,
+            "valid_until": "2026-11-19T00:48:09.875Z"
+          },
+          {
+            "offer_id": "offer-e32093cd447dd44c88b8265145772f23",
+            "revision": "offer-0818ba0f18b1204e1a56f6709961a2c9",
+            "catalog_view": "view-084a4143422211950c4760ebc0fc57db",
+            "contract": {
+              "id": "https://contracts.example.net/capabilities/design.review",
+              "version": "1.0.0",
+              "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce"
+            },
+            "restrictions": {
+              "allowed_effects": [
+                "workspace.read"
+              ],
+              "resources": [
+                {
+                  "resource": "workspace:self",
+                  "actions": [
+                    "read",
+                    "create",
+                    "update"
+                  ]
+                }
+              ],
+              "additional_preconditions": [
+                {
+                  "kind": "budget_minimum",
+                  "description": "Minimum receiver assessment, execution, and verification allocation.",
+                  "resource": "model_calls",
+                  "minimum": 3
+                },
+                {
+                  "kind": "budget_minimum",
+                  "description": "Minimum receiver assessment, execution, and verification allocation.",
+                  "resource": "model_tokens",
+                  "minimum": 50000
+                }
+              ]
+            },
+            "max_budget": {
+              "model_tokens": 500000,
+              "model_calls": 16,
+              "tool_calls": 12,
+              "delegations": 2,
+              "wall_time_ms": 300000,
+              "input_bytes": 128000,
+              "output_bytes": 32000,
+              "artifact_bytes": 128000
+            },
+            "max_hops": 2,
+            "valid_until": "2026-11-19T00:48:09.875Z"
+          }
+        ],
+        "next_cursor": null
+      }
+    }
+  ]
+}

@@ -1,0 +1,180 @@
+{
+  "case": "assessment_required_evidence_unsupplied",
+  "passed": true,
+  "expected_status": "completed",
+  "assessment_expectation": {
+    "id": "required_evidence_unsupplied",
+    "objective": "Decide whether a production rollout is safe using its actual rollout report. The report is not included, its location is unknown, and its contents must not be assumed.",
+    "context": "No rollout report or observations are present in the supplied input.",
+    "requirement_id": "requirement-rollout-evidence",
+    "requirement": "Ground the safety decision in the actual rollout report.",
+    "acceptance": "Cite real report evidence; do not invent facts about an unsupplied report.",
+    "expected_local_assessment": [
+      "unknown",
+      "insufficient"
+    ],
+    "expected_task_status": [
+      "rejected"
+    ]
+  },
+  "actual_model_assessments": [
+    {
+      "assessment_summary": "The request contract directly expresses the needed outcome, but the mandatory requirement depends on real evidence from an actual rollout report. The supplied context states that no report or observations are present and the report location is unknown. Local approved bindings for this contract allow only workspace:self read/write, with no identified report resource or approved external access. Therefore this step can only honestly report unable unless the actual report or an accessible location is supplied; it cannot fulfill the safety decision requirement from current local resources.",
+      "contract_digest": "sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23",
+      "local_assessment": "insufficient",
+      "requirement_ids": [
+        "requirement-rollout-evidence"
+      ],
+      "step_id": "step-1-attempt-rollout-safety-decision"
+    }
+  ],
+  "task": {
+    "operation_id": "operation-ae6f2f87bfbd4bd58ea54e7d526b7000",
+    "problem": {
+      "code": "unsupported_contract",
+      "detail": "The operation could not satisfy the service contract.",
+      "effect_disposition": "none",
+      "instance": "urn:lasa:request",
+      "retry": "never",
+      "status": 422,
+      "title": "Unsupported contract",
+      "type": "https://errors.lasa.example/unsupported-contract"
+    },
+    "received_at": "2026-11-18T10:50:49.779Z",
+    "request_digest": "sha256:5769692483e74ae2a6555a92d7a582b93adc13619300d180f87de17cf2be3d77",
+    "revision": 2,
+    "selection": {
+      "catalog_view": "view-1edf6c9bc916034fac5fd07226e82fde",
+      "contract": {
+        "digest": "sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23",
+        "id": "https://contracts.example.net/capabilities/task.attempt",
+        "version": "1.0.0"
+      },
+      "offer_id": "offer-c4806a9bd86e8c75484041fe650e4481",
+      "offer_revision": "offer-6dadc54d3f63fbdb8c01f3e9335bcf25"
+    },
+    "service_id": "https://identity.example.net/services/layer1",
+    "session_id": "session-3f49cf588228477b92028d4c028ed89d",
+    "status": "rejected",
+    "task_id": "task-7a78e0bbbc8143359a83270f5e7274ed",
+    "updated_at": "2026-11-18T10:51:06.838Z"
+  },
+  "layer1_events": [
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-92786d77005f45a4b13062187d5dec87",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 16737,
+        "input_digest": "sha256:ddd8f2750c00b9bdecd86c9ae40d0ed70f4c6fa2e8cb7a849a39f0205243efd5",
+        "operation_id": "model-9fcc1b2bb5124cab818b76061236ab14",
+        "output_bytes": 0,
+        "output_digest": null,
+        "payload_truncated": false,
+        "phase": "started",
+        "purpose": "planning",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 21753,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 60000
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        }
+      },
+      "redacted": true,
+      "sequence": 1,
+      "service_id": "https://identity.example.net/services/layer1",
+      "task_id": "task-7a78e0bbbc8143359a83270f5e7274ed",
+      "timestamp": "2026-11-18T10:50:49.952Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-0abb5df4e826418b8413ee1847540e4b",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 57,
+        "input_digest": "sha256:b76833f38e09c07c549d631491923de05fd522498e66a29d7c30899afe18ac7c",
+        "operation_id": "model-9fcc1b2bb5124cab818b76061236ab14",
+        "output_bytes": 1569,
+        "output_digest": "sha256:7b11d8554b463dffe8cda8e4672445a556f553800c1113fee06a573e3f80ad68",
+        "payload_truncated": false,
+        "phase": "finished",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 4612,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 16828
+        }
+      },
+      "redacted": true,
+      "sequence": 2,
+      "service_id": "https://identity.example.net/services/layer1",
+      "task_id": "task-7a78e0bbbc8143359a83270f5e7274ed",
+      "timestamp": "2026-11-18T10:51:06.785Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-46872c74a07b4b328047198556ab0cd7",
+      "kind": "routing",
+      "payload": {
+        "assessment_summary": "The request contract directly expresses the needed outcome, but the mandatory requirement depends on real evidence from an actual rollout report. The supplied context states that no report or observations are present and the report location is unknown. Local approved bindings for this contract allow only workspace:self read/write, with no identified report resource or approved external access. Therefore this step can only honestly report unable unless the actual report or an accessible location is supplied; it cannot fulfill the safety decision requirement from current local resources.",
+        "authorization_decision_id": "authority-02e90527f409cbd6f763c97e348abeff",
+        "catalog_revision": "catalog-dbd6f85517d0bf1b47c2dfb7dce019ed",
+        "contract": {
+          "digest": "sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23",
+          "id": "https://contracts.example.net/capabilities/task.attempt",
+          "version": "1.0.0"
+        },
+        "decision_reason": "Verified local=insufficient, peer=not_claimed; selected none.",
+        "local_assessment": "insufficient",
+        "offer_revision": null,
+        "peer_assessment": "not_claimed",
+        "policy": {
+          "preferred_executor": "local",
+          "unclaimed_peer_fallback": "reject"
+        },
+        "requirement_ids": [
+          "requirement-rollout-evidence"
+        ],
+        "selected_executor": "none",
+        "step_id": "step-1-attempt-rollout-safety-decision"
+      },
+      "redacted": true,
+      "sequence": 3,
+      "service_id": "https://identity.example.net/services/layer1",
+      "task_id": "task-7a78e0bbbc8143359a83270f5e7274ed",
+      "timestamp": "2026-11-18T10:51:06.832Z"
+    }
+  ],
+  "layer2": [],
+  "execution": "actual Codex App Server, actual gpt-5.5 API inference, real isolated HTTPS sockets; no planner/verifier/model mocks"
+}

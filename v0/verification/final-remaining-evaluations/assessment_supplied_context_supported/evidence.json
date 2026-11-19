@@ -1,0 +1,504 @@
+{
+  "case": "assessment_supplied_context_supported",
+  "runtime_image": "sha256:4f09ec491ffad8efe8311b968e627308888f42912319da2744f16101d438f16e",
+  "passed": true,
+  "expected_status": "completed",
+  "assessment_expectation": {
+    "id": "supplied_context_supported",
+    "objective": "Summarize the two responsibilities described in the supplied context.",
+    "context": "The parent verifies the final answer. The child performs its bounded assigned work.",
+    "requirement_id": "requirement-summary",
+    "requirement": "State the two supplied responsibilities accurately.",
+    "acceptance": "The summary identifies parent verification and bounded child execution using only the supplied text.",
+    "expected_local_assessment": [
+      "sufficient"
+    ],
+    "expected_task_status": [
+      "completed"
+    ]
+  },
+  "actual_model_assessments": [
+    {
+      "assessment_summary": "The request contract directly matches the needed outcome: a bounded attempt to summarize the supplied context with requirement-level evidence. Local binding for task.attempt is approved with workspace.read/workspace.write; the proposed step only needs the supplied input text and does not require external access. The requirement ID is preserved.",
+      "contract_digest": "sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23",
+      "local_assessment": "sufficient",
+      "requirement_ids": [
+        "requirement-summary"
+      ],
+      "step_id": "step-1-summarize-responsibilities"
+    }
+  ],
+  "task": {
+    "admission": {
+      "accepted_at": "2026-11-18T11:20:28.665Z",
+      "authorization_decision_id": "authority-fde9b1bbd434cb13c7f5f5787927d5ab",
+      "contract": {
+        "digest": "sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23",
+        "id": "https://contracts.example.net/capabilities/task.attempt",
+        "version": "1.0.0"
+      },
+      "effective_limits": {
+        "budget": {
+          "artifact_bytes": 128000,
+          "delegations": 2,
+          "input_bytes": 128000,
+          "model_calls": 16,
+          "model_tokens": 500000,
+          "output_bytes": 32000,
+          "tool_calls": 8,
+          "wall_time_ms": 300000
+        },
+        "deadline": "2026-11-18T11:24:11.596115+00:00",
+        "max_hops": 2
+      },
+      "plan_digest": "sha256:530a84e952ed75bddff898614461a100f3b01f245cab2cd7deb8fa17d09d0ec8",
+      "request_digest": "sha256:0492c99501711a774ab66395288639a86a0603805ad7efa420216f03ec77eaca"
+    },
+    "operation_id": "operation-8d6c4dfe57bf414db1c7d56f93d1a927",
+    "received_at": "2026-11-18T11:20:11.658Z",
+    "request_digest": "sha256:0492c99501711a774ab66395288639a86a0603805ad7efa420216f03ec77eaca",
+    "result": {
+      "artifacts": [],
+      "contract": {
+        "digest": "sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23",
+        "id": "https://contracts.example.net/capabilities/task.attempt",
+        "version": "1.0.0"
+      },
+      "effect_disposition": "none",
+      "evidence": [
+        {
+          "artifact_ids": [],
+          "criterion_id": "honest-disposition",
+          "disposition": "passed",
+          "summary": "The supplied context explicitly states: \u201cThe parent verifies the final answer. The child performs its bounded assigned work.\u201d The response uses only that text to identify both responsibilities."
+        }
+      ],
+      "output": {
+        "disposition": "fulfilled",
+        "requirement_evidence": [
+          {
+            "evidence": "The summary identifies the parent responsibility as verifying the final answer, and the child responsibility as performing its bounded assigned work, matching the supplied context exactly.",
+            "id": "requirement-summary"
+          }
+        ],
+        "summary": "The parent is responsible for verifying the final answer. The child is responsible for performing its bounded assigned work."
+      },
+      "request_digest": "sha256:0492c99501711a774ab66395288639a86a0603805ad7efa420216f03ec77eaca",
+      "usage": {
+        "artifact_bytes": 0,
+        "delegations": 0,
+        "input_bytes": 413,
+        "model_calls": 4,
+        "model_tokens": 15494,
+        "output_bytes": 420,
+        "tool_calls": 0,
+        "wall_time_ms": 29381
+      }
+    },
+    "revision": 4,
+    "selection": {
+      "catalog_view": "view-1bdbfec46608cca3575ecab4ac5cf9c1",
+      "contract": {
+        "digest": "sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23",
+        "id": "https://contracts.example.net/capabilities/task.attempt",
+        "version": "1.0.0"
+      },
+      "offer_id": "offer-c4806a9bd86e8c75484041fe650e4481",
+      "offer_revision": "offer-f884d063760b3acce5ab2c17ed8d0bfa"
+    },
+    "service_id": "https://identity.example.net/services/layer1",
+    "session_id": "session-31a0d6a5cf3e4702a408cc0c300fa516",
+    "status": "completed",
+    "task_id": "task-144e2b0730114f4ea7b144beea1e0415",
+    "updated_at": "2026-11-18T11:20:44.052Z"
+  },
+  "layer1_events": [
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-9d73088961e54d22a90f8c6cda673da9",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 17325,
+        "input_digest": "sha256:33e1be92fb18391a36b7dadf9d9e65d31406b2a1c431462507ac945b85d3ce1c",
+        "operation_id": "model-db27051921a14234b9ad274a850cf191",
+        "output_bytes": 0,
+        "output_digest": null,
+        "payload_truncated": false,
+        "phase": "started",
+        "purpose": "planning",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 22341,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 60000
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        }
+      },
+      "redacted": true,
+      "sequence": 1,
+      "service_id": "https://identity.example.net/services/layer1",
+      "task_id": "task-144e2b0730114f4ea7b144beea1e0415",
+      "timestamp": "2026-11-18T11:20:11.972Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-9fd38b74d79141dea2e3e9740a38b783",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 57,
+        "input_digest": "sha256:94d6535bacd079da85a28765ce9cd9e2185d3c28d0b628a38c59a74d358f41ba",
+        "operation_id": "model-db27051921a14234b9ad274a850cf191",
+        "output_bytes": 1062,
+        "output_digest": "sha256:1a9a5b0e7cc52f9943175c32d00a293eb5b468e181f4ff242e32622f61312d10",
+        "payload_truncated": false,
+        "phase": "finished",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 4201,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 9316
+        }
+      },
+      "redacted": true,
+      "sequence": 2,
+      "service_id": "https://identity.example.net/services/layer1",
+      "task_id": "task-144e2b0730114f4ea7b144beea1e0415",
+      "timestamp": "2026-11-18T11:20:21.293Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-ee4d4feb06374e00bc0bf60e65714ea9",
+      "kind": "routing",
+      "payload": {
+        "assessment_summary": "The request contract directly matches the needed outcome: a bounded attempt to summarize the supplied context with requirement-level evidence. Local binding for task.attempt is approved with workspace.read/workspace.write; the proposed step only needs the supplied input text and does not require external access. The requirement ID is preserved.",
+        "authorization_decision_id": "authority-fde9b1bbd434cb13c7f5f5787927d5ab",
+        "catalog_revision": "catalog-14d81790b00b56e8a4153df3c798d97a",
+        "contract": {
+          "digest": "sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23",
+          "id": "https://contracts.example.net/capabilities/task.attempt",
+          "version": "1.0.0"
+        },
+        "decision_reason": "Both suitable; configured preference selects local",
+        "local_assessment": "sufficient",
+        "offer_revision": null,
+        "peer_assessment": "matched",
+        "policy": {
+          "preferred_executor": "local",
+          "unclaimed_peer_fallback": "reject"
+        },
+        "requirement_ids": [
+          "requirement-summary"
+        ],
+        "selected_executor": "local",
+        "step_id": "step-1-summarize-responsibilities"
+      },
+      "redacted": true,
+      "sequence": 3,
+      "service_id": "https://identity.example.net/services/layer1",
+      "task_id": "task-144e2b0730114f4ea7b144beea1e0415",
+      "timestamp": "2026-11-18T11:20:21.346Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-4bb8f8f9a5a743d1babd7b0713937ad5",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 9235,
+        "input_digest": "sha256:212a663a530540bb6c42b17e6ed037064d1f08192d03d1af09eb4e0e408c216f",
+        "operation_id": "model-0f24447c9c5443b183996df86e1039a9",
+        "output_bytes": 0,
+        "output_digest": null,
+        "payload_truncated": false,
+        "phase": "started",
+        "purpose": "planning",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 13761,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 60000
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        }
+      },
+      "redacted": true,
+      "sequence": 4,
+      "service_id": "https://identity.example.net/services/layer1",
+      "task_id": "task-144e2b0730114f4ea7b144beea1e0415",
+      "timestamp": "2026-11-18T11:20:21.367Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-43317c4a590e46ce84ba924c8df6be1a",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 57,
+        "input_digest": "sha256:942b838eeac067bc94853785eeb76dca4d3e8c1c6689109e619de0858e16cd74",
+        "operation_id": "model-0f24447c9c5443b183996df86e1039a9",
+        "output_bytes": 533,
+        "output_digest": "sha256:acd859afb1422a1ffcc94ff19b663501fc4d79590956377a06f956d4703c3d70",
+        "payload_truncated": false,
+        "phase": "finished",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 2109,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 7258
+        }
+      },
+      "redacted": true,
+      "sequence": 5,
+      "service_id": "https://identity.example.net/services/layer1",
+      "task_id": "task-144e2b0730114f4ea7b144beea1e0415",
+      "timestamp": "2026-11-18T11:20:28.631Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-c3031045206f4a6fb407a51fe567445c",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 5100,
+        "input_digest": "sha256:db35828dd4542a2e9166a1e330adda5c49c7a5a99e85607fbcadc130296ee84e",
+        "operation_id": "model-005c3c25d7dc40dcaf2e9ca118f40330",
+        "output_bytes": 0,
+        "output_digest": null,
+        "payload_truncated": false,
+        "phase": "started",
+        "purpose": "execution",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 44312,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 60000
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        }
+      },
+      "redacted": true,
+      "sequence": 6,
+      "service_id": "https://identity.example.net/services/layer1",
+      "task_id": "task-144e2b0730114f4ea7b144beea1e0415",
+      "timestamp": "2026-11-18T11:20:30.856Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-5f1d50730c6d4854a934ff3064661502",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 57,
+        "input_digest": "sha256:e68734d9f833651250f730ab5d4292d08d30cf6cbb60e938a4072ab916439a02",
+        "operation_id": "model-005c3c25d7dc40dcaf2e9ca118f40330",
+        "output_bytes": 1237,
+        "output_digest": "sha256:f1a455156eed88880c253a0be9f89d27f76b1572401242ee1bf0b587d4d31b9f",
+        "payload_truncated": false,
+        "phase": "finished",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 7942,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 6282
+        }
+      },
+      "redacted": true,
+      "sequence": 7,
+      "service_id": "https://identity.example.net/services/layer1",
+      "task_id": "task-144e2b0730114f4ea7b144beea1e0415",
+      "timestamp": "2026-11-18T11:20:37.143Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-3ca656bf149e469482149dc2cacca094",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 5444,
+        "input_digest": "sha256:05730382a760aa90b707d77f16aea847491537f08ca4407f09e4d70d5bc559af",
+        "operation_id": "model-fe63fd2f97eb4b1892606aaafe3e4121",
+        "output_bytes": 0,
+        "output_digest": null,
+        "payload_truncated": false,
+        "phase": "started",
+        "purpose": "verification",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 9974,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 60000
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        }
+      },
+      "redacted": true,
+      "sequence": 8,
+      "service_id": "https://identity.example.net/services/layer1",
+      "task_id": "task-144e2b0730114f4ea7b144beea1e0415",
+      "timestamp": "2026-11-18T11:20:37.500Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-8d3cfb02410b4eb7af47090fdcbb6c1f",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 57,
+        "input_digest": "sha256:f0438072a64c1330499d4ad4eab4d3619e7876ceeeb7e63eebe957ce0f22e8ef",
+        "operation_id": "model-fe63fd2f97eb4b1892606aaafe3e4121",
+        "output_bytes": 357,
+        "output_digest": "sha256:106df7344d936ae4b7c479d881d05fcad7ad1d907d0455543d41e2e98a45b2f5",
+        "payload_truncated": false,
+        "phase": "finished",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 1242,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 6525
+        }
+      },
+      "redacted": true,
+      "sequence": 9,
+      "service_id": "https://identity.example.net/services/layer1",
+      "task_id": "task-144e2b0730114f4ea7b144beea1e0415",
+      "timestamp": "2026-11-18T11:20:44.031Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-e0f79c16b1f54e4db153f1c9f6d1b9e3",
+      "kind": "verification",
+      "payload": {
+        "checks": [
+          {
+            "artifact_ids": [],
+            "criterion_id": "honest-disposition",
+            "disposition": "passed",
+            "summary": "The supplied context explicitly states: \u201cThe parent verifies the final answer. The child performs its bounded assigned work.\u201d The response uses only that text to identify both responsibilities."
+          }
+        ],
+        "contract": {
+          "digest": "sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23",
+          "id": "https://contracts.example.net/capabilities/task.attempt",
+          "version": "1.0.0"
+        },
+        "release": "accepted",
+        "request_digest": "sha256:0492c99501711a774ab66395288639a86a0603805ad7efa420216f03ec77eaca",
+        "step_id": "final-release"
+      },
+      "redacted": true,
+      "sequence": 10,
+      "service_id": "https://identity.example.net/services/layer1",
+      "task_id": "task-144e2b0730114f4ea7b144beea1e0415",
+      "timestamp": "2026-11-18T11:20:44.052Z"
+    }
+  ],
+  "layer2": [],
+  "execution": "actual Codex App Server, actual gpt-5.5 API inference, real isolated HTTPS sockets; no planner/verifier/model mocks"
+}

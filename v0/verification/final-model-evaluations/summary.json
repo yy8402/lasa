@@ -1,0 +1,37 @@
+{
+  "passed": false,
+  "cases": [
+    {
+      "case": "local_first",
+      "passed": true
+    },
+    {
+      "case": "delegate_first",
+      "passed": false
+    },
+    {
+      "case": "fallback_disabled",
+      "passed": true
+    },
+    {
+      "case": "fallback_enabled",
+      "passed": false
+    },
+    {
+      "case": "no_peer",
+      "passed": true
+    },
+    {
+      "case": "assessment_supplied_context_supported",
+      "passed": true
+    },
+    {
+      "case": "assessment_required_network_access_missing",
+      "passed": true
+    },
+    {
+      "case": "assessment_required_evidence_unsupplied",
+      "passed": true
+    }
+  ]
+}

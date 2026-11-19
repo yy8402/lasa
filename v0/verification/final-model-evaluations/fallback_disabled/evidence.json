@@ -1,0 +1,166 @@
+{
+  "case": "fallback_disabled",
+  "passed": true,
+  "expected_status": "rejected",
+  "assessment_expectation": null,
+  "actual_model_assessments": [
+    {
+      "assessment_summary": "The request contract directly expresses the needed design review outcome and the input conforms to its schema. However, there is no approved local binding for the design.review contract; only task.attempt is locally bound, so local ability to fulfill this step is unknown.",
+      "contract_digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce",
+      "local_assessment": "unknown",
+      "requirement_ids": [
+        "criterion-coverage"
+      ],
+      "step_id": "step-1"
+    }
+  ],
+  "task": {
+    "operation_id": "operation-8b83f3aa4b384a218d514903208d232e",
+    "problem": {
+      "code": "unsupported_contract",
+      "detail": "The operation could not satisfy the service contract.",
+      "effect_disposition": "none",
+      "instance": "urn:lasa:request",
+      "retry": "never",
+      "status": 422,
+      "title": "Unsupported contract",
+      "type": "https://errors.lasa.example/unsupported-contract"
+    },
+    "received_at": "2026-11-18T10:49:10.325Z",
+    "request_digest": "sha256:6e0dffc03243914276adce36edeaed09608e30122ef4bc9f973012e460760d58",
+    "revision": 2,
+    "selection": {
+      "catalog_view": "view-72dfeb460757560a09a18700169f2f2e",
+      "contract": {
+        "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce",
+        "id": "https://contracts.example.net/capabilities/design.review",
+        "version": "1.0.0"
+      },
+      "offer_id": "offer-64e5fa51fd40cc76f274b05869ea6194",
+      "offer_revision": "offer-71f1f8585a3994bc6b333dbce6f1c0af"
+    },
+    "service_id": "https://identity.example.net/services/layer1",
+    "session_id": "session-dfce413db03e4042809bbefd09a978c7",
+    "status": "rejected",
+    "task_id": "task-633bc7cb5e5f43dba0c27363d2bda101",
+    "updated_at": "2026-11-18T10:49:16.849Z"
+  },
+  "layer1_events": [
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-db70976ab92d4c6a948cc06b86d2645b",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 12567,
+        "input_digest": "sha256:23283f8a82eac7eeeb47546f10a66a7631f7c55b5e117a331ba33592d091f331",
+        "operation_id": "model-fde47956befd41a7bf1e682348b50c8c",
+        "output_bytes": 0,
+        "output_digest": null,
+        "payload_truncated": false,
+        "phase": "started",
+        "purpose": "planning",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 17583,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 60000
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        }
+      },
+      "redacted": true,
+      "sequence": 1,
+      "service_id": "https://identity.example.net/services/layer1",
+      "task_id": "task-633bc7cb5e5f43dba0c27363d2bda101",
+      "timestamp": "2026-11-18T10:49:10.461Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-327080fbe4284fc886122ce00cafae7e",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 57,
+        "input_digest": "sha256:5147f10002992da2328a6047a846d4e747ea57c0482f07d019489f3fc7e90aa9",
+        "operation_id": "model-fde47956befd41a7bf1e682348b50c8c",
+        "output_bytes": 966,
+        "output_digest": "sha256:842a69c987b0475ce8fc7863785b607c76db0af7785146e5717e55656f96839c",
+        "payload_truncated": false,
+        "phase": "finished",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 3004,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 6371
+        }
+      },
+      "redacted": true,
+      "sequence": 2,
+      "service_id": "https://identity.example.net/services/layer1",
+      "task_id": "task-633bc7cb5e5f43dba0c27363d2bda101",
+      "timestamp": "2026-11-18T10:49:16.836Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-9ccf3eccb4144aa582771b35fa10479a",
+      "kind": "routing",
+      "payload": {
+        "assessment_summary": "The request contract directly expresses the needed design review outcome and the input conforms to its schema. However, there is no approved local binding for the design.review contract; only task.attempt is locally bound, so local ability to fulfill this step is unknown.",
+        "authorization_decision_id": "authority-49e371bb1ce5abf5cfebf503eb5ee1dc",
+        "catalog_revision": "catalog-6aff13f5dc9b8cc58aa1ec7a435412b0",
+        "contract": {
+          "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce",
+          "id": "https://contracts.example.net/capabilities/design.review",
+          "version": "1.0.0"
+        },
+        "decision_reason": "Verified local=insufficient, peer=not_claimed; selected none.",
+        "local_assessment": "insufficient",
+        "offer_revision": null,
+        "peer_assessment": "not_claimed",
+        "policy": {
+          "preferred_executor": "peer",
+          "unclaimed_peer_fallback": "reject"
+        },
+        "requirement_ids": [
+          "criterion-coverage"
+        ],
+        "selected_executor": "none",
+        "step_id": "step-1"
+      },
+      "redacted": true,
+      "sequence": 3,
+      "service_id": "https://identity.example.net/services/layer1",
+      "task_id": "task-633bc7cb5e5f43dba0c27363d2bda101",
+      "timestamp": "2026-11-18T10:49:16.843Z"
+    }
+  ],
+  "layer2": [],
+  "execution": "actual Codex App Server, actual gpt-5.5 API inference, real isolated HTTPS sockets; no planner/verifier/model mocks"
+}

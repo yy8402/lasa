@@ -1,0 +1,964 @@
+{
+  "wheel_sha256": "45e5f26c1b1ac59d015e5df2befa5446eed8b87e110c1bf0c1952389a84a12fd",
+  "layer1": {
+    "package_version": "1.1.0",
+    "module_path": "/Users/yyang/Dev/CodeX/LASA/v0/.deploy/target/venv/lib/python3.12/site-packages/lasa_service/__init__.py",
+    "installed_files": {
+      "lasa_contracts/README.md": "6606fb136c6932e1897a72574a4c721cac640e09f7053f3f5c7496e905d99869",
+      "lasa_contracts/VALIDATION.md": "b1c9d179267df5b691fc6c74ab07b455ec54ff12a804a1d0c6785be8653a7bd7",
+      "lasa_contracts/__init__.py": "9a2b302ce88b1db172514e5d07e167426cc57461ee4d53e4629aad644e930fc6",
+      "lasa_contracts/acceptance.md": "e5e46ab14cf32e9d42069ba4daf55b3f3400feae68ed18f6d66db0185c3fc13f",
+      "lasa_contracts/api.openapi.json": "91caa5b177e4059c4a1a2ec5f1aaadf6d209f902dfc1d564970db9faf59a6aca",
+      "lasa_contracts/architecture.md": "75c8436fd006a2798d1d0a4d324fb611f08c7fddbdfc5430f6bb97b5993bef67",
+      "lasa_contracts/capabilities.md": "44f983247ce1f351d171b68d19d7c84b42205f7771c4ef23f5f259bc353bf2c0",
+      "lasa_contracts/config.schema.json": "d6f023abc3e53e72c49d949c944e00018c943f31dc2d0c0619ba8aeeeae9c84d",
+      "lasa_contracts/connectors.md": "d354fad3267cfe88effcd90b5d45866d7a4106c15ed1b62eb4889ac32d256335",
+      "lasa_contracts/contracts.schema.json": "a952c76e9ccf494d8dfee83f3b3729ea39f74de609e9392db9815bf4ac16d7ad",
+      "lasa_contracts/discovery.md": "cf7ad62291b7e646cd408eefe484ee2f65bf6239f2368a6dff20b99060f6ecb3",
+      "lasa_contracts/execution.md": "5a34524c532214de81b75221d7b0a76b680d9f93963c7342d6c54a85a1ae5a5a",
+      "lasa_contracts/private.schema.json": "3a9f0663410f5cbc3513b754f61060f21ba7ccd9014b58006ce5a02d809081f3",
+      "lasa_contracts/sources.md": "2c84109f41e14604203bd3dfd66165da9707ec3b08a455d65e665e98b3603732",
+      "lasa_contracts/validate.py": "305db993dde0f2894d626c3061671977b396ba51d80b7d0f76b4dcab9f113f74",
+      "lasa_contracts/validation-cases.json": "c7b2195432286915f00d8b24867411fb1b2e5fb9080c4c2acd109731436e78b4",
+      "lasa_contracts/examples/authorization.json": "8454df6b81e0cb726b49330c50a6092d3e107c265c33297aae6dc2dc48bdc204",
+      "lasa_contracts/examples/availability.json": "8fea82a048525b7ca196c40139865bb038c8efb479e4cc36cfa4858e658e5e1d",
+      "lasa_contracts/examples/binding.json": "589ac1a38a01a2016b72a62dd92ac180c03763f4b2679299902b03f0815c8c01",
+      "lasa_contracts/examples/bootstrap.json": "2e1990710c3abf15159e45e0a58bc6c48d0190f43fe8d933b7c873304553d282",
+      "lasa_contracts/examples/call-event.json": "9d6f815afc2651b27aa37cc192179479dd86835420a244b7d4af86c7295ef0ad",
+      "lasa_contracts/examples/capability-attempt.json": "6ff6debd055e45019f33583dacd18905c0f768886c210714000d36475a98d1c1",
+      "lasa_contracts/examples/capability-documents-read.json": "172a72a325c3bb3d607aa63560e7831c78ac5f1aabab41f714cf5209fd3a3fb4",
+      "lasa_contracts/examples/capability-documents-search.json": "7dc5c24ddcb732f1787686a20bd577900e124c71b4f9c819213570675151f0b3",
+      "lasa_contracts/examples/capability-repository-inspect.json": "7574eea3208ec212862b020998de3b488c5247bdefb6400a14753cd3e64e0167",
+      "lasa_contracts/examples/capability-review.json": "f2ebe2cb25f30a0ea5f8375bd95e3689e039d159c4b976fc7b9f0a13ff4dd04e",
+      "lasa_contracts/examples/catalog.json": "1355a0939250a67109a318ad566efb93edb63ec833e37efae63f7f3f6ea41645",
+      "lasa_contracts/examples/child-plan.json": "4e5a31b5fd789ce0475bfba3264b340e70bae0f3c8d0de21116d3248a5bf305e",
+      "lasa_contracts/examples/config-no-peer.json": "e95354e44e20b862e09762c4e58b4002f3dce910ed214e3f17dc0c663bbd9067",
+      "lasa_contracts/examples/config.json": "c2a9dddc3fa0e76146fcf51c9c023dfc95c416d609583b5383ffdc018a895834",
+      "lasa_contracts/examples/create-session.json": "5277be6becd0240115287a1266806dd51a05e9bcbafb4b2405eecfd8924a64ae",
+      "lasa_contracts/examples/delegated-task-request.json": "06ab375263805c001ff770a94aeaaf31a0204149c3432e451e5caf1a41732711",
+      "lasa_contracts/examples/descriptor.json": "0901990fe26af7ba2f1f8f6a1c818848c5e27b738cfc256207bb8ac7d45b1de2",
+      "lasa_contracts/examples/events.json": "b324786ed43e62c617b8469b2f2545f8540c2e2ca8112f7cd2ec83497c6386df",
+      "lasa_contracts/examples/fallback-task-request.json": "8d540293ee22fd25c405cf859ab58e61f46ea77449003f3d65655ec23d5fae09",
+      "lasa_contracts/examples/manifest.json": "89317c8216519679f23a8405c3f3e5f7279bd0a2b09aaeb7d32bedb94bee3d24",
+      "lasa_contracts/examples/offer.json": "8caaa126906de6576b610ae231a3970eac6ef2daf0b890f47cc28f4d19fab1c2",
+      "lasa_contracts/examples/plan.json": "d69f5fd5a580cbcb4aac80a0a3e53aaf4b6d15f8a9a0ab6b61bab7fd8ec8a7e6",
+      "lasa_contracts/examples/problem.json": "d13d769e8ae9d1fc23782ce0b50876811e8b4ea1e7986720e750ad2373a9c735",
+      "lasa_contracts/examples/routing-event.json": "f4361e19094399a8c0a240a7512e87e391c1a5548fbf68d06ff0b651af7b73ad",
+      "lasa_contracts/examples/session.json": "2edfa611a60a1c905b9a533646803f889bdae1a5f9af2597aa9f9dd9b0c9eaf6",
+      "lasa_contracts/examples/task-completed.json": "5c0184a48e3e3ca59b39cd7ccda7f65719b13c559a6f5977ca131ce20a479afc",
+      "lasa_contracts/examples/task-request.json": "05b01eaa40b0163931b6029558727d3e423a532c98c2d8681fc8f615e0298610",
+      "lasa_contracts/examples/task-result.json": "2ca3b08f9b83d291f8423a7e124a77bafaddb965ed11e62e25f3bccb5060a388",
+      "lasa_contracts/standards/openapi-3.2-2026-11-12.schema.json": "f1f7ee38d431a7bb1082e4df2288dbe1d4d3f49081b497af249c07b77737fb43",
+      "lasa_contracts/standards/source.json": "2caeb4390cb6cb7aa76f033dad31d38dd793db4a46b5f801d2a2c0c8c8d6327e",
+      "lasa_service/__init__.py": "28ed3a61d6603fe4733ecdeddb0bc01d5052b73db3c694c63bb7faf9454eeef9",
+      "lasa_service/api.py": "fbfb084fe837ed11e99cc3e6f1e76851086fd3dddc79914349381deb5068b7db",
+      "lasa_service/auth.py": "96dde1680457a2d7c11ec7a6a509d7412b63134f62632c046c8d1cbcbc377698",
+      "lasa_service/broker.py": "45a45b6fcd59e934ac8b8e8465073156324bbe4e3fac821fb265081306ff42a5",
+      "lasa_service/capabilities.py": "5f86ed0b1b05bfee810bd1d62e1b884ef472328cde4218ba840cf4b5d0961747",
+      "lasa_service/cli.py": "fe1fbb4dfe616730a405f15d8060d5453dbd0025dee43bb5fd8dd8cae442ff24",
+      "lasa_service/config.py": "584b3e0f9c1f1b686aa257099ccb083c1041ff1995ef421dd08b9077e1ff28e1",
+      "lasa_service/connector_schema.py": "126a498f3a2ad755dd8f638fc8cda43c19c3ed621bc980f732543220fa65609c",
+      "lasa_service/connectors.py": "3d2ccb50b26bee087103e1be2c8348ac2dff92cbf417f00a0f3ff398be266be9",
+      "lasa_service/container_entry.py": "55a27ec6e5fac5fca24b4034d824da1aac514d9d6d69f15a83b1c4cff611c50c",
+      "lasa_service/contracts.py": "a675bc258aa18f0c1407a42f29ff56ef4d05f3158c8a7f38d25007d6be4c531e",
+      "lasa_service/coordinator.py": "f779eebb37f91836fdd1af4fefe8079f3fb390fe871591797d881bc9792fe7a7",
+      "lasa_service/delegation.py": "ded03e6db5d7d92590921c70a77e4bd678b14e76d75f0f129705936ef80bec77",
+      "lasa_service/diagnostics.py": "59475d8869a19e62fe928377e7a845a0614b1cb7e0d1a261690dda295a5c2e3a",
+      "lasa_service/discovery.py": "c233ce18fd0c3c6633285a4411eddb189e33a28859841bf0aaaabf44c0b853ca",
+      "lasa_service/enclosure.py": "adcd7b766fd4db1c6c7bf11eaf80075615168a922059c65d99e73cd412dffc89",
+      "lasa_service/errors.py": "5dc64e552ec6edebe58baea3a1691123192b03826036485a912bb27efc4c02f9",
+      "lasa_service/evidence.py": "623ebb4fd1d920a92e089c5f6d3bacf17421172c7f3e46621a5b9b2a0eb733ef",
+      "lasa_service/gateway.py": "abe264838ca3ca83f6de27561b0532ac0471efb61b370342927eece42a32c0dc",
+      "lasa_service/mcp_bridge.py": "6b49354eac4011f7afae7247b955e16f720bdaae465ca39cc2479ffc4b21af48",
+      "lasa_service/outcomes.py": "290cdcced06727198acc9bf16193a1374fef0a0b2b3d7d85ac256afa910c4856",
+      "lasa_service/peer.py": "0144e16528a421dbfc1f2c3eaab9a3968a7dbed4a66751e4bac9d7072f36105a",
+      "lasa_service/planning.py": "e87efdf8144674dcb18ef9172701a1ef09cdfb8c117f9e3723d9a0218a872554",
+      "lasa_service/preconditions.py": "9073b01ba4be2d0a6ddd0136b5c5cad11455efec4816dc6af554c0d2cb65e4f0",
+      "lasa_service/routing.py": "03a6dabad61b7a4ed9ac311424430c9eaa654d72511af546713887ea0a68dc28",
+      "lasa_service/rpc.py": "4c394a8eb1f944dda1f7dd23639cff0cc6cd6f5d825ae3298676d9e7605fe70b",
+      "lasa_service/runtime.py": "6a62f450afa873a855a24390732c889f810439f405974af724c612006574edae",
+      "lasa_service/stdio_guard.py": "4d3d0fab494ba7a91d2416a4df10a82febf79986e15ce66b0822e4f07680bfe8",
+      "lasa_service/store.py": "8551e3806eda0b8afb3ef02b1ddcc45e8f2d1b389b91187da7936dffe9616152",
+      "lasa_service/workspace.py": "77029d9c555f8c06eb7c935296560e97684911db7145d2f47fb654e868c62b72"
+    },
+    "configuration_hashes": {
+      "config.json": "f12d2d71a22306f89ccb12708a77ff99a8f2a1a660d21cd6fa5e3f2944cf9ba9",
+      "authorization.json": "a04eb8cf3f61bd3fcdd62a9e3943d3922e391c3f055d587c19163cff549fa226",
+      "contracts.json": "2850da2ae002737a243136b41cc4c1007ec7ccbc370775b3d227c7be90b247a3",
+      "connectors.json": "18da9f76c3a64e26c91f34c769362e62864ea6d5bcf2831b06c8df93cc8afbae",
+      "runtime.json": "09abe94991f564d47d52a9968a703c71232ec8bb8a95aafb7a2cb2938e79c8fe"
+    },
+    "deployment_revision": "connectors-20261119-45e5f26c1b1a-steady",
+    "routing": {
+      "preferred_executor": "peer",
+      "unclaimed_peer_fallback": "attempt"
+    },
+    "has_peer": true,
+    "task_states": {
+      "completed": 9,
+      "failed": 2,
+      "rejected": 2
+    },
+    "token_file_modes": {
+      "metadata-token.txt": "0o600",
+      "operator-token.txt": "0o600"
+    },
+    "owned_task_containers": [],
+    "runtime_image": "sha256:4f09ec491ffad8efe8311b968e627308888f42912319da2744f16101d438f16e",
+    "process_arguments": "/Users/yyang/Dev/CodeX/LASA/v0/.deploy/target/venv/bin/python -I -m lasa_service.cli --config /Users/yyang/Dev/CodeX/LASA/v0/.deploy/target/layer1/config.json",
+    "https": {
+      "ready": {
+        "status": "ready"
+      },
+      "anonymous_status": 401,
+      "states": {
+        "design.review": "available",
+        "task.attempt": "available",
+        "documents.search": "unknown",
+        "repository.inspect": "unknown",
+        "documents.read": "unknown"
+      },
+      "catalog": {
+        "service_id": "https://localhost:8443/lasa",
+        "catalog_view": "view-b90175aef3b2113b543a1a84dd689a92",
+        "revision": "catalog-93092ce3c691f0684d2e67a6cc46c4e3",
+        "valid_until": "2026-11-19T02:26:50.497Z",
+        "offers": [
+          {
+            "offer_id": "offer-4b3b2f5d6e6e97b764d3ea9e44f31f1f",
+            "revision": "offer-11aaeeefcfeda667ed8f5f1af7fbfe67",
+            "catalog_view": "view-b90175aef3b2113b543a1a84dd689a92",
+            "contract": {
+              "id": "https://contracts.example.net/capabilities/design.review",
+              "version": "1.0.0",
+              "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce"
+            },
+            "restrictions": {
+              "allowed_effects": [
+                "workspace.read"
+              ],
+              "resources": [
+                {
+                  "resource": "workspace:self",
+                  "actions": [
+                    "read",
+                    "create",
+                    "update"
+                  ]
+                },
+                {
+                  "resource": "documents:lasa",
+                  "actions": [
+                    "read"
+                  ]
+                },
+                {
+                  "resource": "repository:python-sdk",
+                  "actions": [
+                    "read"
+                  ]
+                },
+                {
+                  "resource": "documentation:python-sdk",
+                  "actions": [
+                    "read"
+                  ]
+                }
+              ],
+              "additional_preconditions": [
+                {
+                  "kind": "budget_minimum",
+                  "description": "Minimum receiver assessment, execution, and verification allocation.",
+                  "resource": "model_calls",
+                  "minimum": 9
+                },
+                {
+                  "kind": "budget_minimum",
+                  "description": "Minimum receiver assessment, execution, and verification allocation.",
+                  "resource": "model_tokens",
+                  "minimum": 300000
+                }
+              ]
+            },
+            "max_budget": {
+              "model_tokens": 500000,
+              "model_calls": 16,
+              "tool_calls": 12,
+              "delegations": 2,
+              "wall_time_ms": 300000,
+              "input_bytes": 128000,
+              "output_bytes": 32000,
+              "artifact_bytes": 128000
+            },
+            "max_hops": 2,
+            "valid_until": "2026-11-19T02:26:50.497Z"
+          },
+          {
+            "offer_id": "offer-87118c69dffb6d83735184f20cdd6f8a",
+            "revision": "offer-1a3cd22cdd490a0ad2bbd38401a9e0e2",
+            "catalog_view": "view-b90175aef3b2113b543a1a84dd689a92",
+            "contract": {
+              "id": "https://contracts.example.net/capabilities/task.attempt",
+              "version": "1.0.0",
+              "digest": "sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23"
+            },
+            "restrictions": {
+              "allowed_effects": [
+                "external.read",
+                "workspace.read",
+                "workspace.write"
+              ],
+              "resources": [
+                {
+                  "resource": "workspace:self",
+                  "actions": [
+                    "read",
+                    "create",
+                    "update"
+                  ]
+                },
+                {
+                  "resource": "documents:lasa",
+                  "actions": [
+                    "read"
+                  ]
+                },
+                {
+                  "resource": "repository:python-sdk",
+                  "actions": [
+                    "read"
+                  ]
+                },
+                {
+                  "resource": "documentation:python-sdk",
+                  "actions": [
+                    "read"
+                  ]
+                }
+              ],
+              "additional_preconditions": [
+                {
+                  "kind": "budget_minimum",
+                  "description": "Minimum receiver assessment, execution, and verification allocation.",
+                  "resource": "model_calls",
+                  "minimum": 9
+                },
+                {
+                  "kind": "budget_minimum",
+                  "description": "Minimum receiver assessment, execution, and verification allocation.",
+                  "resource": "model_tokens",
+                  "minimum": 300000
+                }
+              ]
+            },
+            "max_budget": {
+              "model_tokens": 500000,
+              "model_calls": 16,
+              "tool_calls": 12,
+              "delegations": 2,
+              "wall_time_ms": 300000,
+              "input_bytes": 128000,
+              "output_bytes": 32000,
+              "artifact_bytes": 128000
+            },
+            "max_hops": 2,
+            "valid_until": "2026-11-19T02:26:50.497Z"
+          },
+          {
+            "offer_id": "offer-d48da5d218afb2f1c0278d1988030ab0",
+            "revision": "offer-9cd325a3d275780627ff0a8402c1484e",
+            "catalog_view": "view-b90175aef3b2113b543a1a84dd689a92",
+            "contract": {
+              "id": "https://contracts.example.net/capabilities/documents.search",
+              "version": "1.0.0",
+              "digest": "sha256:2a6bd42b305d7b416da9131965228c3c9d8de2a6fa524e8d6561bc2a5b215f12"
+            },
+            "restrictions": {
+              "allowed_effects": [
+                "external.read"
+              ],
+              "resources": [
+                {
+                  "resource": "workspace:self",
+                  "actions": [
+                    "read",
+                    "create",
+                    "update"
+                  ]
+                },
+                {
+                  "resource": "documents:lasa",
+                  "actions": [
+                    "read"
+                  ]
+                },
+                {
+                  "resource": "repository:python-sdk",
+                  "actions": [
+                    "read"
+                  ]
+                },
+                {
+                  "resource": "documentation:python-sdk",
+                  "actions": [
+                    "read"
+                  ]
+                }
+              ],
+              "additional_preconditions": [
+                {
+                  "kind": "budget_minimum",
+                  "description": "Minimum receiver assessment, execution, and verification allocation.",
+                  "resource": "model_calls",
+                  "minimum": 9
+                },
+                {
+                  "kind": "budget_minimum",
+                  "description": "Minimum receiver assessment, execution, and verification allocation.",
+                  "resource": "model_tokens",
+                  "minimum": 300000
+                }
+              ]
+            },
+            "max_budget": {
+              "model_tokens": 500000,
+              "model_calls": 16,
+              "tool_calls": 12,
+              "delegations": 2,
+              "wall_time_ms": 300000,
+              "input_bytes": 128000,
+              "output_bytes": 32000,
+              "artifact_bytes": 128000
+            },
+            "max_hops": 2,
+            "valid_until": "2026-11-19T02:26:50.497Z"
+          },
+          {
+            "offer_id": "offer-db246981e143ba07989d28501913acca",
+            "revision": "offer-f7521ef50e28e3404932d4a2c83511da",
+            "catalog_view": "view-b90175aef3b2113b543a1a84dd689a92",
+            "contract": {
+              "id": "https://contracts.example.net/capabilities/repository.inspect",
+              "version": "1.0.0",
+              "digest": "sha256:4c305684d20521d2f72628d5606a3537338691fc5f201177eca55b3aed1f5239"
+            },
+            "restrictions": {
+              "allowed_effects": [
+                "external.read"
+              ],
+              "resources": [
+                {
+                  "resource": "workspace:self",
+                  "actions": [
+                    "read",
+                    "create",
+                    "update"
+                  ]
+                },
+                {
+                  "resource": "documents:lasa",
+                  "actions": [
+                    "read"
+                  ]
+                },
+                {
+                  "resource": "repository:python-sdk",
+                  "actions": [
+                    "read"
+                  ]
+                },
+                {
+                  "resource": "documentation:python-sdk",
+                  "actions": [
+                    "read"
+                  ]
+                }
+              ],
+              "additional_preconditions": [
+                {
+                  "kind": "budget_minimum",
+                  "description": "Minimum receiver assessment, execution, and verification allocation.",
+                  "resource": "model_calls",
+                  "minimum": 9
+                },
+                {
+                  "kind": "budget_minimum",
+                  "description": "Minimum receiver assessment, execution, and verification allocation.",
+                  "resource": "model_tokens",
+                  "minimum": 300000
+                }
+              ]
+            },
+            "max_budget": {
+              "model_tokens": 500000,
+              "model_calls": 16,
+              "tool_calls": 12,
+              "delegations": 2,
+              "wall_time_ms": 300000,
+              "input_bytes": 128000,
+              "output_bytes": 32000,
+              "artifact_bytes": 128000
+            },
+            "max_hops": 2,
+            "valid_until": "2026-11-19T02:26:50.497Z"
+          },
+          {
+            "offer_id": "offer-ea105b301d4bb7c0707f9b198b299319",
+            "revision": "offer-6a94d0cc8f8a695d6c695dbc051c06f6",
+            "catalog_view": "view-b90175aef3b2113b543a1a84dd689a92",
+            "contract": {
+              "id": "https://contracts.example.net/capabilities/documents.read",
+              "version": "1.0.0",
+              "digest": "sha256:e45b5a4209e4deb4d503ee162b4416fa48881e7c74058d231247d83b581a431d"
+            },
+            "restrictions": {
+              "allowed_effects": [
+                "external.read"
+              ],
+              "resources": [
+                {
+                  "resource": "workspace:self",
+                  "actions": [
+                    "read",
+                    "create",
+                    "update"
+                  ]
+                },
+                {
+                  "resource": "documents:lasa",
+                  "actions": [
+                    "read"
+                  ]
+                },
+                {
+                  "resource": "repository:python-sdk",
+                  "actions": [
+                    "read"
+                  ]
+                },
+                {
+                  "resource": "documentation:python-sdk",
+                  "actions": [
+                    "read"
+                  ]
+                }
+              ],
+              "additional_preconditions": [
+                {
+                  "kind": "budget_minimum",
+                  "description": "Minimum receiver assessment, execution, and verification allocation.",
+                  "resource": "model_calls",
+                  "minimum": 9
+                },
+                {
+                  "kind": "budget_minimum",
+                  "description": "Minimum receiver assessment, execution, and verification allocation.",
+                  "resource": "model_tokens",
+                  "minimum": 300000
+                }
+              ]
+            },
+            "max_budget": {
+              "model_tokens": 500000,
+              "model_calls": 16,
+              "tool_calls": 12,
+              "delegations": 2,
+              "wall_time_ms": 300000,
+              "input_bytes": 128000,
+              "output_bytes": 32000,
+              "artifact_bytes": 128000
+            },
+            "max_hops": 2,
+            "valid_until": "2026-11-19T02:26:50.497Z"
+          }
+        ],
+        "next_cursor": null
+      }
+    }
+  },
+  "layer2": {
+    "package_version": "1.1.0",
+    "module_path": "/home/yang/Dev/CodeX/LASA/v0/.deploy/target/venv/lib/python3.14/site-packages/lasa_service/__init__.py",
+    "installed_files": {
+      "lasa_contracts/README.md": "6606fb136c6932e1897a72574a4c721cac640e09f7053f3f5c7496e905d99869",
+      "lasa_contracts/VALIDATION.md": "b1c9d179267df5b691fc6c74ab07b455ec54ff12a804a1d0c6785be8653a7bd7",
+      "lasa_contracts/__init__.py": "9a2b302ce88b1db172514e5d07e167426cc57461ee4d53e4629aad644e930fc6",
+      "lasa_contracts/acceptance.md": "e5e46ab14cf32e9d42069ba4daf55b3f3400feae68ed18f6d66db0185c3fc13f",
+      "lasa_contracts/api.openapi.json": "91caa5b177e4059c4a1a2ec5f1aaadf6d209f902dfc1d564970db9faf59a6aca",
+      "lasa_contracts/architecture.md": "75c8436fd006a2798d1d0a4d324fb611f08c7fddbdfc5430f6bb97b5993bef67",
+      "lasa_contracts/capabilities.md": "44f983247ce1f351d171b68d19d7c84b42205f7771c4ef23f5f259bc353bf2c0",
+      "lasa_contracts/config.schema.json": "d6f023abc3e53e72c49d949c944e00018c943f31dc2d0c0619ba8aeeeae9c84d",
+      "lasa_contracts/connectors.md": "d354fad3267cfe88effcd90b5d45866d7a4106c15ed1b62eb4889ac32d256335",
+      "lasa_contracts/contracts.schema.json": "a952c76e9ccf494d8dfee83f3b3729ea39f74de609e9392db9815bf4ac16d7ad",
+      "lasa_contracts/discovery.md": "cf7ad62291b7e646cd408eefe484ee2f65bf6239f2368a6dff20b99060f6ecb3",
+      "lasa_contracts/execution.md": "5a34524c532214de81b75221d7b0a76b680d9f93963c7342d6c54a85a1ae5a5a",
+      "lasa_contracts/private.schema.json": "3a9f0663410f5cbc3513b754f61060f21ba7ccd9014b58006ce5a02d809081f3",
+      "lasa_contracts/sources.md": "2c84109f41e14604203bd3dfd66165da9707ec3b08a455d65e665e98b3603732",
+      "lasa_contracts/validate.py": "305db993dde0f2894d626c3061671977b396ba51d80b7d0f76b4dcab9f113f74",
+      "lasa_contracts/validation-cases.json": "c7b2195432286915f00d8b24867411fb1b2e5fb9080c4c2acd109731436e78b4",
+      "lasa_contracts/examples/authorization.json": "8454df6b81e0cb726b49330c50a6092d3e107c265c33297aae6dc2dc48bdc204",
+      "lasa_contracts/examples/availability.json": "8fea82a048525b7ca196c40139865bb038c8efb479e4cc36cfa4858e658e5e1d",
+      "lasa_contracts/examples/binding.json": "589ac1a38a01a2016b72a62dd92ac180c03763f4b2679299902b03f0815c8c01",
+      "lasa_contracts/examples/bootstrap.json": "2e1990710c3abf15159e45e0a58bc6c48d0190f43fe8d933b7c873304553d282",
+      "lasa_contracts/examples/call-event.json": "9d6f815afc2651b27aa37cc192179479dd86835420a244b7d4af86c7295ef0ad",
+      "lasa_contracts/examples/capability-attempt.json": "6ff6debd055e45019f33583dacd18905c0f768886c210714000d36475a98d1c1",
+      "lasa_contracts/examples/capability-documents-read.json": "172a72a325c3bb3d607aa63560e7831c78ac5f1aabab41f714cf5209fd3a3fb4",
+      "lasa_contracts/examples/capability-documents-search.json": "7dc5c24ddcb732f1787686a20bd577900e124c71b4f9c819213570675151f0b3",
+      "lasa_contracts/examples/capability-repository-inspect.json": "7574eea3208ec212862b020998de3b488c5247bdefb6400a14753cd3e64e0167",
+      "lasa_contracts/examples/capability-review.json": "f2ebe2cb25f30a0ea5f8375bd95e3689e039d159c4b976fc7b9f0a13ff4dd04e",
+      "lasa_contracts/examples/catalog.json": "1355a0939250a67109a318ad566efb93edb63ec833e37efae63f7f3f6ea41645",
+      "lasa_contracts/examples/child-plan.json": "4e5a31b5fd789ce0475bfba3264b340e70bae0f3c8d0de21116d3248a5bf305e",
+      "lasa_contracts/examples/config-no-peer.json": "e95354e44e20b862e09762c4e58b4002f3dce910ed214e3f17dc0c663bbd9067",
+      "lasa_contracts/examples/config.json": "c2a9dddc3fa0e76146fcf51c9c023dfc95c416d609583b5383ffdc018a895834",
+      "lasa_contracts/examples/create-session.json": "5277be6becd0240115287a1266806dd51a05e9bcbafb4b2405eecfd8924a64ae",
+      "lasa_contracts/examples/delegated-task-request.json": "06ab375263805c001ff770a94aeaaf31a0204149c3432e451e5caf1a41732711",
+      "lasa_contracts/examples/descriptor.json": "0901990fe26af7ba2f1f8f6a1c818848c5e27b738cfc256207bb8ac7d45b1de2",
+      "lasa_contracts/examples/events.json": "b324786ed43e62c617b8469b2f2545f8540c2e2ca8112f7cd2ec83497c6386df",
+      "lasa_contracts/examples/fallback-task-request.json": "8d540293ee22fd25c405cf859ab58e61f46ea77449003f3d65655ec23d5fae09",
+      "lasa_contracts/examples/manifest.json": "89317c8216519679f23a8405c3f3e5f7279bd0a2b09aaeb7d32bedb94bee3d24",
+      "lasa_contracts/examples/offer.json": "8caaa126906de6576b610ae231a3970eac6ef2daf0b890f47cc28f4d19fab1c2",
+      "lasa_contracts/examples/plan.json": "d69f5fd5a580cbcb4aac80a0a3e53aaf4b6d15f8a9a0ab6b61bab7fd8ec8a7e6",
+      "lasa_contracts/examples/problem.json": "d13d769e8ae9d1fc23782ce0b50876811e8b4ea1e7986720e750ad2373a9c735",
+      "lasa_contracts/examples/routing-event.json": "f4361e19094399a8c0a240a7512e87e391c1a5548fbf68d06ff0b651af7b73ad",
+      "lasa_contracts/examples/session.json": "2edfa611a60a1c905b9a533646803f889bdae1a5f9af2597aa9f9dd9b0c9eaf6",
+      "lasa_contracts/examples/task-completed.json": "5c0184a48e3e3ca59b39cd7ccda7f65719b13c559a6f5977ca131ce20a479afc",
+      "lasa_contracts/examples/task-request.json": "05b01eaa40b0163931b6029558727d3e423a532c98c2d8681fc8f615e0298610",
+      "lasa_contracts/examples/task-result.json": "2ca3b08f9b83d291f8423a7e124a77bafaddb965ed11e62e25f3bccb5060a388",
+      "lasa_contracts/standards/openapi-3.2-2026-11-12.schema.json": "f1f7ee38d431a7bb1082e4df2288dbe1d4d3f49081b497af249c07b77737fb43",
+      "lasa_contracts/standards/source.json": "2caeb4390cb6cb7aa76f033dad31d38dd793db4a46b5f801d2a2c0c8c8d6327e",
+      "lasa_service/__init__.py": "28ed3a61d6603fe4733ecdeddb0bc01d5052b73db3c694c63bb7faf9454eeef9",
+      "lasa_service/api.py": "fbfb084fe837ed11e99cc3e6f1e76851086fd3dddc79914349381deb5068b7db",
+      "lasa_service/auth.py": "96dde1680457a2d7c11ec7a6a509d7412b63134f62632c046c8d1cbcbc377698",
+      "lasa_service/broker.py": "45a45b6fcd59e934ac8b8e8465073156324bbe4e3fac821fb265081306ff42a5",
+      "lasa_service/capabilities.py": "5f86ed0b1b05bfee810bd1d62e1b884ef472328cde4218ba840cf4b5d0961747",
+      "lasa_service/cli.py": "fe1fbb4dfe616730a405f15d8060d5453dbd0025dee43bb5fd8dd8cae442ff24",
+      "lasa_service/config.py": "584b3e0f9c1f1b686aa257099ccb083c1041ff1995ef421dd08b9077e1ff28e1",
+      "lasa_service/connector_schema.py": "126a498f3a2ad755dd8f638fc8cda43c19c3ed621bc980f732543220fa65609c",
+      "lasa_service/connectors.py": "3d2ccb50b26bee087103e1be2c8348ac2dff92cbf417f00a0f3ff398be266be9",
+      "lasa_service/container_entry.py": "55a27ec6e5fac5fca24b4034d824da1aac514d9d6d69f15a83b1c4cff611c50c",
+      "lasa_service/contracts.py": "a675bc258aa18f0c1407a42f29ff56ef4d05f3158c8a7f38d25007d6be4c531e",
+      "lasa_service/coordinator.py": "f779eebb37f91836fdd1af4fefe8079f3fb390fe871591797d881bc9792fe7a7",
+      "lasa_service/delegation.py": "ded03e6db5d7d92590921c70a77e4bd678b14e76d75f0f129705936ef80bec77",
+      "lasa_service/diagnostics.py": "59475d8869a19e62fe928377e7a845a0614b1cb7e0d1a261690dda295a5c2e3a",
+      "lasa_service/discovery.py": "c233ce18fd0c3c6633285a4411eddb189e33a28859841bf0aaaabf44c0b853ca",
+      "lasa_service/enclosure.py": "adcd7b766fd4db1c6c7bf11eaf80075615168a922059c65d99e73cd412dffc89",
+      "lasa_service/errors.py": "5dc64e552ec6edebe58baea3a1691123192b03826036485a912bb27efc4c02f9",
+      "lasa_service/evidence.py": "623ebb4fd1d920a92e089c5f6d3bacf17421172c7f3e46621a5b9b2a0eb733ef",
+      "lasa_service/gateway.py": "abe264838ca3ca83f6de27561b0532ac0471efb61b370342927eece42a32c0dc",
+      "lasa_service/mcp_bridge.py": "6b49354eac4011f7afae7247b955e16f720bdaae465ca39cc2479ffc4b21af48",
+      "lasa_service/outcomes.py": "290cdcced06727198acc9bf16193a1374fef0a0b2b3d7d85ac256afa910c4856",
+      "lasa_service/peer.py": "0144e16528a421dbfc1f2c3eaab9a3968a7dbed4a66751e4bac9d7072f36105a",
+      "lasa_service/planning.py": "e87efdf8144674dcb18ef9172701a1ef09cdfb8c117f9e3723d9a0218a872554",
+      "lasa_service/preconditions.py": "9073b01ba4be2d0a6ddd0136b5c5cad11455efec4816dc6af554c0d2cb65e4f0",
+      "lasa_service/routing.py": "03a6dabad61b7a4ed9ac311424430c9eaa654d72511af546713887ea0a68dc28",
+      "lasa_service/rpc.py": "4c394a8eb1f944dda1f7dd23639cff0cc6cd6f5d825ae3298676d9e7605fe70b",
+      "lasa_service/runtime.py": "6a62f450afa873a855a24390732c889f810439f405974af724c612006574edae",
+      "lasa_service/stdio_guard.py": "4d3d0fab494ba7a91d2416a4df10a82febf79986e15ce66b0822e4f07680bfe8",
+      "lasa_service/store.py": "8551e3806eda0b8afb3ef02b1ddcc45e8f2d1b389b91187da7936dffe9616152",
+      "lasa_service/workspace.py": "77029d9c555f8c06eb7c935296560e97684911db7145d2f47fb654e868c62b72"
+    },
+    "configuration_hashes": {
+      "config.json": "aab75d76cca4a82d5c8c8abe8514a09288db5d7b1047df435b3689d9f381ee7c",
+      "authorization.json": "a6fdc7a48f86ac73495c2fa97e5f215fc315bf120f011b2321d4603be3e2d0e8",
+      "contracts.json": "2850da2ae002737a243136b41cc4c1007ec7ccbc370775b3d227c7be90b247a3",
+      "connectors.json": "d4ca6694f705260b29e21c958342644d197d610ffcd46b100c90f17f27a513bf",
+      "runtime.json": "d1296bfd373140f30e94bcba13f82185d893143ee11984fc11781ea625fdbff3"
+    },
+    "deployment_revision": "connectors-20261119-45e5f26c1b1a-steady",
+    "routing": {
+      "preferred_executor": "local",
+      "unclaimed_peer_fallback": "reject"
+    },
+    "has_peer": false,
+    "task_states": {
+      "completed": 8,
+      "failed": 1
+    },
+    "token_file_modes": {},
+    "owned_task_containers": [],
+    "runtime_image": "sha256:227a150e354dd650b451ca20744e59751005b2a4002c1b9d6b0d228de64766a1",
+    "filesystem_entry_sha256": "4e7e0c6e39fa416d9368ff0d0a4b9c2d5351be30c76e6e45eced03394b6ede31",
+    "filesystem_version": "2.4.0",
+    "node_version": "v24.22.3",
+    "service_active": "active",
+    "linger": "yes",
+    "process_arguments": [
+      "/home/yang/Dev/CodeX/LASA/v0/.deploy/target/venv/bin/python",
+      "-I",
+      "-m",
+      "lasa_service.cli",
+      "--config",
+      "/home/yang/Dev/CodeX/LASA/v0/.deploy/target/layer2/config.json"
+    ],
+    "https": {
+      "ready": {
+        "status": "ready"
+      },
+      "anonymous_status": 401,
+      "states": {
+        "design.review": "available",
+        "task.attempt": "available",
+        "documents.search": "available",
+        "repository.inspect": "available",
+        "documents.read": "available"
+      },
+      "catalog": {
+        "service_id": "https://192.168.0.188/lasa",
+        "catalog_view": "view-45d4c77bc261e18599ff2a84296926f4",
+        "revision": "catalog-a85a6b564bd3b33429a7b2f932663013",
+        "valid_until": "2026-11-19T02:26:29.457Z",
+        "offers": [
+          {
+            "offer_id": "offer-4b3b2f5d6e6e97b764d3ea9e44f31f1f",
+            "revision": "offer-0875237c49426a4a05e6eba2de13c8cd",
+            "catalog_view": "view-45d4c77bc261e18599ff2a84296926f4",
+            "contract": {
+              "id": "https://contracts.example.net/capabilities/design.review",
+              "version": "1.0.0",
+              "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce"
+            },
+            "restrictions": {
+              "allowed_effects": [
+                "workspace.read"
+              ],
+              "resources": [
+                {
+                  "resource": "workspace:self",
+                  "actions": [
+                    "read",
+                    "create",
+                    "update"
+                  ]
+                },
+                {
+                  "resource": "documents:lasa",
+                  "actions": [
+                    "read"
+                  ]
+                },
+                {
+                  "resource": "repository:python-sdk",
+                  "actions": [
+                    "read"
+                  ]
+                },
+                {
+                  "resource": "documentation:python-sdk",
+                  "actions": [
+                    "read"
+                  ]
+                }
+              ],
+              "additional_preconditions": [
+                {
+                  "kind": "budget_minimum",
+                  "description": "Minimum receiver assessment, execution, and verification allocation.",
+                  "resource": "model_calls",
+                  "minimum": 3
+                },
+                {
+                  "kind": "budget_minimum",
+                  "description": "Minimum receiver assessment, execution, and verification allocation.",
+                  "resource": "model_tokens",
+                  "minimum": 50000
+                }
+              ]
+            },
+            "max_budget": {
+              "model_tokens": 500000,
+              "model_calls": 16,
+              "tool_calls": 12,
+              "delegations": 2,
+              "wall_time_ms": 300000,
+              "input_bytes": 128000,
+              "output_bytes": 32000,
+              "artifact_bytes": 128000
+            },
+            "max_hops": 2,
+            "valid_until": "2026-11-19T02:26:29.457Z"
+          },
+          {
+            "offer_id": "offer-87118c69dffb6d83735184f20cdd6f8a",
+            "revision": "offer-6eacc08e328f13157e5c1141eeec0fdf",
+            "catalog_view": "view-45d4c77bc261e18599ff2a84296926f4",
+            "contract": {
+              "id": "https://contracts.example.net/capabilities/task.attempt",
+              "version": "1.0.0",
+              "digest": "sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23"
+            },
+            "restrictions": {
+              "allowed_effects": [
+                "external.read",
+                "workspace.read",
+                "workspace.write"
+              ],
+              "resources": [
+                {
+                  "resource": "workspace:self",
+                  "actions": [
+                    "read",
+                    "create",
+                    "update"
+                  ]
+                },
+                {
+                  "resource": "documents:lasa",
+                  "actions": [
+                    "read"
+                  ]
+                },
+                {
+                  "resource": "repository:python-sdk",
+                  "actions": [
+                    "read"
+                  ]
+                },
+                {
+                  "resource": "documentation:python-sdk",
+                  "actions": [
+                    "read"
+                  ]
+                }
+              ],
+              "additional_preconditions": [
+                {
+                  "kind": "budget_minimum",
+                  "description": "Minimum receiver assessment, execution, and verification allocation.",
+                  "resource": "model_calls",
+                  "minimum": 3
+                },
+                {
+                  "kind": "budget_minimum",
+                  "description": "Minimum receiver assessment, execution, and verification allocation.",
+                  "resource": "model_tokens",
+                  "minimum": 50000
+                }
+              ]
+            },
+            "max_budget": {
+              "model_tokens": 500000,
+              "model_calls": 16,
+              "tool_calls": 12,
+              "delegations": 2,
+              "wall_time_ms": 300000,
+              "input_bytes": 128000,
+              "output_bytes": 32000,
+              "artifact_bytes": 128000
+            },
+            "max_hops": 2,
+            "valid_until": "2026-11-19T02:26:29.457Z"
+          },
+          {
+            "offer_id": "offer-d48da5d218afb2f1c0278d1988030ab0",
+            "revision": "offer-429b027477bd2a71e6d776b7b476dbaa",
+            "catalog_view": "view-45d4c77bc261e18599ff2a84296926f4",
+            "contract": {
+              "id": "https://contracts.example.net/capabilities/documents.search",
+              "version": "1.0.0",
+              "digest": "sha256:2a6bd42b305d7b416da9131965228c3c9d8de2a6fa524e8d6561bc2a5b215f12"
+            },
+            "restrictions": {
+              "allowed_effects": [
+                "external.read"
+              ],
+              "resources": [
+                {
+                  "resource": "workspace:self",
+                  "actions": [
+                    "read",
+                    "create",
+                    "update"
+                  ]
+                },
+                {
+                  "resource": "documents:lasa",
+                  "actions": [
+                    "read"
+                  ]
+                },
+                {
+                  "resource": "repository:python-sdk",
+                  "actions": [
+                    "read"
+                  ]
+                },
+                {
+                  "resource": "documentation:python-sdk",
+                  "actions": [
+                    "read"
+                  ]
+                }
+              ],
+              "additional_preconditions": [
+                {
+                  "kind": "budget_minimum",
+                  "description": "Minimum receiver assessment, execution, and verification allocation.",
+                  "resource": "model_calls",
+                  "minimum": 3
+                },
+                {
+                  "kind": "budget_minimum",
+                  "description": "Minimum receiver assessment, execution, and verification allocation.",
+                  "resource": "model_tokens",
+                  "minimum": 50000
+                }
+              ]
+            },
+            "max_budget": {
+              "model_tokens": 500000,
+              "model_calls": 16,
+              "tool_calls": 12,
+              "delegations": 2,
+              "wall_time_ms": 300000,
+              "input_bytes": 128000,
+              "output_bytes": 32000,
+              "artifact_bytes": 128000
+            },
+            "max_hops": 2,
+            "valid_until": "2026-11-19T02:26:29.457Z"
+          },
+          {
+            "offer_id": "offer-db246981e143ba07989d28501913acca",
+            "revision": "offer-2621d24097a7f94ff0e58cd12a2cca36",
+            "catalog_view": "view-45d4c77bc261e18599ff2a84296926f4",
+            "contract": {
+              "id": "https://contracts.example.net/capabilities/repository.inspect",
+              "version": "1.0.0",
+              "digest": "sha256:4c305684d20521d2f72628d5606a3537338691fc5f201177eca55b3aed1f5239"
+            },
+            "restrictions": {
+              "allowed_effects": [
+                "external.read"
+              ],
+              "resources": [
+                {
+                  "resource": "workspace:self",
+                  "actions": [
+                    "read",
+                    "create",
+                    "update"
+                  ]
+                },
+                {
+                  "resource": "documents:lasa",
+                  "actions": [
+                    "read"
+                  ]
+                },
+                {
+                  "resource": "repository:python-sdk",
+                  "actions": [
+                    "read"
+                  ]
+                },
+                {
+                  "resource": "documentation:python-sdk",
+                  "actions": [
+                    "read"
+                  ]
+                }
+              ],
+              "additional_preconditions": [
+                {
+                  "kind": "budget_minimum",
+                  "description": "Minimum receiver assessment, execution, and verification allocation.",
+                  "resource": "model_calls",
+                  "minimum": 3
+                },
+                {
+                  "kind": "budget_minimum",
+                  "description": "Minimum receiver assessment, execution, and verification allocation.",
+                  "resource": "model_tokens",
+                  "minimum": 50000
+                }
+              ]
+            },
+            "max_budget": {
+              "model_tokens": 500000,
+              "model_calls": 16,
+              "tool_calls": 12,
+              "delegations": 2,
+              "wall_time_ms": 300000,
+              "input_bytes": 128000,
+              "output_bytes": 32000,
+              "artifact_bytes": 128000
+            },
+            "max_hops": 2,
+            "valid_until": "2026-11-19T02:26:29.457Z"
+          },
+          {
+            "offer_id": "offer-ea105b301d4bb7c0707f9b198b299319",
+            "revision": "offer-c8f1981323e4ef412503157008f4659a",
+            "catalog_view": "view-45d4c77bc261e18599ff2a84296926f4",
+            "contract": {
+              "id": "https://contracts.example.net/capabilities/documents.read",
+              "version": "1.0.0",
+              "digest": "sha256:e45b5a4209e4deb4d503ee162b4416fa48881e7c74058d231247d83b581a431d"
+            },
+            "restrictions": {
+              "allowed_effects": [
+                "external.read"
+              ],
+              "resources": [
+                {
+                  "resource": "workspace:self",
+                  "actions": [
+                    "read",
+                    "create",
+                    "update"
+                  ]
+                },
+                {
+                  "resource": "documents:lasa",
+                  "actions": [
+                    "read"
+                  ]
+                },
+                {
+                  "resource": "repository:python-sdk",
+                  "actions": [
+                    "read"
+                  ]
+                },
+                {
+                  "resource": "documentation:python-sdk",
+                  "actions": [
+                    "read"
+                  ]
+                }
+              ],
+              "additional_preconditions": [
+                {
+                  "kind": "budget_minimum",
+                  "description": "Minimum receiver assessment, execution, and verification allocation.",
+                  "resource": "model_calls",
+                  "minimum": 3
+                },
+                {
+                  "kind": "budget_minimum",
+                  "description": "Minimum receiver assessment, execution, and verification allocation.",
+                  "resource": "model_tokens",
+                  "minimum": 50000
+                }
+              ]
+            },
+            "max_budget": {
+              "model_tokens": 500000,
+              "model_calls": 16,
+              "tool_calls": 12,
+              "delegations": 2,
+              "wall_time_ms": 300000,
+              "input_bytes": 128000,
+              "output_bytes": 32000,
+              "artifact_bytes": 128000
+            },
+            "max_hops": 2,
+            "valid_until": "2026-11-19T02:26:29.457Z"
+          }
+        ],
+        "next_cursor": null
+      }
+    }
+  },
+  "privacy_scan": "No saved model/service token values in JSON evidence"
+}

@@ -1,0 +1,118 @@
+{
+  "status": "passed",
+  "checked_at": "2026-11-18T12:58:34.215811+00:00",
+  "wheel_sha256": "756da6a87ce1e9fb1f1e8d4d38aad13bd67ffda3296781a348542bb7944c6b90",
+  "hosts": {
+    "layer1": {
+      "python": "3.12.13",
+      "version": "1.0.0",
+      "module": "/Users/yyang/Dev/CodeX/LASA/v0/.deploy/target/venv/lib/python3.12/site-packages/lasa_service/__init__.py",
+      "installed_files_matched": 69,
+      "config_sha256": "1a868c6bfe9d7eb605440405431e060f186beb9a386cf7034fbfc21f6e58def9",
+      "policy_sha256": "5d06a9e3c201b567622aae61fab09dfd19306f8c45930153b3edb4fe2b75bb8c",
+      "deployment_revision": "target-20261118-756da6a87ce1-steady",
+      "service_id": "https://localhost:8443/lasa",
+      "base_url": "https://localhost:8443/lasa/v1",
+      "routing": {
+        "preferred_executor": "peer",
+        "unclaimed_peer_fallback": "attempt"
+      },
+      "model": "gpt-5.5",
+      "provider": "https://api.openai.com/v1/",
+      "image": "sha256:4f09ec491ffad8efe8311b968e627308888f42912319da2744f16101d438f16e",
+      "image_architecture": "amd64",
+      "rootfs_layers": [
+        "sha256:1d7b9dd8778ebc4d9bf2f64436dd358640718cb349f5640b33bebaea4ffd62c2",
+        "sha256:a3cfe73133965fb536427fde3fe66b2949ea6178f568733760bf45f5c8b5c405",
+        "sha256:5e63f01f0cee6291b52c44ffeee48c9eb7b94cdb19478259bcfce37db9eb680e",
+        "sha256:311a92d269bd002ca4ff3d801c6320df734027d3b425ff1ec860368f12b07a26",
+        "sha256:73d214f5b99edf359f91d9a4cf8f06d2fd9088de898a4e67631759f68171c6fd",
+        "sha256:d987ad2deaf28bc807318ae1973b61c4ce4f336516c7acd4e2951d09612c9f48",
+        "sha256:8f426bf86a7e1697b4d1ceabc59dc7f5f78d2de91c4d47f350a8149369a4f956"
+      ],
+      "codex_expected_version": "0.169.0-alpha.11.1",
+      "owned_containers": [],
+      "launchd_jobs": [
+        [
+          "31015",
+          "0",
+          "com.lasa.layer1-https"
+        ],
+        [
+          "44103",
+          "-15",
+          "com.lasa.layer1"
+        ],
+        [
+          "-",
+          "0",
+          "com.lasa.tokens"
+        ]
+      ]
+    },
+    "layer2": {
+      "python": "3.14.4",
+      "version": "1.0.0",
+      "config_sha256": "521aa7aba3e750ba72775fe0afc073ef3e7c3a30c9a859c6d69ad23f9636c131",
+      "policy_sha256": "1e8b2618f1a9610c83e2903a8640489fa668403cc185466dd3168a77411041f8",
+      "deployment_revision": "target-20261118-756da6a87ce1-steady",
+      "service_id": "https://192.168.0.188/lasa",
+      "base_url": "https://192.168.0.188/lasa/v1",
+      "routing": {
+        "preferred_executor": "local",
+        "unclaimed_peer_fallback": "reject"
+      },
+      "peer_configured": false,
+      "model": "gpt-5.5",
+      "provider": "https://api.openai.com/v1/",
+      "image": "sha256:227a150e354dd650b451ca20744e59751005b2a4002c1b9d6b0d228de64766a1",
+      "image_architecture": "amd64",
+      "rootfs_layers": [
+        "sha256:1d7b9dd8778ebc4d9bf2f64436dd358640718cb349f5640b33bebaea4ffd62c2",
+        "sha256:a3cfe73133965fb536427fde3fe66b2949ea6178f568733760bf45f5c8b5c405",
+        "sha256:5e63f01f0cee6291b52c44ffeee48c9eb7b94cdb19478259bcfce37db9eb680e",
+        "sha256:311a92d269bd002ca4ff3d801c6320df734027d3b425ff1ec860368f12b07a26",
+        "sha256:73d214f5b99edf359f91d9a4cf8f06d2fd9088de898a4e67631759f68171c6fd",
+        "sha256:d987ad2deaf28bc807318ae1973b61c4ce4f336516c7acd4e2951d09612c9f48",
+        "sha256:8f426bf86a7e1697b4d1ceabc59dc7f5f78d2de91c4d47f350a8149369a4f956"
+      ],
+      "codex_expected_version": "0.169.0-alpha.11.1",
+      "owned_containers": [],
+      "backend_unit": [
+        "ActiveState=active",
+        "SubState=running",
+        "UnitFileState=enabled",
+        "MainPID=2639571",
+        "NRestarts=0"
+      ],
+      "https_unit": [
+        "ActiveState=active",
+        "SubState=running",
+        "UnitFileState=enabled",
+        "MainPID=2629023"
+      ],
+      "user_linger": "Linger=yes",
+      "installed_files_matched": 69
+    }
+  },
+  "restart_checks": {
+    "both_backends_restarted": true,
+    "configuration_preserved": true,
+    "completed_task_byte_digest_preserved": "299a1e57bc7c1bacb6663000df28a3db53f31d3644ef5002826da31c28c7a54e",
+    "session_preserved": true,
+    "child_diagnostics_via_layer1_after_restart": true
+  },
+  "authentication": {
+    "anonymous_descriptor": 401,
+    "wrong_receiver_audience": 401,
+    "private_file_modes": {
+      "layer1/signing-key.pem": "0o600",
+      "layer2/signing-key.pem": "0o600",
+      "layer1/operator-token.txt": "0o600",
+      "layer2/peer-token.txt": "0o600"
+    }
+  },
+  "image_parity": "same exported amd64 rootfs layer digests; Docker stores expose different image IDs",
+  "prototype_data": "preserved in original directories; no migration or deletion",
+  "verification_owned_containers_remaining": 0
+}

@@ -1,0 +1,456 @@
+{
+  "type": "object",
+  "properties": {
+    "config_version": {
+      "const": "1.0"
+    },
+    "service": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://",
+          "maxLength": 2048
+        },
+        "deployment_revision": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
+        },
+        "base_url": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://",
+          "maxLength": 2048
+        },
+        "descriptor_url": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://",
+          "maxLength": 2048
+        },
+        "publish_api_catalog": {
+          "type": "boolean"
+        },
+        "workspace_root": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "session_retention_seconds": {
+          "type": "integer",
+          "minimum": 3600,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "id",
+        "deployment_revision",
+        "base_url",
+        "descriptor_url",
+        "publish_api_catalog",
+        "workspace_root",
+        "session_retention_seconds"
+      ],
+      "additionalProperties": false
+    },
+    "authentication": {
+      "type": "object",
+      "properties": {
+        "issuer": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://",
+          "maxLength": 2048
+        },
+        "audience": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://",
+          "maxLength": 2048
+        },
+        "jwks_url": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://",
+          "maxLength": 2048
+        },
+        "allowed_algorithms": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "ES256",
+              "EdDSA",
+              "RS256"
+            ]
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "jwks_file": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "issuer",
+        "audience",
+        "allowed_algorithms"
+      ],
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "required": [
+            "jwks_url"
+          ],
+          "not": {
+            "required": [
+              "jwks_file"
+            ]
+          }
+        },
+        {
+          "required": [
+            "jwks_file"
+          ],
+          "not": {
+            "required": [
+              "jwks_url"
+            ]
+          }
+        }
+      ]
+    },
+    "authorization": {
+      "type": "object",
+      "properties": {
+        "resolver_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
+        },
+        "policy_file": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "trusted_delegator_service_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uri",
+            "pattern": "^https://",
+            "maxLength": 2048
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "resolver_id",
+        "policy_file",
+        "trusted_delegator_service_ids"
+      ],
+      "additionalProperties": false
+    },
+    "contract_publishers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "namespace": {
+            "type": "string",
+            "format": "uri",
+            "pattern": "^https://",
+            "maxLength": 2048
+          },
+          "trusted_registry_file": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048
+          }
+        },
+        "required": [
+          "namespace",
+          "trusted_registry_file"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    },
+    "executors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
+          },
+          "kind": {
+            "const": "codex-app-server"
+          },
+          "model": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "provider_base_url": {
+            "type": "string",
+            "format": "uri",
+            "pattern": "^https://",
+            "maxLength": 2048
+          },
+          "credential_ref": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048
+          },
+          "runtime_profile_file": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048
+          },
+          "connector_policy_file": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "model",
+          "provider_base_url",
+          "credential_ref",
+          "connector_policy_file",
+          "runtime_profile_file"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    },
+    "bindings": {
+      "type": "array",
+      "items": {
+        "$ref": "https://schemas.example.net/lasa/1.1/private.schema.json#/$defs/FulfillmentBinding"
+      }
+    },
+    "published_contracts": {
+      "type": "array",
+      "items": {
+        "$ref": "contracts.schema.json#/$defs/CapabilityRef"
+      },
+      "uniqueItems": true
+    },
+    "limits": {
+      "type": "object",
+      "properties": {
+        "max_task_budget": {
+          "$ref": "contracts.schema.json#/$defs/Budget"
+        },
+        "assessment_budget": {
+          "$ref": "contracts.schema.json#/$defs/Budget"
+        },
+        "integration_reserve": {
+          "$ref": "contracts.schema.json#/$defs/Budget"
+        },
+        "max_hops": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 32
+        },
+        "max_children": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 64
+        },
+        "max_plan_steps": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64
+        },
+        "max_active_tasks": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1024
+        },
+        "max_clock_skew_seconds": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 60
+        },
+        "reconciliation_timeout_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 300
+        }
+      },
+      "required": [
+        "max_task_budget",
+        "assessment_budget",
+        "integration_reserve",
+        "max_hops",
+        "max_children",
+        "max_plan_steps",
+        "max_active_tasks",
+        "max_clock_skew_seconds",
+        "reconciliation_timeout_seconds"
+      ],
+      "additionalProperties": false
+    },
+    "routing": {
+      "$ref": "contracts.schema.json#/$defs/RoutingPolicy"
+    },
+    "peer": {
+      "type": "object",
+      "properties": {
+        "descriptor_url": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://",
+          "maxLength": 2048
+        },
+        "expected_service_id": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://",
+          "maxLength": 2048
+        },
+        "allowed_base_url": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://",
+          "maxLength": 2048
+        },
+        "credential_ref": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "authorization_ref": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "request_timeout_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 60
+        },
+        "ca_file": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "descriptor_url",
+        "expected_service_id",
+        "allowed_base_url",
+        "credential_ref",
+        "authorization_ref",
+        "request_timeout_seconds"
+      ],
+      "additionalProperties": false
+    },
+    "discovery_cache": {
+      "type": "object",
+      "properties": {
+        "descriptor_max_age_seconds": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3600
+        },
+        "catalog_max_age_seconds": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 300
+        },
+        "availability_max_age_seconds": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 30
+        },
+        "page_size": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      "required": [
+        "descriptor_max_age_seconds",
+        "catalog_max_age_seconds",
+        "availability_max_age_seconds",
+        "page_size"
+      ],
+      "additionalProperties": false
+    },
+    "storage": {
+      "type": "object",
+      "properties": {
+        "data_root": {
+          "type": "string",
+          "minLength": 1
+        },
+        "listen_host": {
+          "const": "127.0.0.1"
+        },
+        "listen_port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        }
+      },
+      "required": [
+        "data_root",
+        "listen_host",
+        "listen_port"
+      ],
+      "additionalProperties": false
+    },
+    "verifiers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "contract": {
+            "$ref": "contracts.schema.json#/$defs/CapabilityRef"
+          },
+          "verifier_id": {
+            "enum": [
+              "design-review-v1",
+              "task-attempt-v1",
+              "documents-read-v1",
+              "documents-search-v1",
+              "repository-inspect-v1"
+            ]
+          }
+        },
+        "required": [
+          "contract",
+          "verifier_id"
+        ],
+        "additionalProperties": false
+      },
+      "uniqueItems": true
+    }
+  },
+  "required": [
+    "config_version",
+    "service",
+    "authentication",
+    "authorization",
+    "contract_publishers",
+    "executors",
+    "bindings",
+    "published_contracts",
+    "limits",
+    "routing",
+    "discovery_cache",
+    "storage",
+    "verifiers"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.example.net/lasa/1.1/config.schema.json",
+  "title": "Private LASA target configuration; not prototype configuration"
+}

@@ -1,0 +1,99 @@
+[
+  {
+    "case": "layer2-no-peer",
+    "passed": true,
+    "status": "completed",
+    "layer1_model_calls": 0,
+    "layer2_model_calls": 2,
+    "tool_calls": 0,
+    "routing": [
+      "local"
+    ]
+  },
+  {
+    "case": "local-first",
+    "passed": true,
+    "status": "completed",
+    "layer1_model_calls": 4,
+    "layer2_model_calls": 0,
+    "tool_calls": 0,
+    "routing": [
+      "local"
+    ]
+  },
+  {
+    "case": "delegate-first",
+    "passed": true,
+    "status": "completed",
+    "layer1_model_calls": 4,
+    "layer2_model_calls": 2,
+    "tool_calls": 0,
+    "routing": [
+      "peer"
+    ]
+  },
+  {
+    "case": "fallback-disabled",
+    "passed": true,
+    "status": "rejected",
+    "layer1_model_calls": 1,
+    "layer2_model_calls": 0,
+    "tool_calls": 0,
+    "routing": [
+      "none"
+    ]
+  },
+  {
+    "case": "fallback-enabled",
+    "passed": true,
+    "status": "completed",
+    "layer1_model_calls": 5,
+    "layer2_model_calls": 2,
+    "tool_calls": 0,
+    "routing": [
+      "peer"
+    ]
+  },
+  {
+    "case": "local-tools",
+    "passed": false,
+    "status": "failed",
+    "layer1_model_calls": 8,
+    "layer2_model_calls": 0,
+    "tool_calls": 2,
+    "routing": [
+      "local"
+    ]
+  },
+  {
+    "case": "local-tools-with-receipts",
+    "passed": true,
+    "status": "completed",
+    "layer1_model_calls": 9,
+    "layer2_model_calls": 0,
+    "tool_calls": 2,
+    "routing": [
+      "local"
+    ]
+  },
+  {
+    "case": "steady-delegation",
+    "passed": true,
+    "status": "completed",
+    "layer1_model_calls": 4,
+    "layer2_model_calls": 2,
+    "tool_calls": 0,
+    "routing": [
+      "peer"
+    ]
+  },
+  {
+    "case": "content-permission-denied",
+    "passed": true,
+    "status": 403,
+    "layer1_model_calls": 0,
+    "layer2_model_calls": 0,
+    "tool_calls": 0,
+    "routing": []
+  }
+]

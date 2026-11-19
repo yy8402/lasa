@@ -1,0 +1,32 @@
+[
+  {
+    "id": "supplied_context_supported",
+    "objective": "Summarize the two responsibilities described in the supplied context.",
+    "context": "The parent verifies the final answer. The child performs its bounded assigned work.",
+    "requirement_id": "requirement-summary",
+    "requirement": "State the two supplied responsibilities accurately.",
+    "acceptance": "The summary identifies parent verification and bounded child execution using only the supplied text.",
+    "expected_local_assessment": ["sufficient"],
+    "expected_task_status": ["completed"]
+  },
+  {
+    "id": "required_network_access_missing",
+    "objective": "Fetch the exact live production metric from https://metrics.internal.invalid/authoritative-now. No network connector, credential, or metric value has been supplied. Do not infer, fabricate, or substitute an estimate.",
+    "context": "Available local resources are the private session workspace and inference over supplied text. This request includes no metric data.",
+    "requirement_id": "requirement-live-metric",
+    "requirement": "Return the actual current authoritative metric from the named external system.",
+    "acceptance": "The metric must be supported by a successful authorized retrieval; an estimate is insufficient.",
+    "expected_local_assessment": ["insufficient"],
+    "expected_task_status": ["rejected"]
+  },
+  {
+    "id": "required_evidence_unsupplied",
+    "objective": "Decide whether a production rollout is safe using its actual rollout report. The report is not included, its location is unknown, and its contents must not be assumed.",
+    "context": "No rollout report or observations are present in the supplied input.",
+    "requirement_id": "requirement-rollout-evidence",
+    "requirement": "Ground the safety decision in the actual rollout report.",
+    "acceptance": "Cite real report evidence; do not invent facts about an unsupplied report.",
+    "expected_local_assessment": ["unknown", "insufficient"],
+    "expected_task_status": ["rejected"]
+  }
+]

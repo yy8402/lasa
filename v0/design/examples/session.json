@@ -1,0 +1,7 @@
+{
+  "session_id": "session-child-001",
+  "service_id": "https://identity.example.net/services/layer2",
+  "created_at": "2026-11-18T08:00:00Z",
+  "retention_until": "2026-11-25T08:00:00Z",
+  "active_task_id": null
+}

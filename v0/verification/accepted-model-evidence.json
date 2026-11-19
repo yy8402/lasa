@@ -1,0 +1,207 @@
+{
+  "accepted_scenarios": [
+    {
+      "case": "local_first",
+      "evidence": "final-remaining-evaluations/local_first/evidence.json",
+      "sha256": "f50094a75346a1f94fbcf80426b547c9afe8b4255d0d7a817ad8ed82581bae78",
+      "passed": true,
+      "status": "completed",
+      "routing": [
+        "local"
+      ],
+      "layer1_model_calls": 4,
+      "layer2_model_calls": 0,
+      "actual_model_assessments": [
+        {
+          "assessment_summary": "The request contract directly expresses the needed outcome: a bounded design review against the supplied criterion. Approved local binding for this contract permits workspace.read, which is within the contract max effects and sufficient because the design and criteria are supplied in the request. No peer delegation or additional resource access is needed.",
+          "contract_digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce",
+          "local_assessment": "sufficient",
+          "requirement_ids": [
+            "criterion-coverage"
+          ],
+          "step_id": "step-1"
+        }
+      ],
+      "runtime_image": "sha256:4f09ec491ffad8efe8311b968e627308888f42912319da2744f16101d438f16e"
+    },
+    {
+      "case": "delegate_first",
+      "evidence": "peer-evaluations-v2/delegate_first/evidence.json",
+      "sha256": "22e3776c3774be35d55df54683e84f45bab9cb3e75f0eadc42fbe4a72b62ccc4",
+      "passed": true,
+      "status": "completed",
+      "routing": [
+        "peer"
+      ],
+      "layer1_model_calls": 4,
+      "layer2_model_calls": 2,
+      "actual_model_assessments": [
+        {
+          "assessment_summary": "The request contract directly expresses the needed outcome: a bounded semantic design review against explicit criteria. The supplied input conforms to the design.review schema with one design and one criterion. The approved local binding for this contract permits workspace.read, which is within the contract max effects; no peer delegation or additional resource access is needed. The step can produce coverage for the supplied criterion and findings, if any, grounded in the provided design text.",
+          "contract_digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce",
+          "local_assessment": "sufficient",
+          "requirement_ids": [
+            "criterion-coverage"
+          ],
+          "step_id": "step-1-design-review"
+        }
+      ],
+      "runtime_image": "sha256:4f09ec491ffad8efe8311b968e627308888f42912319da2744f16101d438f16e"
+    },
+    {
+      "case": "fallback_disabled",
+      "evidence": "final-remaining-evaluations/fallback_disabled/evidence.json",
+      "sha256": "48640a077d159fb82959588ed5dae34eeec06fbd715cbdcf7b3f7d978ec4e5a3",
+      "passed": true,
+      "status": "rejected",
+      "routing": [
+        "none"
+      ],
+      "layer1_model_calls": 1,
+      "layer2_model_calls": 0,
+      "actual_model_assessments": [
+        {
+          "assessment_summary": "The requested outcome is directly expressed by the supplied design.review contract and the input conforms to its schema. However, no approved local binding is supplied for the design.review contract; only task.attempt is locally bound. Peer offers do not grant permission. Therefore local ability to fulfill this step is unknown.",
+          "contract_digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce",
+          "local_assessment": "unknown",
+          "requirement_ids": [
+            "criterion-coverage"
+          ],
+          "step_id": "step-1"
+        }
+      ],
+      "runtime_image": "sha256:4f09ec491ffad8efe8311b968e627308888f42912319da2744f16101d438f16e"
+    },
+    {
+      "case": "fallback_enabled",
+      "evidence": "peer-evaluations-v2/fallback_enabled/evidence.json",
+      "sha256": "2497a113e72d53e5a8fad8b3f4ac416c02b04d1e589a2691e7744458f1b98bfa",
+      "passed": true,
+      "status": "completed",
+      "routing": [
+        "peer"
+      ],
+      "layer1_model_calls": 5,
+      "layer2_model_calls": 2,
+      "actual_model_assessments": [
+        {
+          "assessment_summary": "The request contract directly expresses the needed design review outcome and the input conforms to its schema. However, there is no approved LOCAL binding for the design.review contract; the only approved local binding is for task.attempt. Peer offers are not treated as permission. Therefore approved local bindings/resources cannot fulfill this step locally as planned.",
+          "contract_digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce",
+          "local_assessment": "insufficient",
+          "requirement_ids": [
+            "criterion-coverage"
+          ],
+          "step_id": "step-1-design-review"
+        }
+      ],
+      "runtime_image": "sha256:4f09ec491ffad8efe8311b968e627308888f42912319da2744f16101d438f16e"
+    },
+    {
+      "case": "no_peer",
+      "evidence": "no-peer-verdict-observation/no_peer/evidence.json",
+      "sha256": "83bea9a06934e7f077af8430d97e3e9cbe8721947ad921bf26ebc22e900fdb5c",
+      "passed": true,
+      "status": "completed",
+      "routing": [
+        "local"
+      ],
+      "layer1_model_calls": 2,
+      "layer2_model_calls": 0,
+      "actual_model_assessments": [
+        {
+          "assessment_summary": "No peer is configured; the approved local binding is the only execution path.",
+          "contract_digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce",
+          "local_assessment": "sufficient",
+          "requirement_ids": [
+            "criterion-coverage"
+          ],
+          "step_id": "step-local"
+        }
+      ],
+      "runtime_image": "sha256:4f09ec491ffad8efe8311b968e627308888f42912319da2744f16101d438f16e"
+    },
+    {
+      "case": "assessment_supplied_context_supported",
+      "evidence": "final-remaining-evaluations/assessment_supplied_context_supported/evidence.json",
+      "sha256": "4a7ff543319298db8fd2042ba71aa021b35da960f5d0a207754036a41175f5f7",
+      "passed": true,
+      "status": "completed",
+      "routing": [
+        "local"
+      ],
+      "layer1_model_calls": 4,
+      "layer2_model_calls": 0,
+      "actual_model_assessments": [
+        {
+          "assessment_summary": "The request contract directly matches the needed outcome: a bounded attempt to summarize the supplied context with requirement-level evidence. Local binding for task.attempt is approved with workspace.read/workspace.write; the proposed step only needs the supplied input text and does not require external access. The requirement ID is preserved.",
+          "contract_digest": "sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23",
+          "local_assessment": "sufficient",
+          "requirement_ids": [
+            "requirement-summary"
+          ],
+          "step_id": "step-1-summarize-responsibilities"
+        }
+      ],
+      "runtime_image": "sha256:4f09ec491ffad8efe8311b968e627308888f42912319da2744f16101d438f16e"
+    },
+    {
+      "case": "assessment_required_network_access_missing",
+      "evidence": "final-remaining-evaluations/assessment_required_network_access_missing/evidence.json",
+      "sha256": "e26943d1a7b31e07e489f3beea45d8becb7c1a06bcbb7ac7964a3882c63235c4",
+      "passed": true,
+      "status": "rejected",
+      "routing": [
+        "none"
+      ],
+      "layer1_model_calls": 1,
+      "layer2_model_calls": 0,
+      "actual_model_assessments": [
+        {
+          "assessment_summary": "The request contract directly matches a bounded attempt and can honestly report inability, but approved LOCAL bindings/resources do not include external.read, network access, credentials, or the metric value. Therefore the actual mandatory outcome\u2014successful authorized retrieval of the current metric\u2014cannot be fulfilled locally; any execution should return unable for requirement-live-metric rather than infer or fabricate a metric.",
+          "contract_digest": "sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23",
+          "local_assessment": "insufficient",
+          "requirement_ids": [
+            "requirement-live-metric"
+          ],
+          "step_id": "step-1-attempt-live-metric"
+        }
+      ],
+      "runtime_image": "sha256:4f09ec491ffad8efe8311b968e627308888f42912319da2744f16101d438f16e"
+    },
+    {
+      "case": "assessment_required_evidence_unsupplied",
+      "evidence": "final-remaining-evaluations/assessment_required_evidence_unsupplied/evidence.json",
+      "sha256": "b99cd78f0ab0d1d2f6d97afbe26c1460f90eb364acb07b7868f2135ba49fbfd4",
+      "passed": true,
+      "status": "rejected",
+      "routing": [
+        "none"
+      ],
+      "layer1_model_calls": 1,
+      "layer2_model_calls": 0,
+      "actual_model_assessments": [
+        {
+          "assessment_summary": "The request contract directly matches the requested bounded attempt, but the mandatory requirement cannot be fulfilled with the approved local bindings and supplied resources because no rollout report, report location, or report observations are provided. Local access is limited to workspace:self read/create/update; the actual report is not identified there, and peer offers do not grant additional permission. A compliant execution would likely need to report unable rather than decide safety without real report evidence.",
+          "contract_digest": "sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23",
+          "local_assessment": "insufficient",
+          "requirement_ids": [
+            "requirement-rollout-evidence"
+          ],
+          "step_id": "step-1-attempt-rollout-safety-decision"
+        }
+      ],
+      "runtime_image": "sha256:4f09ec491ffad8efe8311b968e627308888f42912319da2744f16101d438f16e"
+    }
+  ],
+  "retained_counterexamples": [
+    {
+      "case": "no_peer",
+      "evidence": "final-remaining-evaluations/no_peer/evidence.json",
+      "sha256": "73d6fcf2f9bab962471d927540adaa7ba8014a59b8b464b4714c759aedd73714",
+      "status": "failed",
+      "problem": "verification_failed",
+      "finding": "Schema and coverage passed, independent semantic verification rejected the output. Original short reason was not persisted in metadata mode. No result was released. A later instrumented observation passed; verification rules were unchanged and this counterexample remains part of the evidence."
+    }
+  ],
+  "model_quality_limit": "Three frozen planner-assessment cases are a small, task-specific evaluation. Semantic model judgments can reject otherwise structurally valid work; they are not a correctness proof."
+}

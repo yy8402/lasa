@@ -1,0 +1,137 @@
+[
+  {
+    "file": "capability-review.json",
+    "schema": "contracts.schema.json#/$defs/CapabilityDefinition",
+    "visibility": "wire"
+  },
+  {
+    "file": "capability-attempt.json",
+    "schema": "contracts.schema.json#/$defs/CapabilityDefinition",
+    "visibility": "wire"
+  },
+  {
+    "file": "descriptor.json",
+    "schema": "contracts.schema.json#/$defs/ServiceDescriptor",
+    "visibility": "wire"
+  },
+  {
+    "file": "bootstrap.json",
+    "schema": "contracts.schema.json#/$defs/BootstrapCatalog",
+    "visibility": "wire"
+  },
+  {
+    "file": "catalog.json",
+    "schema": "contracts.schema.json#/$defs/OfferCatalog",
+    "visibility": "wire"
+  },
+  {
+    "file": "offer.json",
+    "schema": "contracts.schema.json#/$defs/CapabilityOffer",
+    "visibility": "wire"
+  },
+  {
+    "file": "availability.json",
+    "schema": "contracts.schema.json#/$defs/Availability",
+    "visibility": "wire"
+  },
+  {
+    "file": "binding.json",
+    "schema": "private.schema.json#/$defs/FulfillmentBinding",
+    "visibility": "private"
+  },
+  {
+    "file": "authorization.json",
+    "schema": "contracts.schema.json#/$defs/TaskAuthorization",
+    "visibility": "private"
+  },
+  {
+    "file": "task-request.json",
+    "schema": "contracts.schema.json#/$defs/TaskRequest",
+    "visibility": "wire"
+  },
+  {
+    "file": "delegated-task-request.json",
+    "schema": "contracts.schema.json#/$defs/TaskRequest",
+    "visibility": "wire"
+  },
+  {
+    "file": "fallback-task-request.json",
+    "schema": "contracts.schema.json#/$defs/TaskRequest",
+    "visibility": "wire"
+  },
+  {
+    "file": "create-session.json",
+    "schema": "contracts.schema.json#/$defs/CreateSession",
+    "visibility": "wire"
+  },
+  {
+    "file": "session.json",
+    "schema": "contracts.schema.json#/$defs/Session",
+    "visibility": "wire"
+  },
+  {
+    "file": "plan.json",
+    "schema": "contracts.schema.json#/$defs/ResponsibilityPlan",
+    "visibility": "private"
+  },
+  {
+    "file": "task-completed.json",
+    "schema": "contracts.schema.json#/$defs/Task",
+    "visibility": "wire"
+  },
+  {
+    "file": "task-result.json",
+    "schema": "contracts.schema.json#/$defs/TaskResult",
+    "visibility": "wire"
+  },
+  {
+    "file": "routing-event.json",
+    "schema": "contracts.schema.json#/$defs/DiagnosticEvent",
+    "visibility": "wire"
+  },
+  {
+    "file": "call-event.json",
+    "schema": "contracts.schema.json#/$defs/DiagnosticEvent",
+    "visibility": "wire"
+  },
+  {
+    "file": "events.json",
+    "schema": "contracts.schema.json#/$defs/EventPage",
+    "visibility": "wire"
+  },
+  {
+    "file": "problem.json",
+    "schema": "contracts.schema.json#/$defs/Problem",
+    "visibility": "wire"
+  },
+  {
+    "file": "config.json",
+    "schema": "config.schema.json",
+    "visibility": "private"
+  },
+  {
+    "file": "config-no-peer.json",
+    "schema": "config.schema.json",
+    "visibility": "private"
+  },
+  {
+    "file": "child-plan.json",
+    "schema": "contracts.schema.json#/$defs/ResponsibilityPlan",
+    "visibility": "private"
+  },
+  {
+    "file": "capability-documents-read.json",
+    "schema": "contracts.schema.json#/$defs/CapabilityDefinition",
+    "visibility": "wire"
+  },
+  {
+    "file": "capability-documents-search.json",
+    "schema": "contracts.schema.json#/$defs/CapabilityDefinition",
+    "visibility": "wire"
+  },
+  {
+    "file": "capability-repository-inspect.json",
+    "schema": "contracts.schema.json#/$defs/CapabilityDefinition",
+    "visibility": "wire"
+  }
+]

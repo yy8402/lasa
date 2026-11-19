@@ -1,0 +1,974 @@
+{
+  "case": "documents-read-300s",
+  "passed": false,
+  "execution": "managed deployed services, real HTTPS, actual Codex App Server and gpt-5.5 inference",
+  "elapsed_seconds": 52.345,
+  "descriptor": {
+    "descriptor_version": "1.0",
+    "service_id": "https://localhost:8443/lasa",
+    "deployment_revision": "connectors-20261119-bb51bca893fe-steady",
+    "revision": "descriptor-10e21303bc987250cc5e7a97216b20b5",
+    "valid_until": "2026-11-19T02:10:58.931Z",
+    "protocols": [
+      {
+        "version": "lasa/1.1",
+        "base_url": "https://localhost:8443/lasa/v1",
+        "openapi_url": "https://localhost:8443/lasa/v1/openapi.json",
+        "wire_schema_digest": "sha256:7e7b4b8f638c579f5951f3efd4fdb29986c35c4edf899a653c11121286ce652b",
+        "features": [
+          "metadata-diagnostics",
+          "content-diagnostics",
+          "clarification",
+          "artifacts",
+          "bounded-delegation"
+        ],
+        "required_features": [
+          "metadata-diagnostics",
+          "bounded-delegation"
+        ]
+      }
+    ],
+    "authentication": {
+      "issuer": "https://localhost:8443/lasa/development-issuer",
+      "audience": "https://localhost:8443/lasa"
+    },
+    "catalog_url": "https://localhost:8443/lasa/v1/capabilities",
+    "contract_url_template": "https://localhost:8443/lasa/v1/contracts/{digest}",
+    "idempotency_retention_seconds": 604800
+  },
+  "catalog_revision": "catalog-f1dbae61aea841cf5b97d42fcf1bd651",
+  "session": {
+    "session_id": "session-521d57ff94ab4a2da6478fa00da50050",
+    "service_id": "https://localhost:8443/lasa",
+    "created_at": "2026-11-19T02:10:29.272Z",
+    "retention_until": "2026-11-26T02:10:29.272Z",
+    "active_task_id": null
+  },
+  "task": {
+    "admission": {
+      "accepted_at": "2026-11-19T02:10:46.779Z",
+      "authorization_decision_id": "authority-c226f4e67e8141b4b0f8ddb4573e19e3",
+      "contract": {
+        "digest": "sha256:e45b5a4209e4deb4d503ee162b4416fa48881e7c74058d231247d83b581a431d",
+        "id": "https://contracts.example.net/capabilities/documents.read",
+        "version": "1.0.0"
+      },
+      "effective_limits": {
+        "budget": {
+          "artifact_bytes": 128000,
+          "delegations": 2,
+          "input_bytes": 128000,
+          "model_calls": 16,
+          "model_tokens": 500000,
+          "output_bytes": 32000,
+          "tool_calls": 12,
+          "wall_time_ms": 300000
+        },
+        "deadline": "2026-11-19T02:14:29.275Z",
+        "max_hops": 2
+      },
+      "plan_digest": "sha256:0a1060fee69528d7b39a1c0fef63347208961385a4bbccfde92ed1fbe3950350",
+      "request_digest": "sha256:34a3a58ec996a9cf38abc722d7c932f6aacd225e24ca6be629fa34d630f8bb37"
+    },
+    "operation_id": "deployment-task-e834e05dc29e48dc92d6c2ddcf694b96",
+    "problem": {
+      "code": "verification_failed",
+      "detail": "The operation could not satisfy the service contract.",
+      "effect_disposition": "none",
+      "instance": "urn:lasa:request",
+      "retry": "never",
+      "status": 422,
+      "title": "Verification failed",
+      "type": "https://errors.lasa.example/verification-failed"
+    },
+    "received_at": "2026-11-19T02:10:29.280Z",
+    "request_digest": "sha256:34a3a58ec996a9cf38abc722d7c932f6aacd225e24ca6be629fa34d630f8bb37",
+    "revision": 5,
+    "selection": {
+      "catalog_view": "view-822d34d64c89c74c9d2b87c50aed8eb9",
+      "contract": {
+        "digest": "sha256:e45b5a4209e4deb4d503ee162b4416fa48881e7c74058d231247d83b581a431d",
+        "id": "https://contracts.example.net/capabilities/documents.read",
+        "version": "1.0.0"
+      },
+      "offer_id": "offer-ea105b301d4bb7c0707f9b198b299319",
+      "offer_revision": "offer-ffca5440d402e2ab6f17582901f27e31"
+    },
+    "service_id": "https://localhost:8443/lasa",
+    "session_id": "session-521d57ff94ab4a2da6478fa00da50050",
+    "status": "failed",
+    "task_id": "task-21d0acac066843659feb8253121c42dc",
+    "updated_at": "2026-11-19T02:11:21.361Z"
+  },
+  "events": [
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"input\":[{\"content\":[{\"text\":\"{\\\"contracts\\\":{\\\"sha256:2a6bd42b305d7b416da9131965228c3c9d8de2a6fa524e8d6561bc2a5b215f12\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"readmit_if_no_uncertain_effect\\\",\\\"unknown_commit_possible\\\":false},\\\"failures\\\":[{\\\"code\\\":\\\"source_unavailable\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"A required approved source is unavailable, denied, or outside the allocation.\\\",\\\"retry\\\":\\\"readmission\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/documents.search\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"collection\\\":{\\\"const\\\":\\\"python-sdk-root\\\"},\\\"limit\\\":{\\\"maximum\\\":10,\\\"minimum\\\":1,\\\"type\\\":\\\"integer\\\"},\\\"query\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"collection\\\",\\\"query\\\",\\\"limit\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"external.read\\\"],\\\"non_guarantees\\\":[\\\"Does not cover unapproved collections or assert that source-provided content is universally correct.\\\"],\\\"outcome\\\":\\\"Return the first limit matching Markdown filenames from the approved top-level repository index, sorted by filename; query matching is case-insensitive substring matching. Set truncated according to the observed matching count.\\\",\\\"output_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"matches\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"document_id\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"source_uri\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"document_id\\\",\\\"source_uri\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":10,\\\"type\\\":\\\"array\\\"},\\\"truncated\\\":{\\\"type\\\":\\\"boolean\\\"}},\\\"required\\\":[\\\"matches\\\",\\\"truncated\\\"],\\\"type\\\":\\\"object\\\"},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Return the first limit matching Markdown filenames from the approved top-level repository index, sorted by filename; query matching is case-insensitive substring matching. Set truncated according to the observed matching count.\\\",\\\"evidence_required\\\":[\\\"Receiver-generated successful source-operation receipts and digest-verified source artifacts.\\\"],\\\"id\\\":\\\"verified-source-content\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"Inputs select an approved read-only collection.\\\",\\\"kind\\\":\\\"input_schema\\\"},{\\\"actions\\\":[\\\"read\\\"],\\\"description\\\":\\\"Read authority for the approved source is required.\\\",\\\"kind\\\":\\\"resource_authorized\\\",\\\"resource\\\":\\\"repository:python-sdk\\\"}],\\\"title\\\":\\\"Search approved repository document names\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"sha256:4c305684d20521d2f72628d5606a3537338691fc5f201177eca55b3aed1f5239\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"readmit_if_no_uncertain_effect\\\",\\\"unknown_commit_possible\\\":false},\\\"failures\\\":[{\\\"code\\\":\\\"source_unavailable\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"A required approved source is unavailable, denied, or outside the allocation.\\\",\\\"retry\\\":\\\"readmission\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/repository.inspect\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"repository\\\":{\\\"const\\\":\\\"modelcontextprotocol/python-sdk\\\"}},\\\"required\\\":[\\\"repository\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"external.read\\\"],\\\"non_guarantees\\\":[\\\"Does not cover unapproved collections or assert that source-provided content is universally correct.\\\"],\\\"outcome\\\":\\\"Return repository identity, description and default branch from the approved metadata source and the exact documentation index from the approved documentation source. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"output_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"default_branch\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"description\\\":{\\\"maxLength\\\":4096,\\\"type\\\":[\\\"string\\\",\\\"null\\\"]},\\\"documentation_index\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"repository\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"sources\\\":{\\\"items\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"maxItems\\\":2,\\\"minItems\\\":2,\\\"type\\\":\\\"array\\\"}},\\\"required\\\":[\\\"repository\\\",\\\"description\\\",\\\"default_branch\\\",\\\"documentation_index\\\",\\\"sources\\\"],\\\"type\\\":\\\"object\\\"},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Return repository identity, description and default branch from the approved metadata source and the exact documentation index from the approved documentation source. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"evidence_required\\\":[\\\"Receiver-generated successful source-operation receipts and digest-verified source artifacts.\\\"],\\\"id\\\":\\\"verified-source-content\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"Inputs select an approved read-only collection.\\\",\\\"kind\\\":\\\"input_schema\\\"},{\\\"actions\\\":[\\\"read\\\"],\\\"description\\\":\\\"Read authority for the approved source is required.\\\",\\\"kind\\\":\\\"resource_authorized\\\",\\\"resource\\\":\\\"repository:python-sdk\\\"},{\\\"actions\\\":[\\\"read\\\"],\\\"description\\\":\\\"Read authority for the documentation source is required.\\\",\\\"kind\\\":\\\"resource_authorized\\\",\\\"resource\\\":\\\"documentation:python-sdk\\\"}],\\\"title\\\":\\\"Inspect repository metadata and documentation index\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"readmit_if_no_uncertain_effect\\\",\\\"unknown_commit_possible\\\":false},\\\"failures\\\":[{\\\"code\\\":\\\"insufficient_input\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"The supplied design does not contain enough information to review the requested criteria.\\\",\\\"retry\\\":\\\"readmission\\\"},{\\\"code\\\":\\\"evaluation_failed\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"The bounded review could not be completed.\\\",\\\"retry\\\":\\\"readmission\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/design.review\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"criteria\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"description\\\":{\\\"maxLength\\\":2048,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"id\\\",\\\"description\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"design\\\":{\\\"maxLength\\\":32000,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"design\\\",\\\"criteria\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"workspace.read\\\"],\\\"non_guarantees\\\":[\\\"Does not prove correctness or inspect resources not supplied in the request.\\\"],\\\"outcome\\\":\\\"Return criterion coverage and actionable findings grounded in the supplied design.\\\",\\\"output_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"coverage\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"criterion_id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"disposition\\\":{\\\"enum\\\":[\\\"reviewed\\\",\\\"insufficient_input\\\"]},\\\"evidence\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"criterion_id\\\",\\\"disposition\\\",\\\"evidence\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"findings\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"criterion_id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"observation\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"recommendation\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"severity\\\":{\\\"enum\\\":[\\\"info\\\",\\\"warning\\\",\\\"error\\\"]}},\\\"required\\\":[\\\"criterion_id\\\",\\\"severity\\\",\\\"observation\\\",\\\"recommendation\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":128,\\\"type\\\":\\\"array\\\"}},\\\"required\\\":[\\\"findings\\\",\\\"coverage\\\"],\\\"type\\\":\\\"object\\\"},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Every supplied criterion has a coverage entry; findings cite supplied design evidence.\\\",\\\"evidence_required\\\":[\\\"coverage and supporting observations\\\"],\\\"id\\\":\\\"criterion-cov"
+      },
+      "event_id": "event-2dd33cc10921405f98aa10f226a09f25",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 37203,
+        "input_digest": "sha256:ffab66f5e82ace665570e12cec3e1642cb9bfdb25e40c6447515478c8b69102e",
+        "operation_id": "model-15127fe6945d4ed59ff101aff3b44764",
+        "output_bytes": 0,
+        "output_digest": null,
+        "payload_truncated": true,
+        "phase": "started",
+        "purpose": "planning",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 42219,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 59125
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        }
+      },
+      "redacted": true,
+      "sequence": 1,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-21d0acac066843659feb8253121c42dc",
+      "timestamp": "2026-11-19T02:10:30.166Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"output\":{\"steps\":[{\"assessment_summary\":\"The request contract directly expresses the required outcome and the input conforms to its schema. However, approved LOCAL bindings do not include the documents.read contract or read authority for resource documents:lasa; only workspace-bound design.review and task.attempt are locally bound. A peer offer advertises documents.read, but peer claims are not local permission, so local fulfillment is insufficient.\",\"contract_digest\":\"sha256:e45b5a4209e4deb4d503ee162b4416fa48881e7c74058d231247d83b581a431d\",\"depends_on\":[],\"input_json\":\"{\\\"collection\\\":\\\"lasa-docs\\\",\\\"document_id\\\":\\\"README.md\\\"}\",\"local_assessment\":\"insufficient\",\"requirement_ids\":[\"verified-source-content\"],\"step_id\":\"read_lasa_readme\"}]}}"
+      },
+      "event_id": "event-efe31324fc4b4e2d8ecccc94982f4237",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 57,
+        "input_digest": "sha256:f2104f811dcbec9e0eb5ee806cc5aa8cc82588bdc46113097b0187bab2b45d8d",
+        "operation_id": "model-15127fe6945d4ed59ff101aff3b44764",
+        "output_bytes": 742,
+        "output_digest": "sha256:37f46bf6877217d70822367944d0da918b74025562fc4312184b6b2d2bc1309f",
+        "payload_truncated": false,
+        "phase": "finished",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 8555,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 11252
+        }
+      },
+      "redacted": true,
+      "sequence": 2,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-21d0acac066843659feb8253121c42dc",
+      "timestamp": "2026-11-19T02:10:41.428Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-7146866405c74c2fa10c067ca9bdef1a",
+      "kind": "routing",
+      "payload": {
+        "assessment_summary": "The request contract directly expresses the required outcome and the input conforms to its schema. However, approved LOCAL bindings do not include the documents.read contract or read authority for resource documents:lasa; only workspace-bound design.review and task.attempt are locally bound. A peer offer advertises documents.read, but peer claims are not local permission, so local fulfillment is insufficient.",
+        "authorization_decision_id": "authority-c226f4e67e8141b4b0f8ddb4573e19e3",
+        "catalog_revision": "catalog-e020e9c2037883f27e1fb45e77a86011",
+        "contract": {
+          "digest": "sha256:e45b5a4209e4deb4d503ee162b4416fa48881e7c74058d231247d83b581a431d",
+          "id": "https://contracts.example.net/capabilities/documents.read",
+          "version": "1.0.0"
+        },
+        "decision_reason": "Verified local=insufficient, peer=matched; selected peer.",
+        "local_assessment": "insufficient",
+        "offer_revision": "offer-3e70c7001a7dac5551b71522d6b627ab",
+        "peer_assessment": "matched",
+        "policy": {
+          "preferred_executor": "peer",
+          "unclaimed_peer_fallback": "attempt"
+        },
+        "requirement_ids": [
+          "verified-source-content"
+        ],
+        "selected_executor": "peer",
+        "step_id": "read_lasa_readme"
+      },
+      "redacted": true,
+      "sequence": 3,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-21d0acac066843659feb8253121c42dc",
+      "timestamp": "2026-11-19T02:10:41.612Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"input\":[{\"content\":[{\"text\":\"{\\\"instruction\\\":\\\"Independently assess semantic requirement coverage. Reject a step that merely repeats/reviews the request text when the requirement is to retrieve missing external facts. Matching IDs and JSON schemas do not prove outcome coverage. Each declared step must actually target its assigned outcome. An explicitly allowed bounded fallback is an attempt, not a guarantee, and is permitted if it targets the correct outcome and later verification can report inability honestly. Authority, capacity, and actual routing are checked separately by controllers. Return passed=false for unsupported or mismatched decomposition.\\\",\\\"original_contract\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"readmit_if_no_uncertain_effect\\\",\\\"unknown_commit_possible\\\":false},\\\"failures\\\":[{\\\"code\\\":\\\"source_unavailable\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"A required approved source is unavailable, denied, or outside the allocation.\\\",\\\"retry\\\":\\\"readmission\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/documents.read\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"collection\\\":{\\\"const\\\":\\\"lasa-docs\\\"},\\\"document_id\\\":{\\\"maxLength\\\":128,\\\"pattern\\\":\\\"^[A-Za-z0-9._-]+\\\\\\\\.md$\\\",\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"collection\\\",\\\"document_id\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"external.read\\\"],\\\"non_guarantees\\\":[\\\"Does not cover unapproved collections or assert that source-provided content is universally correct.\\\"],\\\"outcome\\\":\\\"Return the exact authorized document content, source identifier, and SHA-256 of its UTF-8 bytes. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"output_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"content\\\":{\\\"maxLength\\\":8192,\\\"type\\\":\\\"string\\\"},\\\"content_digest\\\":{\\\"pattern\\\":\\\"^sha256:[0-9a-f]{64}$\\\",\\\"type\\\":\\\"string\\\"},\\\"document_id\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"source_uri\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"document_id\\\",\\\"content\\\",\\\"content_digest\\\",\\\"source_uri\\\"],\\\"type\\\":\\\"object\\\"},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Return the exact authorized document content, source identifier, and SHA-256 of its UTF-8 bytes. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"evidence_required\\\":[\\\"Receiver-generated successful source-operation receipts and digest-verified source artifacts.\\\"],\\\"id\\\":\\\"verified-source-content\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"Inputs select an approved read-only collection.\\\",\\\"kind\\\":\\\"input_schema\\\"},{\\\"actions\\\":[\\\"read\\\"],\\\"description\\\":\\\"Read authority for the approved source is required.\\\",\\\"kind\\\":\\\"resource_authorized\\\",\\\"resource\\\":\\\"documents:lasa\\\"}],\\\"title\\\":\\\"Read an approved LASA document\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"original_request\\\":{\\\"collection\\\":\\\"lasa-docs\\\",\\\"document_id\\\":\\\"README.md\\\"},\\\"requirements\\\":[{\\\"acceptance\\\":[{\\\"criterion\\\":\\\"Return the exact authorized document content, source identifier, and SHA-256 of its UTF-8 bytes. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"evidence_required\\\":[\\\"Receiver-generated successful source-operation receipts and digest-verified source artifacts.\\\"],\\\"id\\\":\\\"verified-source-content\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"description\\\":\\\"Return the exact authorized document content, source identifier, and SHA-256 of its UTF-8 bytes. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"mandatory\\\":true,\\\"requirement_id\\\":\\\"verified-source-content\\\",\\\"source\\\":\\\"derived\\\"}],\\\"steps\\\":[{\\\"bounded_fallback\\\":false,\\\"contract\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"readmit_if_no_uncertain_effect\\\",\\\"unknown_commit_possible\\\":false},\\\"failures\\\":[{\\\"code\\\":\\\"source_unavailable\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"A required approved source is unavailable, denied, or outside the allocation.\\\",\\\"retry\\\":\\\"readmission\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/documents.read\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"collection\\\":{\\\"const\\\":\\\"lasa-docs\\\"},\\\"document_id\\\":{\\\"maxLength\\\":128,\\\"pattern\\\":\\\"^[A-Za-z0-9._-]+\\\\\\\\.md$\\\",\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"collection\\\",\\\"document_id\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"external.read\\\"],\\\"non_guarantees\\\":[\\\"Does not cover unapproved collections or assert that source-provided content is universally correct.\\\"],\\\"outcome\\\":\\\"Return the exact authorized document content, source identifier, and SHA-256 of its UTF-8 bytes. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"output_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"content\\\":{\\\"maxLength\\\":8192,\\\"type\\\":\\\"string\\\"},\\\"content_digest\\\":{\\\"pattern\\\":\\\"^sha256:[0-9a-f]{64}$\\\",\\\"type\\\":\\\"string\\\"},\\\"document_id\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"source_uri\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"document_id\\\",\\\"content\\\",\\\"content_digest\\\",\\\"source_uri\\\"],\\\"type\\\":\\\"object\\\"},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Return the exact authorized document content, source identifier, and SHA-256 of its UTF-8 bytes. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"evidence_required\\\":[\\\"Receiver-generated successful source-operation receipts and digest-verified source artifacts.\\\"],\\\"id\\\":\\\"verified-source-content\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"Inputs select an approved read-only collection.\\\",\\\"kind\\\":\\\"input_schema\\\"},{\\\"actions\\\":[\\\"read\\\"],\\\"description\\\":\\\"Read authority for the approved source is required.\\\",\\\"kind\\\":\\\"resource_authorized\\\",\\\"resource\\\":\\\"documents:lasa\\\"}],\\\"title\\\":\\\"Read an approved LASA document\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"input\\\":{\\\"collection\\\":\\\"lasa-docs\\\",\\\"document_id\\\":\\\"README.md\\\"},\\\"step\\\":{\\\"allocation\\\":{\\\"budget\\\":{\\\"artifact_bytes\\\":128000,\\\"delegations\\\":1,\\\"input_bytes\\\":127948,\\\"model_calls\\\":9,\\\"model_tokens\\\":291445,\\\"output_bytes\\\":28000,\\\"tool_calls\\\":12,\\\"wall_time_ms\\\":198748},\\\"deadline\\\":\\\"2026-11-19T02:12:59.275Z\\\",\\\"max_hops\\\":1},\\\"contract\\\":{\\\"digest\\\":\\\"sha256:e45b5a4209e4deb4d503ee162b4416fa48881e7c74058d231247d83b581a431d\\\",\\\"id\\\":\\\"https://contracts.example.net/capabilities/documents.read\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"depends_on\\\":[],\\\"executor\\\":\\\"peer\\\",\\\"input_digest\\\":\\\"sha256:0b9478e78ee704df02f08f7a661f9b20853ad0b2a5ee8d3179381c51c5a66d3b\\\",\\\"requirement_ids\\\":[\\\"verified-source-content\\\"],\\\"step_id\\\":\\\"read_lasa_readme\\\"}}]}\",\"type\":\"input_text\"}],\"role\":\"user\"}],\"purpose\":\"planning\"}"
+      },
+      "event_id": "event-ecd99865baf441edbcffc4603f9e1d05",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 7116,
+        "input_digest": "sha256:c29649dbde26b4316b6adbcd7ef822d909db48aaaa1b1d75630ee1fc353d46b1",
+        "operation_id": "model-947acfbfc4b24cb99c66a5f594005b75",
+        "output_bytes": 0,
+        "output_digest": null,
+        "payload_truncated": false,
+        "phase": "started",
+        "purpose": "planning",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 11642,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 47628
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        }
+      },
+      "redacted": true,
+      "sequence": 4,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-21d0acac066843659feb8253121c42dc",
+      "timestamp": "2026-11-19T02:10:41.666Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"output\":{\"passed\":true,\"reason\":\"The single declared step invokes the documents.read capability with the original input collection `lasa-docs` and `document_id` `README.md`, and its assigned requirement is `verified-source-content`. The step outcome directly targets retrieving the exact authorized document content, source URI, and SHA-256 digest with the specified size-bound failure behavior, rather than merely restating or reviewing the request. No unsupported or mismatched decomposition is evident; authority, capacity, and routing are outside this semantic coverage check.\"}}"
+      },
+      "event_id": "event-b5d3292deec5421ea33e0a13234f0cda",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 57,
+        "input_digest": "sha256:e0edab73f80a35c2db98b6870b9c10d030961e7188597dfd67bda9cbb8411370",
+        "operation_id": "model-947acfbfc4b24cb99c66a5f594005b75",
+        "output_bytes": 574,
+        "output_digest": "sha256:fe7c411ac2bbe28d9e6c213993bbc69c88103dfa2b686690fabba594ef93be5d",
+        "payload_truncated": false,
+        "phase": "finished",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 1784,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 5046
+        }
+      },
+      "redacted": true,
+      "sequence": 5,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-21d0acac066843659feb8253121c42dc",
+      "timestamp": "2026-11-19T02:10:46.720Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"request\":{\"authorization_ref\":\"default\",\"delegation\":{\"allocation\":{\"budget\":{\"artifact_bytes\":128000,\"delegations\":1,\"input_bytes\":127948,\"model_calls\":8,\"model_tokens\":289661,\"output_bytes\":28000,\"tool_calls\":12,\"wall_time_ms\":193702},\"deadline\":\"2026-11-19T02:12:59.275Z\",\"max_hops\":1},\"ancestry\":[\"https://localhost:8443/lasa\"],\"authority_ceiling\":{\"allowed_delegated_contracts\":[{\"digest\":\"sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce\",\"id\":\"https://contracts.example.net/capabilities/design.review\",\"version\":\"1.0.0\"},{\"digest\":\"sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23\",\"id\":\"https://contracts.example.net/capabilities/task.attempt\",\"version\":\"1.0.0\"},{\"digest\":\"sha256:e45b5a4209e4deb4d503ee162b4416fa48881e7c74058d231247d83b581a431d\",\"id\":\"https://contracts.example.net/capabilities/documents.read\",\"version\":\"1.0.0\"},{\"digest\":\"sha256:2a6bd42b305d7b416da9131965228c3c9d8de2a6fa524e8d6561bc2a5b215f12\",\"id\":\"https://contracts.example.net/capabilities/documents.search\",\"version\":\"1.0.0\"},{\"digest\":\"sha256:4c305684d20521d2f72628d5606a3537338691fc5f201177eca55b3aed1f5239\",\"id\":\"https://contracts.example.net/capabilities/repository.inspect\",\"version\":\"1.0.0\"}],\"allowed_disclosure_services\":[\"https://192.168.0.188/lasa\"],\"allowed_effects\":[\"external.read\"],\"content_diagnostics_allowed\":true,\"resources\":[{\"actions\":[\"create\",\"read\",\"update\"],\"resource\":\"workspace:self\"},{\"actions\":[\"read\"],\"resource\":\"documents:lasa\"},{\"actions\":[\"read\"],\"resource\":\"repository:python-sdk\"},{\"actions\":[\"read\"],\"resource\":\"documentation:python-sdk\"}]},\"delegation_id\":\"delegation-a6908eb8a20e47bca3b6a0fbe25133dc\",\"disclosed_artifacts\":[],\"parent_service_id\":\"https://localhost:8443/lasa\",\"parent_task_id\":\"task-21d0acac066843659feb8253121c42dc\",\"remaining_hops\":1,\"request_digest\":\"sha256:e9845017ada5a88b0bf30a6ce9d2fbb49b283059269b31de0036191a0351b113\",\"requirement_ids\":[\"verified-source-content\"],\"root_task_id\":\"task-21d0acac066843659feb8253121c42dc\",\"step_id\":\"read_lasa_readme\"},\"diagnostics\":\"content\",\"input\":{\"collection\":\"lasa-docs\",\"document_id\":\"README.md\"},\"operation_id\":\"delegation-a6908eb8a20e47bca3b6a0fbe25133dc-task\",\"requested_limits\":{\"budget\":{\"artifact_bytes\":128000,\"delegations\":1,\"input_bytes\":127948,\"model_calls\":8,\"model_tokens\":289661,\"output_bytes\":28000,\"tool_calls\":12,\"wall_time_ms\":193702},\"deadline\":\"2026-11-19T02:12:59.275Z\",\"max_hops\":1},\"selection\":{\"catalog_view\":\"view-59858090d06cddd59ec10e415d2de565\",\"contract\":{\"digest\":\"sha256:e45b5a4209e4deb4d503ee162b4416fa48881e7c74058d231247d83b581a431d\",\"id\":\"https://contracts.example.net/capabilities/documents.read\",\"version\":\"1.0.0\"},\"offer_id\":\"offer-23846558761b1198f085600f5c4bc8ad\",\"offer_revision\":\"offer-3e70c7001a7dac5551b71522d6b627ab\"}},\"service_id\":\"https://192.168.0.188/lasa\"}"
+      },
+      "event_id": "event-7ed9e701d78d439695b68ed3df67d187",
+      "kind": "call",
+      "payload": {
+        "call_type": "child",
+        "contract": {
+          "digest": "sha256:e45b5a4209e4deb4d503ee162b4416fa48881e7c74058d231247d83b581a431d",
+          "id": "https://contracts.example.net/capabilities/documents.read",
+          "version": "1.0.0"
+        },
+        "input_bytes": 2782,
+        "input_digest": "sha256:81de716b4ae7007b9c13a45eddf70e34b449ca398ec3a3d4d90900e92741feae",
+        "operation_id": "delegation-a6908eb8a20e47bca3b6a0fbe25133dc",
+        "output_bytes": 0,
+        "output_digest": null,
+        "payload_truncated": false,
+        "peer_service_id": "https://192.168.0.188/lasa",
+        "phase": "started",
+        "reserved": {
+          "artifact_bytes": 128000,
+          "delegations": 2,
+          "input_bytes": 127948,
+          "model_calls": 8,
+          "model_tokens": 289661,
+          "output_bytes": 28000,
+          "tool_calls": 12,
+          "wall_time_ms": 193702
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        }
+      },
+      "redacted": true,
+      "sequence": 6,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-21d0acac066843659feb8253121c42dc",
+      "timestamp": "2026-11-19T02:10:46.978Z"
+    }
+  ],
+  "children_via_parent": [
+    {
+      "delegation_id": "delegation-a6908eb8a20e47bca3b6a0fbe25133dc",
+      "service_id": "https://192.168.0.188/lasa",
+      "state": "failed",
+      "task_id": "task-6d5c7a7e386e4808b3aa2ad91efe8a56",
+      "trace": {
+        "task_id": "task-6d5c7a7e386e4808b3aa2ad91efe8a56",
+        "events": [
+          {
+            "causal_parent_event_id": null,
+            "event_id": "event-f87864cada8e4ef996dd0ece13074eec",
+            "kind": "routing",
+            "payload": {
+              "assessment_summary": "No peer is configured; the approved local binding is the only execution path.",
+              "authorization_decision_id": "authority-ec3250f82e3d0e454edf42ac61eb9eee",
+              "catalog_revision": null,
+              "contract": {
+                "digest": "sha256:e45b5a4209e4deb4d503ee162b4416fa48881e7c74058d231247d83b581a431d",
+                "id": "https://contracts.example.net/capabilities/documents.read",
+                "version": "1.0.0"
+              },
+              "decision_reason": "No peer is configured; routing settings are ignored.",
+              "local_assessment": "sufficient",
+              "offer_revision": null,
+              "peer_assessment": "not_configured",
+              "policy": {
+                "preferred_executor": "local",
+                "unclaimed_peer_fallback": "reject"
+              },
+              "requirement_ids": [
+                "verified-source-content"
+              ],
+              "selected_executor": "local",
+              "step_id": "step-local"
+            },
+            "redacted": true,
+            "sequence": 1,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-6d5c7a7e386e4808b3aa2ad91efe8a56",
+            "timestamp": "2026-11-19T02:10:47.636Z"
+          },
+          {
+            "causal_parent_event_id": null,
+            "content": {
+              "media_type": "application/json",
+              "text": "{\"input\":[{\"content\":[{\"text\":\"<environment_context>\\n  <cwd>/workspace</cwd>\\n  <shell>bash</shell>\\n  <current_date>2026-11-19</current_date>\\n  <timezone>Etc/UTC</timezone>\\n  <filesystem><workspace_roots><root>/workspace</root></workspace_roots><permission_profile type=\\\"managed\\\"><file_system type=\\\"restricted\\\"><entry access=\\\"read\\\"><special>:root</special></entry><entry access=\\\"write\\\"><path>/workspace</path></entry><entry access=\\\"write\\\"><special>:slash_tmp</special></entry><entry access=\\\"write\\\"><special>:tmpdir</special></entry><entry access=\\\"read\\\"><path>/workspace/.git</path></entry><entry access=\\\"read\\\"><path>/workspace/.agents</path></entry><entry access=\\\"read\\\"><path>/workspace/.codex</path></entry><entry access=\\\"read\\\"><path>/workspace/.aws</path></entry></file_system></permission_profile></filesystem>\\n</environment_context>\",\"type\":\"input_text\"}],\"id\":\"msg_01a1f192-25fb-7693-9cc3-70463486492c\",\"role\":\"user\",\"type\":\"message\"},{\"content\":[{\"text\":\"{\\\"contract\\\":{\\\"digest\\\":\\\"sha256:e45b5a4209e4deb4d503ee162b4416fa48881e7c74058d231247d83b581a431d\\\",\\\"id\\\":\\\"https://contracts.example.net/capabilities/documents.read\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"dependency_results\\\":{},\\\"input\\\":{\\\"collection\\\":\\\"lasa-docs\\\",\\\"document_id\\\":\\\"README.md\\\"},\\\"outcome_contract\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"readmit_if_no_uncertain_effect\\\",\\\"unknown_commit_possible\\\":false},\\\"failures\\\":[{\\\"code\\\":\\\"source_unavailable\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"A required approved source is unavailable, denied, or outside the allocation.\\\",\\\"retry\\\":\\\"readmission\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/documents.read\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"collection\\\":{\\\"const\\\":\\\"lasa-docs\\\"},\\\"document_id\\\":{\\\"maxLength\\\":128,\\\"pattern\\\":\\\"^[A-Za-z0-9._-]+\\\\\\\\.md$\\\",\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"collection\\\",\\\"document_id\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"external.read\\\"],\\\"non_guarantees\\\":[\\\"Does not cover unapproved collections or assert that source-provided content is universally correct.\\\"],\\\"outcome\\\":\\\"Return the exact authorized document content, source identifier, and SHA-256 of its UTF-8 bytes. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"output_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"content\\\":{\\\"maxLength\\\":8192,\\\"type\\\":\\\"string\\\"},\\\"content_digest\\\":{\\\"pattern\\\":\\\"^sha256:[0-9a-f]{64}$\\\",\\\"type\\\":\\\"string\\\"},\\\"document_id\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"source_uri\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"document_id\\\",\\\"content\\\",\\\"content_digest\\\",\\\"source_uri\\\"],\\\"type\\\":\\\"object\\\"},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Return the exact authorized document content, source identifier, and SHA-256 of its UTF-8 bytes. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"evidence_required\\\":[\\\"Receiver-generated successful source-operation receipts and digest-verified source artifacts.\\\"],\\\"id\\\":\\\"verified-source-content\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"Inputs select an approved read-only collection.\\\",\\\"kind\\\":\\\"input_schema\\\"},{\\\"actions\\\":[\\\"read\\\"],\\\"description\\\":\\\"Read authority for the approved source is required.\\\",\\\"kind\\\":\\\"resource_authorized\\\",\\\"resource\\\":\\\"documents:lasa\\\"}],\\\"title\\\":\\\"Read an approved LASA document\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"required_evidence_criterion_ids\\\":[\\\"verified-source-content\\\"],\\\"requirements\\\":[\\\"verified-source-content\\\"],\\\"source_execution\\\":\\\"Invoke the approved source operations needed for the selected input. Use their actual returned data as evidence. The server will assemble exact source fields and hashes from durable operation artifacts. Return output={ready_for_verification:true} only after retrieval succeeds; do not compute hashes or reproduce source bodies. Include evidence for every required criterion.\\\"}\",\"type\":\"input_text\"}],\"id\":\"msg_01a1f192-25fb-7693-9cc3-706b7d82db63\",\"role\":\"user\",\"type\":\"message\"}],\"purpose\":\"execution\"}"
+            },
+            "event_id": "event-acac822584b047e5aeafb4afbf6b581b",
+            "kind": "call",
+            "payload": {
+              "call_type": "model",
+              "input_bytes": 4292,
+              "input_digest": "sha256:dda015aa08eb062170748d3f27e1eea2848175418fc679714e855c4c33a9b3fe",
+              "operation_id": "model-e444c2b9d4ce4fbab55eeca2ec588e9f",
+              "output_bytes": 0,
+              "output_digest": null,
+              "payload_truncated": false,
+              "phase": "started",
+              "purpose": "execution",
+              "reserved": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 1,
+                "model_tokens": 43014,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 60000
+              },
+              "usage": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 0,
+                "model_tokens": 0,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 0
+              }
+            },
+            "redacted": true,
+            "sequence": 2,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-6d5c7a7e386e4808b3aa2ad91efe8a56",
+            "timestamp": "2026-11-19T02:10:49.586Z"
+          },
+          {
+            "causal_parent_event_id": null,
+            "content": {
+              "media_type": "application/json",
+              "text": "{\"output\":{\"output\":[{\"content\":[{\"annotations\":[],\"logprobs\":[],\"text\":\"{\\\"artifact_ids\\\":[],\\\"evidence\\\":[],\\\"output\\\":{\\\"ready_for_verification\\\":true}}\",\"type\":\"output_text\"}],\"id\":\"msg_0f1dc87da1938166016afe5aad309c87d19583347d2cba4f94\",\"internal_chat_message_metadata_passthrough\":{\"content_token_count\":19,\"create_time\":1795054251.708642,\"turn_id\":\"01a1f192-25f2-7940-a704-e669e68645fc\"},\"metadata\":{\"turn_id\":\"01a1f192-25f2-7940-a704-e669e68645fc\"},\"phase\":\"commentary\",\"role\":\"assistant\",\"status\":\"completed\",\"type\":\"message\"}]}}"
+            },
+            "event_id": "event-f5619d7a8cc143e5b9d2d78fcc5e9298",
+            "kind": "call",
+            "payload": {
+              "call_type": "model",
+              "input_bytes": 57,
+              "input_digest": "sha256:8349cc96f74e9eb4d6c90abc2ed894565b72a2a0a23e24c1f039309a135183d9",
+              "operation_id": "model-e444c2b9d4ce4fbab55eeca2ec588e9f",
+              "output_bytes": 527,
+              "output_digest": "sha256:bd4103a1b4ba284a87e7645ff21e938fea9d9d4634dfb5cbf43f96a7d0aa1141",
+              "payload_truncated": false,
+              "phase": "finished",
+              "reserved": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 0,
+                "model_tokens": 0,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 0
+              },
+              "usage": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 1,
+                "model_tokens": 7638,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 5241
+              }
+            },
+            "redacted": true,
+            "sequence": 3,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-6d5c7a7e386e4808b3aa2ad91efe8a56",
+            "timestamp": "2026-11-19T02:10:54.848Z"
+          },
+          {
+            "causal_parent_event_id": null,
+            "content": {
+              "media_type": "application/json",
+              "text": "{\"input\":[{\"content\":[{\"text\":\"<environment_context>\\n  <cwd>/workspace</cwd>\\n  <shell>bash</shell>\\n  <current_date>2026-11-19</current_date>\\n  <timezone>Etc/UTC</timezone>\\n  <filesystem><workspace_roots><root>/workspace</root></workspace_roots><permission_profile type=\\\"managed\\\"><file_system type=\\\"restricted\\\"><entry access=\\\"read\\\"><special>:root</special></entry><entry access=\\\"write\\\"><path>/workspace</path></entry><entry access=\\\"write\\\"><special>:slash_tmp</special></entry><entry access=\\\"write\\\"><special>:tmpdir</special></entry><entry access=\\\"read\\\"><path>/workspace/.git</path></entry><entry access=\\\"read\\\"><path>/workspace/.agents</path></entry><entry access=\\\"read\\\"><path>/workspace/.codex</path></entry><entry access=\\\"read\\\"><path>/workspace/.aws</path></entry></file_system></permission_profile></filesystem>\\n</environment_context>\",\"type\":\"input_text\"}],\"id\":\"msg_01a1f192-25fb-7693-9cc3-70463486492c\",\"role\":\"user\",\"type\":\"message\"},{\"content\":[{\"text\":\"{\\\"contract\\\":{\\\"digest\\\":\\\"sha256:e45b5a4209e4deb4d503ee162b4416fa48881e7c74058d231247d83b581a431d\\\",\\\"id\\\":\\\"https://contracts.example.net/capabilities/documents.read\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"dependency_results\\\":{},\\\"input\\\":{\\\"collection\\\":\\\"lasa-docs\\\",\\\"document_id\\\":\\\"README.md\\\"},\\\"outcome_contract\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"readmit_if_no_uncertain_effect\\\",\\\"unknown_commit_possible\\\":false},\\\"failures\\\":[{\\\"code\\\":\\\"source_unavailable\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"A required approved source is unavailable, denied, or outside the allocation.\\\",\\\"retry\\\":\\\"readmission\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/documents.read\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"collection\\\":{\\\"const\\\":\\\"lasa-docs\\\"},\\\"document_id\\\":{\\\"maxLength\\\":128,\\\"pattern\\\":\\\"^[A-Za-z0-9._-]+\\\\\\\\.md$\\\",\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"collection\\\",\\\"document_id\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"external.read\\\"],\\\"non_guarantees\\\":[\\\"Does not cover unapproved collections or assert that source-provided content is universally correct.\\\"],\\\"outcome\\\":\\\"Return the exact authorized document content, source identifier, and SHA-256 of its UTF-8 bytes. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"output_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"content\\\":{\\\"maxLength\\\":8192,\\\"type\\\":\\\"string\\\"},\\\"content_digest\\\":{\\\"pattern\\\":\\\"^sha256:[0-9a-f]{64}$\\\",\\\"type\\\":\\\"string\\\"},\\\"document_id\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"source_uri\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"document_id\\\",\\\"content\\\",\\\"content_digest\\\",\\\"source_uri\\\"],\\\"type\\\":\\\"object\\\"},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Return the exact authorized document content, source identifier, and SHA-256 of its UTF-8 bytes. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"evidence_required\\\":[\\\"Receiver-generated successful source-operation receipts and digest-verified source artifacts.\\\"],\\\"id\\\":\\\"verified-source-content\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"Inputs select an approved read-only collection.\\\",\\\"kind\\\":\\\"input_schema\\\"},{\\\"actions\\\":[\\\"read\\\"],\\\"description\\\":\\\"Read authority for the approved source is required.\\\",\\\"kind\\\":\\\"resource_authorized\\\",\\\"resource\\\":\\\"documents:lasa\\\"}],\\\"title\\\":\\\"Read an approved LASA document\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"required_evidence_criterion_ids\\\":[\\\"verified-source-content\\\"],\\\"requirements\\\":[\\\"verified-source-content\\\"],\\\"source_execution\\\":\\\"Invoke the approved source operations needed for the selected input. Use their actual returned data as evidence. The server will assemble exact source fields and hashes from durable operation artifacts. Return output={ready_for_verification:true} only after retrieval succeeds; do not compute hashes or reproduce source bodies. Include evidence for every required criterion.\\\"}\",\"type\":\"input_text\"}],\"id\":\"msg_01a1f192-25fb-7693-9cc3-706b7d82db63\",\"role\":\"user\",\"type\":\"message\"}],\"purpose\":\"execution\"}"
+            },
+            "event_id": "event-5989b74d1c1c4791b335dfc519cd3c5c",
+            "kind": "call",
+            "payload": {
+              "call_type": "model",
+              "input_bytes": 4292,
+              "input_digest": "sha256:dda015aa08eb062170748d3f27e1eea2848175418fc679714e855c4c33a9b3fe",
+              "operation_id": "model-ab1fd7914cfa4336add657ee8747ad83",
+              "output_bytes": 0,
+              "output_digest": null,
+              "payload_truncated": false,
+              "phase": "started",
+              "purpose": "execution",
+              "reserved": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 1,
+                "model_tokens": 48999,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 60000
+              },
+              "usage": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 0,
+                "model_tokens": 0,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 0
+              }
+            },
+            "redacted": true,
+            "sequence": 4,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-6d5c7a7e386e4808b3aa2ad91efe8a56",
+            "timestamp": "2026-11-19T02:10:54.976Z"
+          },
+          {
+            "causal_parent_event_id": null,
+            "content": {
+              "media_type": "application/json",
+              "text": "{\"output\":{\"output\":[]}}"
+            },
+            "event_id": "event-7f5264f6f0264b76895945687cacdc5c",
+            "kind": "call",
+            "payload": {
+              "call_type": "model",
+              "input_bytes": 57,
+              "input_digest": "sha256:f6076eec4ba34599c282f5a63190f0745bea4b4d212a684819d5342a62e6213b",
+              "operation_id": "model-ab1fd7914cfa4336add657ee8747ad83",
+              "output_bytes": 13,
+              "output_digest": "sha256:03b7f5aeab0116fb327dabad7240a41a7fb01a469c0ac4b55fe425e78bcd6045",
+              "payload_truncated": false,
+              "phase": "finished",
+              "reserved": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 0,
+                "model_tokens": 0,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 0
+              },
+              "usage": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 1,
+                "model_tokens": 7979,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 4816
+              }
+            },
+            "redacted": true,
+            "sequence": 5,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-6d5c7a7e386e4808b3aa2ad91efe8a56",
+            "timestamp": "2026-11-19T02:10:59.813Z"
+          },
+          {
+            "causal_parent_event_id": null,
+            "content": {
+              "media_type": "application/json",
+              "text": "{\"input\":[{\"content\":[{\"text\":\"<environment_context>\\n  <cwd>/workspace</cwd>\\n  <shell>bash</shell>\\n  <current_date>2026-11-19</current_date>\\n  <timezone>Etc/UTC</timezone>\\n  <filesystem><workspace_roots><root>/workspace</root></workspace_roots><permission_profile type=\\\"managed\\\"><file_system type=\\\"restricted\\\"><entry access=\\\"read\\\"><special>:root</special></entry><entry access=\\\"write\\\"><path>/workspace</path></entry><entry access=\\\"write\\\"><special>:slash_tmp</special></entry><entry access=\\\"write\\\"><special>:tmpdir</special></entry><entry access=\\\"read\\\"><path>/workspace/.git</path></entry><entry access=\\\"read\\\"><path>/workspace/.agents</path></entry><entry access=\\\"read\\\"><path>/workspace/.codex</path></entry><entry access=\\\"read\\\"><path>/workspace/.aws</path></entry></file_system></permission_profile></filesystem>\\n</environment_context>\",\"type\":\"input_text\"}],\"id\":\"msg_01a1f192-25fb-7693-9cc3-70463486492c\",\"role\":\"user\",\"type\":\"message\"},{\"content\":[{\"text\":\"{\\\"contract\\\":{\\\"digest\\\":\\\"sha256:e45b5a4209e4deb4d503ee162b4416fa48881e7c74058d231247d83b581a431d\\\",\\\"id\\\":\\\"https://contracts.example.net/capabilities/documents.read\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"dependency_results\\\":{},\\\"input\\\":{\\\"collection\\\":\\\"lasa-docs\\\",\\\"document_id\\\":\\\"README.md\\\"},\\\"outcome_contract\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"readmit_if_no_uncertain_effect\\\",\\\"unknown_commit_possible\\\":false},\\\"failures\\\":[{\\\"code\\\":\\\"source_unavailable\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"A required approved source is unavailable, denied, or outside the allocation.\\\",\\\"retry\\\":\\\"readmission\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/documents.read\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"collection\\\":{\\\"const\\\":\\\"lasa-docs\\\"},\\\"document_id\\\":{\\\"maxLength\\\":128,\\\"pattern\\\":\\\"^[A-Za-z0-9._-]+\\\\\\\\.md$\\\",\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"collection\\\",\\\"document_id\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"external.read\\\"],\\\"non_guarantees\\\":[\\\"Does not cover unapproved collections or assert that source-provided content is universally correct.\\\"],\\\"outcome\\\":\\\"Return the exact authorized document content, source identifier, and SHA-256 of its UTF-8 bytes. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"output_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"content\\\":{\\\"maxLength\\\":8192,\\\"type\\\":\\\"string\\\"},\\\"content_digest\\\":{\\\"pattern\\\":\\\"^sha256:[0-9a-f]{64}$\\\",\\\"type\\\":\\\"string\\\"},\\\"document_id\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"source_uri\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"document_id\\\",\\\"content\\\",\\\"content_digest\\\",\\\"source_uri\\\"],\\\"type\\\":\\\"object\\\"},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Return the exact authorized document content, source identifier, and SHA-256 of its UTF-8 bytes. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"evidence_required\\\":[\\\"Receiver-generated successful source-operation receipts and digest-verified source artifacts.\\\"],\\\"id\\\":\\\"verified-source-content\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"Inputs select an approved read-only collection.\\\",\\\"kind\\\":\\\"input_schema\\\"},{\\\"actions\\\":[\\\"read\\\"],\\\"description\\\":\\\"Read authority for the approved source is required.\\\",\\\"kind\\\":\\\"resource_authorized\\\",\\\"resource\\\":\\\"documents:lasa\\\"}],\\\"title\\\":\\\"Read an approved LASA document\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"required_evidence_criterion_ids\\\":[\\\"verified-source-content\\\"],\\\"requirements\\\":[\\\"verified-source-content\\\"],\\\"source_execution\\\":\\\"Invoke the approved source operations needed for the selected input. Use their actual returned data as evidence. The server will assemble exact source fields and hashes from durable operation artifacts. Return output={ready_for_verification:true} only after retrieval succeeds; do not compute hashes or reproduce source bodies. Include evidence for every required criterion.\\\"}\",\"type\":\"input_text\"}],\"id\":\"msg_01a1f192-25fb-7693-9cc3-706b7d82db63\",\"role\":\"user\",\"type\":\"message\"}],\"purpose\":\"execution\"}"
+            },
+            "event_id": "event-91e0dc71e2a14e8899eea7d04b9bad5f",
+            "kind": "call",
+            "payload": {
+              "call_type": "model",
+              "input_bytes": 4292,
+              "input_digest": "sha256:dda015aa08eb062170748d3f27e1eea2848175418fc679714e855c4c33a9b3fe",
+              "operation_id": "model-21216039aabd4bf3a68298192e475dcc",
+              "output_bytes": 0,
+              "output_digest": null,
+              "payload_truncated": false,
+              "phase": "started",
+              "purpose": "execution",
+              "reserved": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 1,
+                "model_tokens": 51921,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 60000
+              },
+              "usage": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 0,
+                "model_tokens": 0,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 0
+              }
+            },
+            "redacted": true,
+            "sequence": 6,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-6d5c7a7e386e4808b3aa2ad91efe8a56",
+            "timestamp": "2026-11-19T02:10:59.946Z"
+          },
+          {
+            "causal_parent_event_id": null,
+            "content": {
+              "media_type": "application/json",
+              "text": "{\"output\":{\"output\":[{\"arguments\":\"{\\\"path\\\":\\\"/home/yang/Dev/CodeX/LASA/v0/.deploy/target/documents/lasa/README.md\\\"}\",\"call_id\":\"call_rLDki16o7b9UrvlOjbdWYBEO\",\"id\":\"fc_0f1dc87da1938166016afe5ab5ee8887d1959bd3975d6898ee\",\"internal_chat_message_metadata_passthrough\":{\"create_time\":1795054260.831762,\"turn_id\":\"01a1f192-25f2-7940-a704-e669e68645fc\"},\"metadata\":{\"turn_id\":\"01a1f192-25f2-7940-a704-e669e68645fc\"},\"name\":\"documents_read\",\"namespace\":\"mcp__lasa\",\"status\":\"completed\",\"type\":\"function_call\"}]}}"
+            },
+            "event_id": "event-12ce6d08791b4534a1345897f7a80d77",
+            "kind": "call",
+            "payload": {
+              "call_type": "model",
+              "input_bytes": 57,
+              "input_digest": "sha256:93c85af44c8676c451a6a39bd340ef2addcd84ba6693eccc7e39b23c386eefd7",
+              "operation_id": "model-21216039aabd4bf3a68298192e475dcc",
+              "output_bytes": 497,
+              "output_digest": "sha256:eb9da74f48e0b31efff479a7145b6c7fb0a3b5fe056211851671f809397656df",
+              "payload_truncated": false,
+              "phase": "finished",
+              "reserved": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 0,
+                "model_tokens": 0,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 0
+              },
+              "usage": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 1,
+                "model_tokens": 8052,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 2692
+              }
+            },
+            "redacted": true,
+            "sequence": 7,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-6d5c7a7e386e4808b3aa2ad91efe8a56",
+            "timestamp": "2026-11-19T02:11:02.660Z"
+          },
+          {
+            "causal_parent_event_id": null,
+            "content": {
+              "media_type": "application/json",
+              "text": "{\"arguments\":{\"path\":\"/home/yang/Dev/CodeX/LASA/v0/.deploy/target/documents/lasa/README.md\"},\"name\":\"documents.read\"}"
+            },
+            "event_id": "event-687d4fc527694eb4a99039616792d0fe",
+            "kind": "call",
+            "payload": {
+              "call_type": "tool",
+              "input_bytes": 117,
+              "input_digest": "sha256:c2de6b503d279d5137aba3e26acffdb52549497874276e8f00f01aa2e62cb345",
+              "operation_id": "tool-cbaceb96d9234f946017e8950a14adf209d9e863ec0a37e4a9c968325956acdd",
+              "output_bytes": 0,
+              "output_digest": null,
+              "payload_truncated": false,
+              "phase": "started",
+              "reserved": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 0,
+                "model_tokens": 0,
+                "output_bytes": 0,
+                "tool_calls": 1,
+                "wall_time_ms": 0
+              },
+              "usage": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 0,
+                "model_tokens": 0,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 0
+              }
+            },
+            "redacted": true,
+            "sequence": 8,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-6d5c7a7e386e4808b3aa2ad91efe8a56",
+            "timestamp": "2026-11-19T02:11:03.086Z"
+          },
+          {
+            "causal_parent_event_id": null,
+            "content": {
+              "media_type": "application/json",
+              "text": "{\"value\":{\"evidence_artifact\":{\"artifact_id\":\"artifact-fbf653f650914142977e545ab5496c65\",\"bytes\":1862,\"digest\":\"sha256:c4b2e75af0d6eda3546ae69b8b9c0eb2099e4583961e407d83680a5c69176a60\",\"media_type\":\"application/json\",\"provenance\":{\"contract\":{\"digest\":\"sha256:e45b5a4209e4deb4d503ee162b4416fa48881e7c74058d231247d83b581a431d\",\"id\":\"https://contracts.example.net/capabilities/documents.read\",\"version\":\"1.0.0\"},\"input_digest\":\"sha256:0b9478e78ee704df02f08f7a661f9b20853ad0b2a5ee8d3179381c51c5a66d3b\",\"kind\":\"operation-result\",\"operation_id\":\"tool-cbaceb96d9234f946017e8950a14adf209d9e863ec0a37e4a9c968325956acdd\",\"resource\":\"documents:lasa\",\"result_digest\":\"sha256:c4b2e75af0d6eda3546ae69b8b9c0eb2099e4583961e407d83680a5c69176a60\",\"schema_digest\":\"sha256:1f0b23bab7df21d0ca63eac395556e789912c5a27987d68d29240c47b4bdd08f\",\"sequence\":1,\"service_id\":\"https://192.168.0.188/lasa\",\"task_id\":\"task-6d5c7a7e386e4808b3aa2ad91efe8a56\"},\"source_task_id\":\"task-6d5c7a7e386e4808b3aa2ad91efe8a56\"},\"output\":{\"text\":\"# LASA Service v0\\n\\nPython implementation of the outcome-contract architecture in [design](design/README.md), using Codex App Server as its local execution harness.\\n\\nA service owns workspace-bound sessions, receiver authorization, asynchronous admission, deterministic routing, bounded delegation, durable operation identity, verification, and released results. A model proposes a plan; it cannot grant permissions or dispatch work directly.\\n\\nStart with [running instructions](RUNNING.md). Use [run_task.py](run_task.py) to create a session, submit a task, and inspect local and child diagnostic evidence. The [acceptance matrix](VERIFICATION.md) records tests and actual-model evaluations separately from deployed-service verification.\\n\\nThe normative protocol lives in [design/api.openapi.json](design/api.openapi.json), [design/contracts.schema.json](design/contracts.schema.json), [design/config.schema.json](design/config.schema.json), and [design/private.schema.json](design/private.schema.json). These same files are packaged as `lasa_contracts`; there is one runtime contract source.\\n\\nUseful entry points:\\n\\n- [Capability ownership and semantics](design/capabilities.md)\\n- [Discovery, identity, and HTTP](design/discovery.md)\\n- [Admission, routing, execution, and diagnostics](design/execution.md)\\n- [Implementation acceptance requirements](design/acceptance.md)\\n- [Private development configuration generator](tools/create_development_config.py)\\n- [Bounded actual-model evaluations](evaluations/run_evaluations.py)\\n\\nThe managed local/air188 deployment, actual HTTPS evidence, final configuration, and operating commands are recorded in [the deployment report](deployment/DEPLOYMENT.md). Prototype data is preserved in its original directories; the target protocol replaces its interfaces and uses separate persistent stores.\\n\"}}}"
+            },
+            "event_id": "event-52fa288a17364fe9a6d12e9aa15364f9",
+            "kind": "call",
+            "payload": {
+              "call_type": "tool",
+              "input_bytes": 117,
+              "input_digest": "sha256:c2de6b503d279d5137aba3e26acffdb52549497874276e8f00f01aa2e62cb345",
+              "operation_id": "tool-cbaceb96d9234f946017e8950a14adf209d9e863ec0a37e4a9c968325956acdd",
+              "output_bytes": 2857,
+              "output_digest": "sha256:190e59e987995b849c173e7ed3193933eef295d5ff8bf6436b63d2bd68b17c93",
+              "payload_truncated": false,
+              "phase": "finished",
+              "reserved": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 0,
+                "model_tokens": 0,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 0
+              },
+              "usage": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 0,
+                "model_tokens": 0,
+                "output_bytes": 0,
+                "tool_calls": 1,
+                "wall_time_ms": 0
+              }
+            },
+            "redacted": true,
+            "sequence": 9,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-6d5c7a7e386e4808b3aa2ad91efe8a56",
+            "timestamp": "2026-11-19T02:11:03.210Z"
+          },
+          {
+            "causal_parent_event_id": null,
+            "content": {
+              "media_type": "application/json",
+              "text": "{\"input\":[{\"content\":[{\"text\":\"<environment_context>\\n  <cwd>/workspace</cwd>\\n  <shell>bash</shell>\\n  <current_date>2026-11-19</current_date>\\n  <timezone>Etc/UTC</timezone>\\n  <filesystem><workspace_roots><root>/workspace</root></workspace_roots><permission_profile type=\\\"managed\\\"><file_system type=\\\"restricted\\\"><entry access=\\\"read\\\"><special>:root</special></entry><entry access=\\\"write\\\"><path>/workspace</path></entry><entry access=\\\"write\\\"><special>:slash_tmp</special></entry><entry access=\\\"write\\\"><special>:tmpdir</special></entry><entry access=\\\"read\\\"><path>/workspace/.git</path></entry><entry access=\\\"read\\\"><path>/workspace/.agents</path></entry><entry access=\\\"read\\\"><path>/workspace/.codex</path></entry><entry access=\\\"read\\\"><path>/workspace/.aws</path></entry></file_system></permission_profile></filesystem>\\n</environment_context>\",\"type\":\"input_text\"}],\"id\":\"msg_01a1f192-25fb-7693-9cc3-70463486492c\",\"role\":\"user\",\"type\":\"message\"},{\"content\":[{\"text\":\"{\\\"contract\\\":{\\\"digest\\\":\\\"sha256:e45b5a4209e4deb4d503ee162b4416fa48881e7c74058d231247d83b581a431d\\\",\\\"id\\\":\\\"https://contracts.example.net/capabilities/documents.read\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"dependency_results\\\":{},\\\"input\\\":{\\\"collection\\\":\\\"lasa-docs\\\",\\\"document_id\\\":\\\"README.md\\\"},\\\"outcome_contract\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"readmit_if_no_uncertain_effect\\\",\\\"unknown_commit_possible\\\":false},\\\"failures\\\":[{\\\"code\\\":\\\"source_unavailable\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"A required approved source is unavailable, denied, or outside the allocation.\\\",\\\"retry\\\":\\\"readmission\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/documents.read\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"collection\\\":{\\\"const\\\":\\\"lasa-docs\\\"},\\\"document_id\\\":{\\\"maxLength\\\":128,\\\"pattern\\\":\\\"^[A-Za-z0-9._-]+\\\\\\\\.md$\\\",\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"collection\\\",\\\"document_id\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"external.read\\\"],\\\"non_guarantees\\\":[\\\"Does not cover unapproved collections or assert that source-provided content is universally correct.\\\"],\\\"outcome\\\":\\\"Return the exact authorized document content, source identifier, and SHA-256 of its UTF-8 bytes. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"output_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"content\\\":{\\\"maxLength\\\":8192,\\\"type\\\":\\\"string\\\"},\\\"content_digest\\\":{\\\"pattern\\\":\\\"^sha256:[0-9a-f]{64}$\\\",\\\"type\\\":\\\"string\\\"},\\\"document_id\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"source_uri\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"document_id\\\",\\\"content\\\",\\\"content_digest\\\",\\\"source_uri\\\"],\\\"type\\\":\\\"object\\\"},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Return the exact authorized document content, source identifier, and SHA-256 of its UTF-8 bytes. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"evidence_required\\\":[\\\"Receiver-generated successful source-operation receipts and digest-verified source artifacts.\\\"],\\\"id\\\":\\\"verified-source-content\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"Inputs select an approved read-only collection.\\\",\\\"kind\\\":\\\"input_schema\\\"},{\\\"actions\\\":[\\\"read\\\"],\\\"description\\\":\\\"Read authority for the approved source is required.\\\",\\\"kind\\\":\\\"resource_authorized\\\",\\\"resource\\\":\\\"documents:lasa\\\"}],\\\"title\\\":\\\"Read an approved LASA document\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"required_evidence_criterion_ids\\\":[\\\"verified-source-content\\\"],\\\"requirements\\\":[\\\"verified-source-content\\\"],\\\"source_execution\\\":\\\"Invoke the approved source operations needed for the selected input. Use their actual returned data as evidence. The server will assemble exact source fields and hashes from durable operation artifacts. Return output={ready_for_verification:true} only after retrieval succeeds; do not compute hashes or reproduce source bodies. Include evidence for every required criterion.\\\"}\",\"type\":\"input_text\"}],\"id\":\"msg_01a1f192-25fb-7693-9cc3-706b7d82db63\",\"role\":\"user\",\"type\":\"message\"}],\"purpose\":\"execution\"}"
+            },
+            "event_id": "event-3f54153e26954404858ea4e339517b70",
+            "kind": "call",
+            "payload": {
+              "call_type": "model",
+              "input_bytes": 4292,
+              "input_digest": "sha256:dda015aa08eb062170748d3f27e1eea2848175418fc679714e855c4c33a9b3fe",
+              "operation_id": "model-1df2ff23bd9e4f2eb3d4faa1636e4519",
+              "output_bytes": 0,
+              "output_digest": null,
+              "payload_truncated": false,
+              "phase": "started",
+              "purpose": "execution",
+              "reserved": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 1,
+                "model_tokens": 57275,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 60000
+              },
+              "usage": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 0,
+                "model_tokens": 0,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 0
+              }
+            },
+            "redacted": true,
+            "sequence": 10,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-6d5c7a7e386e4808b3aa2ad91efe8a56",
+            "timestamp": "2026-11-19T02:11:03.338Z"
+          },
+          {
+            "causal_parent_event_id": null,
+            "content": {
+              "media_type": "application/json",
+              "text": "{\"output\":{\"output\":[{\"content\":[{\"annotations\":[],\"logprobs\":[],\"text\":\"{\\\"artifact_ids\\\":[\\\"artifact-fbf653f650914142977e545ab5496c65\\\"],\\\"evidence\\\":[{\\\"artifact_ids\\\":[\\\"artifact-fbf653f650914142977e545ab5496c65\\\"],\\\"criterion_id\\\":\\\"verified-source-content\\\",\\\"disposition\\\":\\\"passed\\\",\\\"summary\\\":\\\"Approved LASA document read succeeded via source operation for README.md; returned durable operation artifact includes source result digest sha256:c4b2e75af0d6eda3546ae69b8b9c0eb2099e4583961e407d83680a5c69176a60.\\\"}],\\\"output\\\":{\\\"ready_for_verification\\\":true}}\",\"type\":\"output_text\"}],\"id\":\"msg_0f1dc87da1938166016afe5aba06e087d1bb3c9a84f202e639\",\"internal_chat_message_metadata_passthrough\":{\"content_token_count\":137,\"create_time\":1795054264.175268,\"turn_id\":\"01a1f192-25f2-7940-a704-e669e68645fc\"},\"metadata\":{\"turn_id\":\"01a1f192-25f2-7940-a704-e669e68645fc\"},\"phase\":\"final_answer\",\"role\":\"assistant\",\"status\":\"completed\",\"type\":\"message\"}]}}"
+            },
+            "event_id": "event-5779bf8a6ed0481c93acd61436587e91",
+            "kind": "call",
+            "payload": {
+              "call_type": "model",
+              "input_bytes": 57,
+              "input_digest": "sha256:b579cb24e4bae8ec828039cd4aff2b7606a174258b5615d40bd50a1653bcd5ea",
+              "operation_id": "model-1df2ff23bd9e4f2eb3d4faa1636e4519",
+              "output_bytes": 942,
+              "output_digest": "sha256:0d691aacae9abc67ae47062ab040166a282737b96352ce0583b1d2645a9f8c27",
+              "payload_truncated": false,
+              "phase": "finished",
+              "reserved": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 0,
+                "model_tokens": 0,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 0
+              },
+              "usage": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 1,
+                "model_tokens": 9050,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 5145
+              }
+            },
+            "redacted": true,
+            "sequence": 11,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-6d5c7a7e386e4808b3aa2ad91efe8a56",
+            "timestamp": "2026-11-19T02:11:08.504Z"
+          },
+          {
+            "causal_parent_event_id": null,
+            "content": {
+              "media_type": "application/json",
+              "text": "{\"input\":[{\"content\":[{\"text\":\"{\\\"candidate_output\\\":{\\\"content\\\":\\\"# LASA Service v0\\\\n\\\\nPython implementation of the outcome-contract architecture in [design](design/README.md), using Codex App Server as its local execution harness.\\\\n\\\\nA service owns workspace-bound sessions, receiver authorization, asynchronous admission, deterministic routing, bounded delegation, durable operation identity, verification, and released results. A model proposes a plan; it cannot grant permissions or dispatch work directly.\\\\n\\\\nStart with [running instructions](RUNNING.md). Use [run_task.py](run_task.py) to create a session, submit a task, and inspect local and child diagnostic evidence. The [acceptance matrix](VERIFICATION.md) records tests and actual-model evaluations separately from deployed-service verification.\\\\n\\\\nThe normative protocol lives in [design/api.openapi.json](design/api.openapi.json), [design/contracts.schema.json](design/contracts.schema.json), [design/config.schema.json](design/config.schema.json), and [design/private.schema.json](design/private.schema.json). These same files are packaged as `lasa_contracts`; there is one runtime contract source.\\\\n\\\\nUseful entry points:\\\\n\\\\n- [Capability ownership and semantics](design/capabilities.md)\\\\n- [Discovery, identity, and HTTP](design/discovery.md)\\\\n- [Admission, routing, execution, and diagnostics](design/execution.md)\\\\n- [Implementation acceptance requirements](design/acceptance.md)\\\\n- [Private development configuration generator](tools/create_development_config.py)\\\\n- [Bounded actual-model evaluations](evaluations/run_evaluations.py)\\\\n\\\\nThe managed local/air188 deployment, actual HTTPS evidence, final configuration, and operating commands are recorded in [the deployment report](deployment/DEPLOYMENT.md). Prototype data is preserved in its original directories; the target protocol replaces its interfaces and uses separate persistent stores.\\\\n\\\",\\\"content_digest\\\":\\\"sha256:489e9cc66fd11401b45adbc85198cbb6c4e92c18659dd1ab2f036cb2b2508717\\\",\\\"document_id\\\":\\\"README.md\\\",\\\"source_uri\\\":\\\"lasa-docs://README.md\\\"},\\\"claimed_evidence\\\":[{\\\"artifact_ids\\\":[\\\"artifact-fbf653f650914142977e545ab5496c65\\\"],\\\"criterion_id\\\":\\\"verified-source-content\\\",\\\"disposition\\\":\\\"passed\\\",\\\"summary\\\":\\\"Approved LASA document read succeeded via source operation for README.md; returned durable operation artifact includes source result digest sha256:c4b2e75af0d6eda3546ae69b8b9c0eb2099e4583961e407d83680a5c69176a60.\\\"}],\\\"contract\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"readmit_if_no_uncertain_effect\\\",\\\"unknown_commit_possible\\\":false},\\\"failures\\\":[{\\\"code\\\":\\\"source_unavailable\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"A required approved source is unavailable, denied, or outside the allocation.\\\",\\\"retry\\\":\\\"readmission\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/documents.read\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"collection\\\":{\\\"const\\\":\\\"lasa-docs\\\"},\\\"document_id\\\":{\\\"maxLength\\\":128,\\\"pattern\\\":\\\"^[A-Za-z0-9._-]+\\\\\\\\.md$\\\",\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"collection\\\",\\\"document_id\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"external.read\\\"],\\\"non_guarantees\\\":[\\\"Does not cover unapproved collections or assert that source-provided content is universally correct.\\\"],\\\"outcome\\\":\\\"Return the exact authorized document content, source identifier, and SHA-256 of its UTF-8 bytes. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"output_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"content\\\":{\\\"maxLength\\\":8192,\\\"type\\\":\\\"string\\\"},\\\"content_digest\\\":{\\\"pattern\\\":\\\"^sha256:[0-9a-f]{64}$\\\",\\\"type\\\":\\\"string\\\"},\\\"document_id\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"source_uri\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"document_id\\\",\\\"content\\\",\\\"content_digest\\\",\\\"source_uri\\\"],\\\"type\\\":\\\"object\\\"},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Return the exact authorized document content, source identifier, and SHA-256 of its UTF-8 bytes. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"evidence_required\\\":[\\\"Receiver-generated successful source-operation receipts and digest-verified source artifacts.\\\"],\\\"id\\\":\\\"verified-source-content\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"Inputs select an approved read-only collection.\\\",\\\"kind\\\":\\\"input_schema\\\"},{\\\"actions\\\":[\\\"read\\\"],\\\"description\\\":\\\"Read authority for the approved source is required.\\\",\\\"kind\\\":\\\"resource_authorized\\\",\\\"resource\\\":\\\"documents:lasa\\\"}],\\\"title\\\":\\\"Read an approved LASA document\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"input\\\":{\\\"collection\\\":\\\"lasa-docs\\\",\\\"document_id\\\":\\\"README.md\\\"},\\\"instruction\\\":\\\"Independently check whether the supplied evidence supports the output and required postconditions. A schema-valid answer or a peer saying complete is insufficient. A fulfilled attempt must satisfy every requirement; unable is an honest attempt outcome but cannot fulfill an actual requested subtask. Reject unsupported factual claims, missing criterion coverage, inadequate evidence, or unresolved effects. State uncertainty as passed=false.\\\",\\\"original_requirements\\\":[{\\\"acceptance\\\":[{\\\"criterion\\\":\\\"Return the exact authorized document content, source identifier, and SHA-256 of its UTF-8 bytes. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"evidence_required\\\":[\\\"Receiver-generated successful source-operation receipts and digest-verified source artifacts.\\\"],\\\"id\\\":\\\"verified-source-content\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"description\\\":\\\"Return the exact authorized document content, source identifier, and SHA-256 of its UTF-8 bytes. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"mandatory\\\":true,\\\"requirement_id\\\":\\\"verified-source-content\\\",\\\"source\\\":\\\"derived\\\"}],\\\"trusted_execution_evidence\\\":{\\\"artifacts\\\":[{\\\"bytes_verified\\\":true,\\\"content\\\":{\\\"text\\\":\\\"{\\\\\\\"text\\\\\\\":\\\\\\\"# LASA Service v0\\\\\\\\n\\\\\\\\nPython implementation of the outcome-contract architecture in [design](design/README.md), using Codex App Server as its local execution harness.\\\\\\\\n\\\\\\\\nA service owns workspace-bound sessions, receiver authorization, asynchronous admission, deterministic routing, bounded delegation, durable operation identity, verification, and released results. A model proposes a plan; it cannot grant permissions or dispatch work directly.\\\\\\\\n\\\\\\\\nStart with [running instructions](RUNNING.md). Use [run_task.py](run_task.py) to create a session, submit a task, and inspect local and child diagnostic evidence. The [acceptance matrix](VERIFICATION.md) records tests and actual-model evaluations separately from deployed-service verification.\\\\\\\\n\\\\\\\\nThe normative protocol lives in [design/api.openapi.json](design/api.openapi.json), [design/contracts.schema.json](design/contracts.schema.json), [design/config.schema.json](design/config.schema.json), and [design/private.schema.json](design/private.schema.json). These same files are packaged as `lasa_contracts`; there is one runtime contract source.\\\\\\\\n\\\\\\\\nUseful entry points:\\\\\\\\n\\\\\\\\n- [Capability ownership and semantics](design/capabilities.md)\\\\\\\\n- [Discovery, identity, and HTTP](design/discovery.md)\\\\\\\\n- [Admission, routing, execution, and diagnostics](design/execution.md)\\\\\\\\n- [Implementation acceptance requirements](design/acceptance.md)\\\\\\\\n- [Private development configuration generator](tools/create_development_config.py)\\\\\\\\n- [Bounded actual-model evaluations](evaluations/run_evaluations.py)\\\\\\\\n\\\\\\\\nThe managed local/air188 deployment, actual HTTPS evidence, final configuration, and operating commands are recorded in [the deployment report](deployment/DEPLOYMENT.md). Prototype data is preserved in its original directories; the target protocol replaces its interfaces and uses separate persistent"
+            },
+            "event_id": "event-ff7eecefa1694919bffc758360b51d4b",
+            "kind": "call",
+            "payload": {
+              "call_type": "model",
+              "input_bytes": 13014,
+              "input_digest": "sha256:e65194176434b4c7d4d17e40d22579a06afe7d1c21f0e1a66a552028a4c01b47",
+              "operation_id": "model-e1449c1943fc4fbfbc42ff80c24f2e28",
+              "output_bytes": 0,
+              "output_digest": null,
+              "payload_truncated": true,
+              "phase": "started",
+              "purpose": "verification",
+              "reserved": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 1,
+                "model_tokens": 17544,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 60000
+              },
+              "usage": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 0,
+                "model_tokens": 0,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 0
+              }
+            },
+            "redacted": true,
+            "sequence": 12,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-6d5c7a7e386e4808b3aa2ad91efe8a56",
+            "timestamp": "2026-11-19T02:11:09.118Z"
+          },
+          {
+            "causal_parent_event_id": null,
+            "content": {
+              "media_type": "application/json",
+              "text": "{\"output\":{\"passed\":false,\"reason\":\"The trusted evidence supports that a receiver operation succeeded and returned README.md text matching the candidate content, with a verified artifact digest for the JSON operation-result artifact. However, the required output content_digest is the SHA-256 of the UTF-8 document content, and the supplied trusted evidence does not provide or verify the candidate digest sha256:489e9cc66fd11401b45adbc85198cbb6c4e92c18659dd1ab2f036cb2b2508717. The visible verified digest sha256:c4b2e75af0d6eda3546ae69b8b9c0eb2099e4583961e407d83680a5c69176a60 is for the JSON artifact/result, not necessarily the raw document bytes. The evidence also does not clearly show that the source operation returned the candidate source_uri lasa-docs://README.md. Because required postcondition coverage for the exact content SHA-256/source identifier is incomplete, the output is not fully supported.\"}}"
+            },
+            "event_id": "event-5006c9656b7f4f4eab6fe4a712f294f0",
+            "kind": "call",
+            "payload": {
+              "call_type": "model",
+              "input_bytes": 57,
+              "input_digest": "sha256:ee1c9c87111d0158c6a0caf888b9ad798b169355ea7e94b66ab3d1dc19297836",
+              "operation_id": "model-e1449c1943fc4fbfbc42ff80c24f2e28",
+              "output_bytes": 904,
+              "output_digest": "sha256:d23c513cc6cf7c2486e42ed91e2ab17aef40e611b91eaf8705849661020b60e9",
+              "payload_truncated": false,
+              "phase": "finished",
+              "reserved": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 0,
+                "model_tokens": 0,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 0
+              },
+              "usage": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 1,
+                "model_tokens": 3972,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 12606
+              }
+            },
+            "redacted": true,
+            "sequence": 13,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-6d5c7a7e386e4808b3aa2ad91efe8a56",
+            "timestamp": "2026-11-19T02:11:21.747Z"
+          },
+          {
+            "causal_parent_event_id": null,
+            "event_id": "event-416e140a3293423b827e466e9a826c7e",
+            "kind": "verification",
+            "payload": {
+              "checks": [
+                {
+                  "artifact_ids": [],
+                  "criterion_id": "verified-source-content",
+                  "disposition": "failed",
+                  "summary": "The trusted evidence supports that a receiver operation succeeded and returned README.md text matching the candidate content, with a verified artifact digest for the JSON operation-result artifact. However, the required output content_digest is the SHA-256 of the UTF-8 document content, and the supplied trusted evidence does not provide or verify the candidate digest sha256:489e9cc66fd11401b45adbc85198cbb6c4e92c18659dd1ab2f036cb2b2508717. The visible verified digest sha256:c4b2e75af0d6eda3546ae69b8b9c0eb2099e4583961e407d83680a5c69176a60 is for the JSON artifact/result, not necessarily the raw document bytes. The evidence also does not clearly show that the source operation returned the candidate source_uri lasa-docs://README.md. Because required postcondition coverage for the exact content SHA-256/source identifier is incomplete, the output is not fully supported."
+                }
+              ],
+              "contract": {
+                "digest": "sha256:e45b5a4209e4deb4d503ee162b4416fa48881e7c74058d231247d83b581a431d",
+                "id": "https://contracts.example.net/capabilities/documents.read",
+                "version": "1.0.0"
+              },
+              "release": "rejected",
+              "request_digest": "sha256:e9845017ada5a88b0bf30a6ce9d2fbb49b283059269b31de0036191a0351b113",
+              "step_id": "semantic-verification"
+            },
+            "redacted": true,
+            "sequence": 14,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-6d5c7a7e386e4808b3aa2ad91efe8a56",
+            "timestamp": "2026-11-19T02:11:21.777Z"
+          }
+        ],
+        "next_sequence": 15
+      }
+    }
+  ]
+}

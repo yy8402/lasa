@@ -1,0 +1,24 @@
+{
+  "layer1": {
+    "protocol": "lasa/1.1",
+    "deployment_revision": "connectors-20261119-bb51bca893fe-steady",
+    "states": {
+      "design.review": "available",
+      "task.attempt": "available",
+      "documents.search": "unknown",
+      "repository.inspect": "unknown",
+      "documents.read": "unknown"
+    }
+  },
+  "layer2": {
+    "protocol": "lasa/1.1",
+    "deployment_revision": "connectors-20261119-bb51bca893fe-steady",
+    "states": {
+      "design.review": "available",
+      "task.attempt": "available",
+      "documents.search": "available",
+      "repository.inspect": "available",
+      "documents.read": "available"
+    }
+  }
+}

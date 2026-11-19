@@ -1,0 +1,55 @@
+{
+  "case": "local-tools",
+  "task_id": "task-3d020d75fc1a437ea8b0551edecfce26",
+  "actual_broker_actions": [
+    {
+      "operation_id": "tool-3339aada14472a72f04cf5de7307c2c604ebd8f51acf8a9f73e436694e8271ff",
+      "state": "finished",
+      "tool": "workspace.write",
+      "arguments": {
+        "relative_path": "deployment-check.txt",
+        "text": "LASA parent retains final responsibility."
+      },
+      "result": {
+        "value": {
+          "bytes_written": 41
+        }
+      }
+    },
+    {
+      "operation_id": "tool-adfd922f69ab742c9f651ae69312dde1ffecce644467221069eb90d8192cff01",
+      "state": "finished",
+      "tool": "workspace.read",
+      "arguments": {
+        "relative_path": "deployment-check.txt"
+      },
+      "result": {
+        "value": {
+          "text": "LASA parent retains final responsibility."
+        }
+      }
+    }
+  ],
+  "release": "rejected",
+  "verifier_reason": [
+    {
+      "checks": [
+        {
+          "artifact_ids": [],
+          "criterion_id": "honest-disposition",
+          "disposition": "failed",
+          "summary": "The supplied material only contains assertions by the candidate/claimed evidence that workspace_write and workspace_read occurred and returned the stated text. No independent tool transcript, artifact ID, or verifiable readback output is provided. Because the fulfilled disposition depends on factual effects (file creation and subsequent exact read), the evidence is insufficient to support the required postcondition and mandatory requirement."
+        }
+      ],
+      "contract": {
+        "digest": "sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23",
+        "id": "https://contracts.example.net/capabilities/task.attempt",
+        "version": "1.0.0"
+      },
+      "release": "rejected",
+      "request_digest": "sha256:ab6617cf75ee302d82b40269d437be1d0560a9172a814e7d8663d5f94401fab6",
+      "step_id": "semantic-verification"
+    }
+  ],
+  "interpretation": "Broker effects are established, but the semantic verifier received candidate claims without the independent tool transcript/artifact it required. The failure is retained; no result was released and no automatic retry was performed."
+}

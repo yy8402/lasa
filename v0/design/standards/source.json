@@ -1,0 +1,7 @@
+{
+  "source_url": "https://spec.openapis.org/oas/3.2/schema/2026-11-12",
+  "retrieved_at": "2026-11-18",
+  "file": "openapi-3.2-2026-11-12.schema.json",
+  "sha256": "f1f7ee38d431a7bb1082e4df2288dbe1d4d3f49081b497af249c07b77737fb43",
+  "purpose": "Official OAS 3.2 structural meta-schema; embedded LASA schemas validated separately."
+}

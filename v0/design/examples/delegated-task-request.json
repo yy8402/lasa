@@ -1,0 +1,84 @@
+{
+  "operation_id": "op-child-review-001",
+  "selection": {
+    "contract": {
+      "id": "https://contracts.example.net/capabilities/design.review",
+      "version": "1.0.0",
+      "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce"
+    },
+    "offer_id": "offer-design-review",
+    "offer_revision": "offer-review-r1",
+    "catalog_view": "view-layer1-policy7"
+  },
+  "input": {
+    "design": "Layer 1 delegates bounded reviews to Layer 2 over HTTPS. The parent verifies returned criterion coverage before release.",
+    "criteria": [
+      {
+        "id": "criterion-accountability",
+        "description": "The parent retains responsibility for the final answer."
+      }
+    ]
+  },
+  "requested_limits": {
+    "budget": {
+      "model_tokens": 8000,
+      "model_calls": 2,
+      "tool_calls": 0,
+      "delegations": 0,
+      "wall_time_ms": 60000,
+      "input_bytes": 32000,
+      "output_bytes": 12000,
+      "artifact_bytes": 0
+    },
+    "deadline": "2026-11-18T08:01:00Z",
+    "max_hops": 0
+  },
+  "authorization_ref": "receiver-policy:trusted-layer1-review",
+  "diagnostics": "metadata",
+  "delegation": {
+    "delegation_id": "delegation-review-001",
+    "root_task_id": "task-root-001",
+    "parent_service_id": "https://identity.example.net/services/layer1",
+    "parent_task_id": "task-root-001",
+    "step_id": "step-review",
+    "requirement_ids": [
+      "requirement-review"
+    ],
+    "ancestry": [
+      "https://identity.example.net/services/layer1"
+    ],
+    "remaining_hops": 0,
+    "request_digest": "sha256:f1be4bd1d08d9cd7ea73fdec23ecd74aa6c71f265d52874d64e5ec45bed8bb45",
+    "allocation": {
+      "budget": {
+        "model_tokens": 8000,
+        "model_calls": 2,
+        "tool_calls": 0,
+        "delegations": 0,
+        "wall_time_ms": 60000,
+        "input_bytes": 32000,
+        "output_bytes": 12000,
+        "artifact_bytes": 0
+      },
+      "deadline": "2026-11-18T08:01:00Z",
+      "max_hops": 0
+    },
+    "disclosed_artifacts": [],
+    "authority_ceiling": {
+      "resources": [
+        {
+          "resource": "workspace:self",
+          "actions": [
+            "read"
+          ]
+        }
+      ],
+      "allowed_effects": [
+        "workspace.read"
+      ],
+      "allowed_disclosure_services": [],
+      "allowed_delegated_contracts": [],
+      "content_diagnostics_allowed": false
+    }
+  }
+}

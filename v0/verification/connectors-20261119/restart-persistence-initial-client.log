@@ -1,0 +1,21 @@
+Traceback (most recent call last):
+  File "/Users/yyang/Dev/CodeX/LASA/v0/deployment/verify_persistence.py", line 142, in <module>
+    asyncio.run(main())
+  File "/Users/yyang/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "/Users/yyang/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/yyang/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/asyncio/base_events.py", line 691, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/Users/yyang/Dev/CodeX/LASA/v0/deployment/verify_persistence.py", line 76, in main
+    before = await witness()
+             ^^^^^^^^^^^^^^^
+  File "/Users/yyang/Dev/CodeX/LASA/v0/deployment/verify_persistence.py", line 61, in witness
+    response.raise_for_status()
+  File "/Users/yyang/Dev/CodeX/LASA/v0/.venv/lib/python3.12/site-packages/httpx/_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '404 Not Found' for url 'https://localhost:8443/lasa/v1'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404

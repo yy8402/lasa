@@ -1,0 +1,939 @@
+{
+  "case": "delegate_first",
+  "runtime_image": "sha256:4f09ec491ffad8efe8311b968e627308888f42912319da2744f16101d438f16e",
+  "passed": true,
+  "expected_status": "completed",
+  "assessment_expectation": null,
+  "actual_model_assessments": [
+    {
+      "assessment_summary": "The request contract directly expresses the needed outcome: a bounded semantic design review against explicit criteria. The supplied input conforms to the design.review schema with one design and one criterion. The approved local binding for this contract permits workspace.read, which is within the contract max effects; no peer delegation or additional resource access is needed. The step can produce coverage for the supplied criterion and findings, if any, grounded in the provided design text.",
+      "contract_digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce",
+      "local_assessment": "sufficient",
+      "requirement_ids": [
+        "criterion-coverage"
+      ],
+      "step_id": "step-1-design-review"
+    }
+  ],
+  "task": {
+    "admission": {
+      "accepted_at": "2026-11-18T11:04:18.974Z",
+      "authorization_decision_id": "authority-c30553bf2152fb157316dcfab69fbeb0",
+      "contract": {
+        "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce",
+        "id": "https://contracts.example.net/capabilities/design.review",
+        "version": "1.0.0"
+      },
+      "effective_limits": {
+        "budget": {
+          "artifact_bytes": 128000,
+          "delegations": 2,
+          "input_bytes": 128000,
+          "model_calls": 16,
+          "model_tokens": 500000,
+          "output_bytes": 32000,
+          "tool_calls": 8,
+          "wall_time_ms": 300000
+        },
+        "deadline": "2026-11-18T11:08:02.922898+00:00",
+        "max_hops": 2
+      },
+      "plan_digest": "sha256:3c68e7e4cc540638f9053f30d0f7388db7e6256c09854b72caacfbbb2c687806",
+      "request_digest": "sha256:2c3ee56f535266616861b91f07e664f4cecfb1581a5c28e21aaf68e763960e98"
+    },
+    "operation_id": "operation-d95f0265e7b84bd9a1a2ea6c650a82b7",
+    "received_at": "2026-11-18T11:04:02.953Z",
+    "request_digest": "sha256:2c3ee56f535266616861b91f07e664f4cecfb1581a5c28e21aaf68e763960e98",
+    "result": {
+      "artifacts": [],
+      "contract": {
+        "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce",
+        "id": "https://contracts.example.net/capabilities/design.review",
+        "version": "1.0.0"
+      },
+      "effect_disposition": "none",
+      "evidence": [
+        {
+          "artifact_ids": [],
+          "criterion_id": "criterion-coverage",
+          "disposition": "passed",
+          "summary": "Every supplied criterion has a coverage entry, and the finding is grounded in the supplied design text stating that the parent checks evidence against original criteria and retains responsibility for final completion."
+        }
+      ],
+      "output": {
+        "coverage": [
+          {
+            "criterion_id": "criterion-accountability",
+            "disposition": "reviewed",
+            "evidence": "The design explicitly states that the parent \"checks returned evidence against the original criteria, and retains responsibility for final completion.\" This directly supports that the parent retains accountability rather than delegating final completion responsibility to the child."
+          }
+        ],
+        "findings": [
+          {
+            "criterion_id": "criterion-accountability",
+            "observation": "The supplied design assigns final accountability to the parent: it accepts the caller objective, sends bounded child work, checks returned evidence against the original criteria, and retains responsibility for final completion.",
+            "recommendation": "Keep this responsibility boundary explicit in any implementation or protocol documentation, especially that child results are evidence for parent review rather than independent final completion.",
+            "severity": "info"
+          }
+        ]
+      },
+      "request_digest": "sha256:2c3ee56f535266616861b91f07e664f4cecfb1581a5c28e21aaf68e763960e98",
+      "usage": {
+        "artifact_bytes": 0,
+        "delegations": 1,
+        "input_bytes": 860,
+        "model_calls": 6,
+        "model_tokens": 18267,
+        "output_bytes": 1828,
+        "tool_calls": 0,
+        "wall_time_ms": 39040
+      }
+    },
+    "revision": 5,
+    "selection": {
+      "catalog_view": "view-c51e63d2ed416d00c34f89c9c6e862db",
+      "contract": {
+        "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce",
+        "id": "https://contracts.example.net/capabilities/design.review",
+        "version": "1.0.0"
+      },
+      "offer_id": "offer-64e5fa51fd40cc76f274b05869ea6194",
+      "offer_revision": "offer-de34668791aa4cf31bcb1297759010ee"
+    },
+    "service_id": "https://identity.example.net/services/layer1",
+    "session_id": "session-d8faf0d35c6e4e8e9112d5e5fffa129c",
+    "status": "completed",
+    "task_id": "task-7d9fb67e57ef44489bba2fe3856cebf9",
+    "updated_at": "2026-11-18T11:04:45.453Z"
+  },
+  "layer1_events": [
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-c7a2296901ed433997bedd5c1404d816",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 17364,
+        "input_digest": "sha256:3be2044e2e71cb802c3faa92cef0b39e592fc03badc7f18d26054f150781591a",
+        "operation_id": "model-9f3bcd9afb5843a38120603bcaf3d114",
+        "output_bytes": 0,
+        "output_digest": null,
+        "payload_truncated": false,
+        "phase": "started",
+        "purpose": "planning",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 22380,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 60000
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        }
+      },
+      "redacted": true,
+      "sequence": 1,
+      "service_id": "https://identity.example.net/services/layer1",
+      "task_id": "task-7d9fb67e57ef44489bba2fe3856cebf9",
+      "timestamp": "2026-11-18T11:04:03.122Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-6dec2c4443b84c3e892415a6486454a4",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 57,
+        "input_digest": "sha256:f6ca677b15cc991c16bd87ae6dd06c859b22eb560469e30e0bee75d20a319d22",
+        "operation_id": "model-9f3bcd9afb5843a38120603bcaf3d114",
+        "output_bytes": 1209,
+        "output_digest": "sha256:c2763d8f916218489f80942f2f59686cff6a68fa80d87149d26c034f2e554f8f",
+        "payload_truncated": false,
+        "phase": "finished",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 4169,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 9953
+        }
+      },
+      "redacted": true,
+      "sequence": 2,
+      "service_id": "https://identity.example.net/services/layer1",
+      "task_id": "task-7d9fb67e57ef44489bba2fe3856cebf9",
+      "timestamp": "2026-11-18T11:04:13.080Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-cd35b9767b8443be98eaf7305d9001fa",
+      "kind": "routing",
+      "payload": {
+        "assessment_summary": "The request contract directly expresses the needed outcome: a bounded semantic design review against explicit criteria. The supplied input conforms to the design.review schema with one design and one criterion. The approved local binding for this contract permits workspace.read, which is within the contract max effects; no peer delegation or additional resource access is needed. The step can produce coverage for the supplied criterion and findings, if any, grounded in the provided design text.",
+        "authorization_decision_id": "authority-c30553bf2152fb157316dcfab69fbeb0",
+        "catalog_revision": "catalog-5757900da8e0c8b0599bcadf39d0a2bb",
+        "contract": {
+          "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce",
+          "id": "https://contracts.example.net/capabilities/design.review",
+          "version": "1.0.0"
+        },
+        "decision_reason": "Both suitable; configured preference selects peer",
+        "local_assessment": "sufficient",
+        "offer_revision": "offer-d780142756a45256e115b2d773ac6caa",
+        "peer_assessment": "matched",
+        "policy": {
+          "preferred_executor": "peer",
+          "unclaimed_peer_fallback": "reject"
+        },
+        "requirement_ids": [
+          "criterion-coverage"
+        ],
+        "selected_executor": "peer",
+        "step_id": "step-1-design-review"
+      },
+      "redacted": true,
+      "sequence": 3,
+      "service_id": "https://identity.example.net/services/layer1",
+      "task_id": "task-7d9fb67e57ef44489bba2fe3856cebf9",
+      "timestamp": "2026-11-18T11:04:13.117Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-351cddcaa56d4fa9ac4c7a91fb7e2b70",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 8876,
+        "input_digest": "sha256:ab0c186449e0cc421130869001c4f88cf137dba04ac77d9c6a728384959a0aaa",
+        "operation_id": "model-2dd0f77bdeea41cabc4499c86d15107b",
+        "output_bytes": 0,
+        "output_digest": null,
+        "payload_truncated": false,
+        "phase": "started",
+        "purpose": "planning",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 13402,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 60000
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        }
+      },
+      "redacted": true,
+      "sequence": 4,
+      "service_id": "https://identity.example.net/services/layer1",
+      "task_id": "task-7d9fb67e57ef44489bba2fe3856cebf9",
+      "timestamp": "2026-11-18T11:04:13.136Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-3835532fc02a41f38e776d14b5fdd155",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 57,
+        "input_digest": "sha256:c60c1374a547fd521ee4c20447309bff612dc85b2ac44a697c321db5632f2541",
+        "operation_id": "model-2dd0f77bdeea41cabc4499c86d15107b",
+        "output_bytes": 628,
+        "output_digest": "sha256:ffb6f76b4312f54a21810af6ecb3f9491c54c0b9036ede6f997ce4e33e52dea6",
+        "payload_truncated": false,
+        "phase": "finished",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 2051,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 5799
+        }
+      },
+      "redacted": true,
+      "sequence": 5,
+      "service_id": "https://identity.example.net/services/layer1",
+      "task_id": "task-7d9fb67e57ef44489bba2fe3856cebf9",
+      "timestamp": "2026-11-18T11:04:18.939Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-e5e4326d86484232975b0b6eda00bb4b",
+      "kind": "call",
+      "payload": {
+        "call_type": "child",
+        "contract": {
+          "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce",
+          "id": "https://contracts.example.net/capabilities/design.review",
+          "version": "1.0.0"
+        },
+        "input_bytes": 2537,
+        "input_digest": "sha256:971fabaf87c1d2c3d33863a911b16ec2b3a16033d4c538ce488f2ca9ee395839",
+        "operation_id": "delegation-f79646621a2d46c3b2d4ef5891555108",
+        "output_bytes": 0,
+        "output_digest": null,
+        "payload_truncated": false,
+        "peer_service_id": "https://identity.example.net/services/layer2",
+        "phase": "started",
+        "reserved": {
+          "artifact_bytes": 128000,
+          "delegations": 2,
+          "input_bytes": 127570,
+          "model_calls": 8,
+          "model_tokens": 293780,
+          "output_bytes": 28000,
+          "tool_calls": 8,
+          "wall_time_ms": 194248
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        }
+      },
+      "redacted": true,
+      "sequence": 6,
+      "service_id": "https://identity.example.net/services/layer1",
+      "task_id": "task-7d9fb67e57ef44489bba2fe3856cebf9",
+      "timestamp": "2026-11-18T11:04:19.066Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-e383123c20cf4796b53148c0105f32f4",
+      "kind": "call",
+      "payload": {
+        "call_type": "child",
+        "child_task_id": "task-620bdd08a94f49c4b79ed0bd8a03c2fb",
+        "contract": {
+          "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce",
+          "id": "https://contracts.example.net/capabilities/design.review",
+          "version": "1.0.0"
+        },
+        "input_bytes": 2537,
+        "input_digest": "sha256:971fabaf87c1d2c3d33863a911b16ec2b3a16033d4c538ce488f2ca9ee395839",
+        "operation_id": "delegation-f79646621a2d46c3b2d4ef5891555108",
+        "output_bytes": 1713,
+        "output_digest": "sha256:d5dc408b015fc7adee2bd67e4cfda42c17a930a6d0ccb5e4e7e25d5278275e20",
+        "payload_truncated": false,
+        "peer_service_id": "https://identity.example.net/services/layer2",
+        "phase": "finished",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 1,
+          "input_bytes": 430,
+          "model_calls": 2,
+          "model_tokens": 9458,
+          "output_bytes": 914,
+          "tool_calls": 0,
+          "wall_time_ms": 14180
+        }
+      },
+      "redacted": true,
+      "sequence": 7,
+      "service_id": "https://identity.example.net/services/layer1",
+      "task_id": "task-7d9fb67e57ef44489bba2fe3856cebf9",
+      "timestamp": "2026-11-18T11:04:36.246Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-487b36833e2741eb88eaa615cd9fc810",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 5380,
+        "input_digest": "sha256:a08f0d8ce00dd0f0b0dfe6bd3d1e2f76cee45db6769883eaae39684920d79dac",
+        "operation_id": "model-c9749813676841f38dab5048d2fdf224",
+        "output_bytes": 0,
+        "output_digest": null,
+        "payload_truncated": false,
+        "phase": "started",
+        "purpose": "verification",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 9910,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 60000
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        }
+      },
+      "redacted": true,
+      "sequence": 8,
+      "service_id": "https://identity.example.net/services/layer1",
+      "task_id": "task-7d9fb67e57ef44489bba2fe3856cebf9",
+      "timestamp": "2026-11-18T11:04:36.274Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-2c6fa85d899642e7bfef48c42e9728f2",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 57,
+        "input_digest": "sha256:022172e72ea1a3f367e702950230c9d5bb700260bbbbed0ffdd95dc04064e17d",
+        "operation_id": "model-c9749813676841f38dab5048d2fdf224",
+        "output_bytes": 582,
+        "output_digest": "sha256:3584683415291c0a3371f0db1a988913c352d0082449afde6b51390d4076b824",
+        "payload_truncated": false,
+        "phase": "finished",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 1269,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 5127
+        }
+      },
+      "redacted": true,
+      "sequence": 9,
+      "service_id": "https://identity.example.net/services/layer1",
+      "task_id": "task-7d9fb67e57ef44489bba2fe3856cebf9",
+      "timestamp": "2026-11-18T11:04:41.407Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-b3b6e0b7bf4a4a70a9f9b0ce8c5e9394",
+      "kind": "verification",
+      "payload": {
+        "checks": [
+          {
+            "artifact_ids": [],
+            "criterion_id": "criterion-coverage",
+            "disposition": "passed",
+            "summary": "Every supplied criterion has a coverage entry, and the finding is grounded in the supplied design text stating that the parent checks evidence against original criteria and retains responsibility for final completion."
+          }
+        ],
+        "contract": {
+          "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce",
+          "id": "https://contracts.example.net/capabilities/design.review",
+          "version": "1.0.0"
+        },
+        "release": "accepted",
+        "request_digest": "sha256:4173bf366a0e07ba7cd2d809a11a285bda54a005b5d951c3b86ffce0a8381cf2",
+        "step_id": "step-1-design-review"
+      },
+      "redacted": true,
+      "sequence": 10,
+      "service_id": "https://identity.example.net/services/layer1",
+      "task_id": "task-7d9fb67e57ef44489bba2fe3856cebf9",
+      "timestamp": "2026-11-18T11:04:41.412Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-2427018ad9004b78904784031cfcf2d4",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 5822,
+        "input_digest": "sha256:b50d0b4d867c6c67712d17481ae18b3bee8925ba740ecfce879e749ffb39dd62",
+        "operation_id": "model-a27e6b5325d349f9b3179b40e75456de",
+        "output_bytes": 0,
+        "output_digest": null,
+        "payload_truncated": false,
+        "phase": "started",
+        "purpose": "verification",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 10352,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 60000
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        }
+      },
+      "redacted": true,
+      "sequence": 11,
+      "service_id": "https://identity.example.net/services/layer1",
+      "task_id": "task-7d9fb67e57ef44489bba2fe3856cebf9",
+      "timestamp": "2026-11-18T11:04:41.447Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-4e27ebd603ba4735bcac0891ee65ca0d",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 57,
+        "input_digest": "sha256:2c0eeac43d4d8423fd1e156a7736235632b64a8064dbc552ae85bdad8894d19d",
+        "operation_id": "model-a27e6b5325d349f9b3179b40e75456de",
+        "output_bytes": 539,
+        "output_digest": "sha256:53ed6e731abaa99db13c793b15dc14f3ec1c70a0c26b23943d74b7d430cbd1e1",
+        "payload_truncated": false,
+        "phase": "finished",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 1320,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 3981
+        }
+      },
+      "redacted": true,
+      "sequence": 12,
+      "service_id": "https://identity.example.net/services/layer1",
+      "task_id": "task-7d9fb67e57ef44489bba2fe3856cebf9",
+      "timestamp": "2026-11-18T11:04:45.433Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-5d9b598511b64f6e88ea74f0219d2fba",
+      "kind": "verification",
+      "payload": {
+        "checks": [
+          {
+            "artifact_ids": [],
+            "criterion_id": "criterion-coverage",
+            "disposition": "passed",
+            "summary": "Every supplied criterion has a coverage entry, and the finding is grounded in the supplied design text stating that the parent checks evidence against original criteria and retains responsibility for final completion."
+          }
+        ],
+        "contract": {
+          "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce",
+          "id": "https://contracts.example.net/capabilities/design.review",
+          "version": "1.0.0"
+        },
+        "release": "accepted",
+        "request_digest": "sha256:2c3ee56f535266616861b91f07e664f4cecfb1581a5c28e21aaf68e763960e98",
+        "step_id": "final-release"
+      },
+      "redacted": true,
+      "sequence": 13,
+      "service_id": "https://identity.example.net/services/layer1",
+      "task_id": "task-7d9fb67e57ef44489bba2fe3856cebf9",
+      "timestamp": "2026-11-18T11:04:45.454Z"
+    }
+  ],
+  "layer2": [
+    {
+      "service_id": "https://identity.example.net/services/layer2",
+      "task": {
+        "admission": {
+          "accepted_at": "2026-11-18T11:04:19.123Z",
+          "authorization_decision_id": "authority-caa3879cc1f2195bdd9ef9c3ad2bd832",
+          "contract": {
+            "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce",
+            "id": "https://contracts.example.net/capabilities/design.review",
+            "version": "1.0.0"
+          },
+          "effective_limits": {
+            "budget": {
+              "artifact_bytes": 128000,
+              "delegations": 1,
+              "input_bytes": 127570,
+              "model_calls": 8,
+              "model_tokens": 293780,
+              "output_bytes": 28000,
+              "tool_calls": 8,
+              "wall_time_ms": 194248
+            },
+            "deadline": "2026-11-18T11:06:32.922Z",
+            "max_hops": 1
+          },
+          "plan_digest": "sha256:565db1dcff30a42ab6650c4d8f57dc03ce4df57a5c486b11d3e3ca2612267dac",
+          "request_digest": "sha256:4173bf366a0e07ba7cd2d809a11a285bda54a005b5d951c3b86ffce0a8381cf2"
+        },
+        "operation_id": "delegation-f79646621a2d46c3b2d4ef5891555108-task",
+        "received_at": "2026-11-18T11:04:19.094Z",
+        "request_digest": "sha256:4173bf366a0e07ba7cd2d809a11a285bda54a005b5d951c3b86ffce0a8381cf2",
+        "result": {
+          "artifacts": [],
+          "contract": {
+            "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce",
+            "id": "https://contracts.example.net/capabilities/design.review",
+            "version": "1.0.0"
+          },
+          "effect_disposition": "none",
+          "evidence": [
+            {
+              "artifact_ids": [],
+              "criterion_id": "criterion-coverage",
+              "disposition": "passed",
+              "summary": "Every supplied criterion has a coverage entry, and the finding is grounded in the supplied design text stating that the parent checks evidence against original criteria and retains responsibility for final completion."
+            }
+          ],
+          "output": {
+            "coverage": [
+              {
+                "criterion_id": "criterion-accountability",
+                "disposition": "reviewed",
+                "evidence": "The design explicitly states that the parent \"checks returned evidence against the original criteria, and retains responsibility for final completion.\" This directly supports that the parent retains accountability rather than delegating final completion responsibility to the child."
+              }
+            ],
+            "findings": [
+              {
+                "criterion_id": "criterion-accountability",
+                "observation": "The supplied design assigns final accountability to the parent: it accepts the caller objective, sends bounded child work, checks returned evidence against the original criteria, and retains responsibility for final completion.",
+                "recommendation": "Keep this responsibility boundary explicit in any implementation or protocol documentation, especially that child results are evidence for parent review rather than independent final completion.",
+                "severity": "info"
+              }
+            ]
+          },
+          "request_digest": "sha256:4173bf366a0e07ba7cd2d809a11a285bda54a005b5d951c3b86ffce0a8381cf2",
+          "usage": {
+            "artifact_bytes": 0,
+            "delegations": 0,
+            "input_bytes": 430,
+            "model_calls": 2,
+            "model_tokens": 9458,
+            "output_bytes": 914,
+            "tool_calls": 0,
+            "wall_time_ms": 14180
+          }
+        },
+        "revision": 4,
+        "selection": {
+          "catalog_view": "view-dd21332d876675ad1afdfc1a4a754945",
+          "contract": {
+            "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce",
+            "id": "https://contracts.example.net/capabilities/design.review",
+            "version": "1.0.0"
+          },
+          "offer_id": "offer-e32093cd447dd44c88b8265145772f23",
+          "offer_revision": "offer-d780142756a45256e115b2d773ac6caa"
+        },
+        "service_id": "https://identity.example.net/services/layer2",
+        "session_id": "session-132d20a1a65c4084bca7028dcedb81dd",
+        "status": "completed",
+        "task_id": "task-620bdd08a94f49c4b79ed0bd8a03c2fb",
+        "updated_at": "2026-11-18T11:04:36.229Z"
+      },
+      "events": [
+        {
+          "causal_parent_event_id": null,
+          "event_id": "event-64bec28215d441318fdc2b0a78d0e1fd",
+          "kind": "routing",
+          "payload": {
+            "assessment_summary": "No peer is configured; the approved local binding is the only execution path.",
+            "authorization_decision_id": "authority-caa3879cc1f2195bdd9ef9c3ad2bd832",
+            "catalog_revision": null,
+            "contract": {
+              "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce",
+              "id": "https://contracts.example.net/capabilities/design.review",
+              "version": "1.0.0"
+            },
+            "decision_reason": "No peer is configured; routing settings are ignored.",
+            "local_assessment": "sufficient",
+            "offer_revision": null,
+            "peer_assessment": "not_configured",
+            "policy": {
+              "preferred_executor": "peer",
+              "unclaimed_peer_fallback": "reject"
+            },
+            "requirement_ids": [
+              "criterion-coverage"
+            ],
+            "selected_executor": "local",
+            "step_id": "step-local"
+          },
+          "redacted": true,
+          "sequence": 1,
+          "service_id": "https://identity.example.net/services/layer2",
+          "task_id": "task-620bdd08a94f49c4b79ed0bd8a03c2fb",
+          "timestamp": "2026-11-18T11:04:19.099Z"
+        },
+        {
+          "causal_parent_event_id": null,
+          "event_id": "event-3ba318be9fab4ca7872301ed0e1bef3c",
+          "kind": "call",
+          "payload": {
+            "call_type": "model",
+            "input_bytes": 4917,
+            "input_digest": "sha256:b6e920c4b123c633d1a875f788c05d24590d5bd0e4055c7a1505420fc1ab792b",
+            "operation_id": "model-050d272dd36f45c4a6f5862e2daf26f6",
+            "output_bytes": 0,
+            "output_digest": null,
+            "payload_truncated": false,
+            "phase": "started",
+            "purpose": "execution",
+            "reserved": {
+              "artifact_bytes": 0,
+              "delegations": 0,
+              "input_bytes": 0,
+              "model_calls": 1,
+              "model_tokens": 44167,
+              "output_bytes": 0,
+              "tool_calls": 0,
+              "wall_time_ms": 60000
+            },
+            "usage": {
+              "artifact_bytes": 0,
+              "delegations": 0,
+              "input_bytes": 0,
+              "model_calls": 0,
+              "model_tokens": 0,
+              "output_bytes": 0,
+              "tool_calls": 0,
+              "wall_time_ms": 0
+            }
+          },
+          "redacted": true,
+          "sequence": 2,
+          "service_id": "https://identity.example.net/services/layer2",
+          "task_id": "task-620bdd08a94f49c4b79ed0bd8a03c2fb",
+          "timestamp": "2026-11-18T11:04:21.607Z"
+        },
+        {
+          "causal_parent_event_id": null,
+          "event_id": "event-0f20baf655cd4fa79f31c3694bd30626",
+          "kind": "call",
+          "payload": {
+            "call_type": "model",
+            "input_bytes": 57,
+            "input_digest": "sha256:de1c72a4342577ecd1008429eb4f5cd6a12c61a8ebfa09b17a00ff07c6580896",
+            "operation_id": "model-050d272dd36f45c4a6f5862e2daf26f6",
+            "output_bytes": 1769,
+            "output_digest": "sha256:4ca2ba919bfca4e863b65e323d7c4de0e3ec74b423e7080c194b9b871aba3224",
+            "payload_truncated": false,
+            "phase": "finished",
+            "reserved": {
+              "artifact_bytes": 0,
+              "delegations": 0,
+              "input_bytes": 0,
+              "model_calls": 0,
+              "model_tokens": 0,
+              "output_bytes": 0,
+              "tool_calls": 0,
+              "wall_time_ms": 0
+            },
+            "usage": {
+              "artifact_bytes": 0,
+              "delegations": 0,
+              "input_bytes": 0,
+              "model_calls": 1,
+              "model_tokens": 8031,
+              "output_bytes": 0,
+              "tool_calls": 0,
+              "wall_time_ms": 7688
+            }
+          },
+          "redacted": true,
+          "sequence": 3,
+          "service_id": "https://identity.example.net/services/layer2",
+          "task_id": "task-620bdd08a94f49c4b79ed0bd8a03c2fb",
+          "timestamp": "2026-11-18T11:04:29.298Z"
+        },
+        {
+          "causal_parent_event_id": null,
+          "event_id": "event-55c409b3c72f4f2eba4254740181a3d2",
+          "kind": "call",
+          "payload": {
+            "call_type": "model",
+            "input_bytes": 5822,
+            "input_digest": "sha256:b50d0b4d867c6c67712d17481ae18b3bee8925ba740ecfce879e749ffb39dd62",
+            "operation_id": "model-793b22f08f6048b29de5468e65c61ae2",
+            "output_bytes": 0,
+            "output_digest": null,
+            "payload_truncated": false,
+            "phase": "started",
+            "purpose": "verification",
+            "reserved": {
+              "artifact_bytes": 0,
+              "delegations": 0,
+              "input_bytes": 0,
+              "model_calls": 1,
+              "model_tokens": 10352,
+              "output_bytes": 0,
+              "tool_calls": 0,
+              "wall_time_ms": 60000
+            },
+            "usage": {
+              "artifact_bytes": 0,
+              "delegations": 0,
+              "input_bytes": 0,
+              "model_calls": 0,
+              "model_tokens": 0,
+              "output_bytes": 0,
+              "tool_calls": 0,
+              "wall_time_ms": 0
+            }
+          },
+          "redacted": true,
+          "sequence": 4,
+          "service_id": "https://identity.example.net/services/layer2",
+          "task_id": "task-620bdd08a94f49c4b79ed0bd8a03c2fb",
+          "timestamp": "2026-11-18T11:04:29.721Z"
+        },
+        {
+          "causal_parent_event_id": null,
+          "event_id": "event-1ee2b77c31304a0eb676726c48649051",
+          "kind": "call",
+          "payload": {
+            "call_type": "model",
+            "input_bytes": 57,
+            "input_digest": "sha256:4f5725a526daf123d319e869923f644e6153ad802cb21e08fafce9ed07eed141",
+            "operation_id": "model-793b22f08f6048b29de5468e65c61ae2",
+            "output_bytes": 468,
+            "output_digest": "sha256:73e3f12c2001267d5b303e77b7a23a844e70da423afad58e1d5a4fe980f72875",
+            "payload_truncated": false,
+            "phase": "finished",
+            "reserved": {
+              "artifact_bytes": 0,
+              "delegations": 0,
+              "input_bytes": 0,
+              "model_calls": 0,
+              "model_tokens": 0,
+              "output_bytes": 0,
+              "tool_calls": 0,
+              "wall_time_ms": 0
+            },
+            "usage": {
+              "artifact_bytes": 0,
+              "delegations": 0,
+              "input_bytes": 0,
+              "model_calls": 1,
+              "model_tokens": 1427,
+              "output_bytes": 0,
+              "tool_calls": 0,
+              "wall_time_ms": 6492
+            }
+          },
+          "redacted": true,
+          "sequence": 5,
+          "service_id": "https://identity.example.net/services/layer2",
+          "task_id": "task-620bdd08a94f49c4b79ed0bd8a03c2fb",
+          "timestamp": "2026-11-18T11:04:36.218Z"
+        },
+        {
+          "causal_parent_event_id": null,
+          "event_id": "event-2b68bde9dc1f451e87b8c9dfe2b1c965",
+          "kind": "verification",
+          "payload": {
+            "checks": [
+              {
+                "artifact_ids": [],
+                "criterion_id": "criterion-coverage",
+                "disposition": "passed",
+                "summary": "Every supplied criterion has a coverage entry, and the finding is grounded in the supplied design text stating that the parent checks evidence against original criteria and retains responsibility for final completion."
+              }
+            ],
+            "contract": {
+              "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce",
+              "id": "https://contracts.example.net/capabilities/design.review",
+              "version": "1.0.0"
+            },
+            "release": "accepted",
+            "request_digest": "sha256:4173bf366a0e07ba7cd2d809a11a285bda54a005b5d951c3b86ffce0a8381cf2",
+            "step_id": "final-release"
+          },
+          "redacted": true,
+          "sequence": 6,
+          "service_id": "https://identity.example.net/services/layer2",
+          "task_id": "task-620bdd08a94f49c4b79ed0bd8a03c2fb",
+          "timestamp": "2026-11-18T11:04:36.230Z"
+        }
+      ]
+    }
+  ],
+  "execution": "actual Codex App Server, actual gpt-5.5 API inference, real isolated HTTPS sockets; no planner/verifier/model mocks"
+}

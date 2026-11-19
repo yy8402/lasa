@@ -1,0 +1,17 @@
+{
+  "README.md": {
+    "bytes": 1831,
+    "sha256": "489e9cc66fd11401b45adbc85198cbb6c4e92c18659dd1ab2f036cb2b2508717",
+    "source": "README.md"
+  },
+  "architecture.md": {
+    "bytes": 6590,
+    "sha256": "75c8436fd006a2798d1d0a4d324fb611f08c7fddbdfc5430f6bb97b5993bef67",
+    "source": "design/architecture.md"
+  },
+  "capabilities.md": {
+    "bytes": 6647,
+    "sha256": "44f983247ce1f351d171b68d19d7c84b42205f7771c4ef23f5f259bc353bf2c0",
+    "source": "design/capabilities.md"
+  }
+}

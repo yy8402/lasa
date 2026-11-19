@@ -1,0 +1,19 @@
+{
+  "tls": [
+    {
+      "origin": "https://localhost:8443",
+      "without_private_CA": "certificate verification rejected"
+    },
+    {
+      "origin": "https://192.168.0.188",
+      "without_private_CA": "certificate verification rejected"
+    }
+  ],
+  "peer_token_issuer": "https://192.168.0.188/lasa/development-issuer",
+  "audience": "https://192.168.0.188/lasa",
+  "subject": "peer-layer1",
+  "lifetime_seconds": 21600,
+  "jti_sha256": "29d079356533dd0718f0132cd821023ab7d42fde2a820920747ff82ec3216261",
+  "managed_refresh_interval_seconds": 3600,
+  "token_values_exposed": false
+}

@@ -1,0 +1,64 @@
+{
+  "revision": 1,
+  "requirements": [
+    {
+      "requirement_id": "requirement-review",
+      "source": "caller",
+      "mandatory": true,
+      "description": "Review the design against accountability.",
+      "acceptance": [
+        {
+          "id": "criterion-accountability",
+          "criterion": "Explain whether the parent retains final responsibility, with evidence.",
+          "method": "semantic_review",
+          "evidence_required": [
+            "coverage and supporting observations"
+          ]
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "step_id": "step-review",
+      "requirement_ids": [
+        "requirement-review"
+      ],
+      "depends_on": [],
+      "contract": {
+        "id": "https://contracts.example.net/capabilities/design.review",
+        "version": "1.0.0",
+        "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce"
+      },
+      "executor": "local",
+      "input_digest": "sha256:09af6b419d40063e6a6053dbf350057c3171aeb4e8b91c708cb59b99384c8c83",
+      "allocation": {
+        "budget": {
+          "model_tokens": 8000,
+          "model_calls": 2,
+          "tool_calls": 0,
+          "delegations": 0,
+          "wall_time_ms": 60000,
+          "input_bytes": 32000,
+          "output_bytes": 12000,
+          "artifact_bytes": 0
+        },
+        "deadline": "2026-11-18T08:01:00Z",
+        "max_hops": 0
+      }
+    }
+  ],
+  "integration_requirement_ids": [
+    "requirement-review"
+  ],
+  "integration_reserve": {
+    "model_tokens": 0,
+    "model_calls": 0,
+    "tool_calls": 0,
+    "delegations": 0,
+    "wall_time_ms": 0,
+    "input_bytes": 0,
+    "output_bytes": 0,
+    "artifact_bytes": 0
+  }
+}

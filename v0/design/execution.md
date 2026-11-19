@@ -1,0 +1,99 @@
+# Task admission, routing, delegation, and evidence
+
+## Submission and authority
+
+A task submission selects an exact capability reference and current offer revision, supplies input conforming to that definition, an operation ID, explicit requested ceilings, and an `authorization_ref`. Authentication proves the caller identity; the receiver's authorization resolver independently resolves the reference and current receiver policy. It returns a private, request-bound `TaskAuthorization` snapshot. A string reference, parent claim, or JSON object from a model is not a grant.
+
+The resolver integration MUST bind its decision to principal, receiver service, request digest, contract, expiry, resources/actions, disclosures, allowed delegated contracts, and ceilings. A reference unavailable to the receiver is rejected; the receiver does not trust an arbitrary URL or token issuer supplied in the task. Cross-domain authorization requires an explicitly configured trust profile. Peers in this core are administratively trusted workload identities; receiver policy is still required. Authority resolution is an internal interface, not a public LASA grant-minting API.
+
+Effective authority is the intersection of authenticated receiver policy, independently resolved task authority, incoming parent ceilings if present, contract/offer limits, and service limits. Empty intersections fail. A service may be authorized to delegate a contract that it cannot execute locally. The local binding catalog never serves as an authorization allowlist.
+
+`202` means durable receipt in `evaluating`, not a promise of fulfillment. Evaluation may use a small separately configured assessment budget and an approved model route for the submitted data. It must not run effectful tools or delegate before admission. The task becomes `accepted` only after authority, input, preconditions, a feasible responsibility plan, and resource reservations pass. Invalid requests can fail synchronously; evaluation can also durably finish as `rejected` with reasons.
+
+A fresh selected offer is pinned at durable receipt together with the receiver authority decision. Its discovery expiry bounds new selection, not the lifetime of this received task. Evaluation rechecks current publication terms (contract, restrictions, ceilings and caller view), authorization, dependencies and the original deadline; expiry renewal alone cannot invalidate its immutable pin. Withdrawal or changed terms still reject admission. Accepted execution continues under its pinned ceilings and current policy checks.
+
+Peer discovery supplied to the planner is advisory. Refresh the catalog once after model planning before routing. Immediately before dispatch, refresh the selected peer offer once, require identical semantic terms and a fresh available observation, and use its renewed selection revision. A changed or withdrawn claim fails closed; do not substitute contracts, widen authority, replay child work or retry planning in a loop.
+
+## Requirements and decomposition
+
+For generic objectives the planner identifies explicit requirements and acceptance criteria. Caller-provided requirements remain immutable. Additional derived requirements receive service-generated IDs; they cannot weaken caller requirements. A named capability supplies its own required postconditions. The planner proposes a bounded DAG of steps, each with one contract, selected inputs, output dependencies, limits, and assigned requirement IDs. A step is small enough to have a clear admission and verification boundary.
+
+The controller checks every declared mandatory requirement has a responsible step or final integration check, dependencies are acyclic, inputs are available and authorized, contracts and schemas match, and reservations fit. Unknown semantic preconditions need clarification or a conservative rejection. This verifies declared coverage, not mathematical completeness of a natural-language decomposition. Semantic sufficiency remains an evidence-bearing model/operator judgment; diagnostic records state that limitation.
+
+The parent owns the original objective, final integration, and caller-facing result. Delegating a step does not delegate accountability. Subsequent discoveries can revise the plan before new actions, using the same original authority and remaining budget. Consequential scope changes require a new task authorization/operation; silently extending an accepted objective is forbidden.
+
+## Routing policy
+
+Configuration uses two independent choices:
+
+```json
+{"routing":{"preferred_executor":"local","unclaimed_peer_fallback":"reject"}}
+```
+
+`preferred_executor` is `local` or `peer` and breaks a tie when both can suitably fulfill a step. It never overrides required access, effects, authorization, or deadlines. `unclaimed_peer_fallback` is `reject` or `attempt`; `attempt` applies only when local execution is assessed insufficient **and** a fresh, complete peer catalog does not claim the needed outcome.
+
+Assessment has explicit `sufficient`, `insufficient`, and `unknown` local states, and `matched`, `not_claimed`, and `unknown` peer states. Matching requires outcome semantics, all preconditions, compatible input/output, allowed effects/disclosure, and available or reservable resources. A catalog claim alone is not a match. Unknown/stale discovery, capacity failure, denied permission, or failed transport are not `not_claimed`.
+
+| Local assessment | Peer assessment | Decision |
+|---|---|---|
+| sufficient | matched | Use preference, subject to current admission |
+| sufficient | not claimed, unknown, or currently unavailable | Local if its admission passes |
+| insufficient | matched | Delegate if peer admission passes |
+| insufficient | not claimed | Attempt generic delegation only when fallback is enabled and its own admission is possible; otherwise report inability |
+| insufficient | unknown/unavailable/denied | Bounded refresh/reassessment or report inability; fallback does not apply |
+| unknown | matched | Delegate to the known suitable peer; local preference can justify a bounded local assessment first |
+| unknown | anything else | Resolve uncertainty/clarify within assessment budget; do not assert insufficiency to trigger fallback |
+| any | no peer configured | Ignore both settings; attempt the local contract if admissible, otherwise reject/report inability |
+
+For fallback, the peer MUST explicitly offer and authorize the generic `task.attempt` contract. The parent submits that contract with the unsatisfied requirement and allowed context; it does not invent a domain capability or bypass the catalog. A successful HTTP response or a `task.attempt` result of `unable` does not satisfy the original requirement. The parent must verify the actual requested outcome. There is no fallback permission escalation.
+
+The planner supplies semantic assessment and candidate inputs. The controller derives current catalog/authority/capacity facts and applies the table deterministically. It records both evidence and decision. User preference inside task text cannot alter receiver routing policy or authority. A failed selected executor can be replaced only after proving no uncertain committed effect remains, retaining operation identity where valid, and rechecking remaining resources; no blind local replay after a peer timeout.
+
+## Delegation envelope and budgets
+
+Every child request includes root/task/step/requirement IDs, parent service and task IDs, a stable child operation ID, ancestry including the parent, decremented hops, deadline, resource allocation, a digest of the canonical request core, and disclosure/artifact manifests. The core digest covers every `TaskRequest` field except `delegation`, including diagnostic consent; it excludes the envelope and transport credentials to avoid a self-reference. The envelope links this digest to a stable `delegation_id`. The peer authenticates the sender, requires it to equal `parent_service_id`, and enforces receiver policy plus ceilings. Envelope data alone confers no authority.
+
+Before dispatch the parent durably reserves an allocation in its aggregate ledger. All child allocations plus local use/reservations and integration reserve must fit the root ceiling. The child receives only its allocation and can allocate smaller descendants. These are reservations, not actual usage. Uncertain allocations remain reserved; they cannot be spent again until reconciled. The core trusts each authorized service to enforce its ledger; global protection against a malicious peer requires stronger federation/accounting beyond this profile.
+
+Deadline is absolute UTC with a configured maximum clock skew; remaining execution time must also be checked with a local monotonic clock. Child deadline precedes parent deadline by the integration reserve. Hops decrement on every edge, and a receiver whose service ID is already in ancestry rejects the request. Limit ancestry length, children per task, plan steps, concurrent work, input/output/artifact bytes, model tokens/calls, tool calls, and wall time. There is no hidden unbounded queue.
+
+Task wall time starts at durable receipt. The effective deadline is the earlier of the requested absolute deadline and receipt plus the requested wall-time allocation; reauthorization cannot reset that anchor. One remaining-time calculation intersects the monotonic task, assessment, active-step, and model-operation expiries with the absolute deadline. Runtime, model HTTP/stream, and tool waits use that ceiling. A separately bounded cleanup/reconciliation window may extend past work expiry to establish disposition, but cannot authorize additional work or release a late result. Failure to confirm a stop is indeterminate and makes the service unavailable for new admission until recovered.
+
+Send only the selected inputs and approved immutable artifacts. Parent workspace paths, provider credentials, full conversation history, hidden state, and unnecessary customer data do not cross the boundary. A child works in its own workspace. Content is untrusted data, including peer descriptions and tool output; it cannot install tools, change trust configuration, or grant permission.
+
+The parent verifies the child's authenticated identity, request linkage, pinned contract, admission decision, result schema, artifact digests, effect disposition, usage, and required acceptance evidence. It then integrates the result and checks original requirement coverage. Valid JSON is not proof of correctness. Unverifiable work is not silently released as completion.
+
+Semantic verification receives bounded receiver-owned execution material alongside candidate claims. Durable tool receipts identify the service/task/step, operation order, disposition, input/result digests, and redacted authorized request/result content. Explicitly selected immutable artifact snapshots have their stored bytes and digest checked again before inclusion. Material is limited to 32 operations, 16 artifacts, and 16 KiB; omitted content is marked. Current task authority and receiver policy restrict included resources and effects. Internal verification does not enable public content diagnostics: caller opt-in and the separate disclosure grant still apply. Private prompts and credentials are excluded. The exact execution-material digest participates in verdict cache identity, so changed facts require a new independent assessment. Receipts establish recorded effects and returned data, not the truth of arbitrary tool content; verification may still reject.
+
+## Durable lifecycle and failures
+
+Main path: `evaluating → accepted → executing → completed`. Evaluation may enter `awaiting_input`, return to evaluation, or terminate `rejected`. Execution may enter `awaiting_input` or `waiting_child`; it can terminate `failed`, `cancelled`, or `indeterminate`. Any active state may enter `cancelling`; confirmed stop becomes `cancelled` only if effects have known disposition. Otherwise reconciliation is bounded, then `indeterminate`.
+
+`completed` means the selected contract's output and completion checks pass; an attempt contract may validly report `unable`. `failed` reports a known unsuccessful outcome with known effects. `indeterminate` means the service cannot establish the disposition of an operation/effect, including a lost child acknowledgment. No final result promises unperformed rollback. Terminal records are immutable; later evidence is appended as a resolution event/receipt, not a rerun or rewritten success. A separate new task may explicitly consume that resolution.
+
+Cancellation stops new dispatch, propagates to children, and terminates task-owned execution. Already committed external actions may persist. External-write contracts require stable effect operation IDs, commit evidence, idempotency/reconciliation semantics, and explicit unknown-commit outcomes. A binding lacking those controls cannot offer such a contract. No automatic compensation is presumed. Deadlines stop new work; bounded cleanup/reconciliation can finish afterward and must be visible in timestamps. Late child outputs are quarantined and cannot reopen a terminal parent or be released without separate authorization.
+
+Idempotency is scoped to authenticated principal, service, method, concrete route, and `Idempotency-Key`. Mutation requests also carry stable operation IDs. Persist key, canonical request digest, and operation identity before side effects. A lost response reuses the same key/content; changed content under that key returns `409 idempotency_conflict`. Duplicate operation IDs with changed content also conflict. Retain deduplication/tombstone records for the session retention period and advertise that period. After expiry a client must reconcile rather than assume a retry is safe. Idempotency avoids duplicate acceptance; it does not guarantee exactly-once external effects.
+
+Errors distinguish invalid input/precondition, incompatible contract/protocol, denied authority/disclosure, changed offer, capacity exhaustion, deadline, unavailable peer, unknown child outcome, and verification failure. HTTP errors use typed problem details. Retry hints are advisory and cannot override uncertain effect disposition. On restart recover durable status, reservations, and reconciliation metadata; never automatically reexecute interrupted work.
+
+## Diagnostic evidence
+
+Always retain bounded decision metadata: service/task/step/requirement/operation IDs, ordered sequence, causal parent event, timestamp, input/output digests and sizes, selected contract/offer/catalog revisions, authority decision reference, assessment classification and short justification, policy decision, reservation/usage, actual model/tool/child calls, and result verification disposition. Sequence is local to a task; causal links express cross-service ordering without pretending clocks are exact.
+
+`diagnostics` selects `metadata` or `content`. Metadata is the default caller view subject to task ownership and redaction. Content requires explicit caller opt-in **and** separate disclosure permission. It can show allowed model request/response and delegated input/result content. Neither mode exposes keys, hidden reasoning, private system prompts, other sessions, or unrestricted private candidates. Operators have a separately authorized view. Trace truncation may drop content payloads but must preserve operation headers, digests, disposition, and a truncation marker.
+
+Diagnostics can establish that a particular call/dispatch/check happened and what evidence informed routing. They cannot establish hidden model reasoning or prove semantic correctness. Signed receipts may authenticate evidence in a future explicitly negotiated trust profile; this core relies on authenticated immediate peers and durable local records, and must describe that limit honestly.
+
+## Implemented contract clarifications
+
+- Approved semantic verifiers are bound to full contract ID/version/digest references in private `verifiers` configuration. A URI suffix never selects a verifier. Unregistered definitions cannot be offered or admitted.
+- A generic attempt is not a claim to a particular missing capacity. An insufficient local assessment cannot become a qualified peer match merely because a generic attempt is offered. Fresh generic-only forwarding uses the explicit fallback policy; unknown local assessment remains unresolved.
+- Semantic plan coverage is checked independently before acceptance. The check is tool-free and consumes assessment budget. Provisional allocations are recomputed from settled assessment usage before durable admission; reservation checks use that final plan. Offer preconditions disclose mandatory model allocation minimums.
+- A child envelope carries an explicit `authority_ceiling`. The sender intersects current policy with its pinned grant immediately before dispatch; the receiver independently intersects that ceiling with its own policy.
+- All workspace writes pass through the durable broker. Codex workspace mounts are read-only, and integration without workspace-read authority receives an empty workspace.
+- `GET /operations/{operation_id}` retrieves a caller-owned immutable receipt without resubmitting work. `POST /tasks/{task_id}/reconcile` appends resolution evidence. A missing receipt remains uncertainty; it does not prove that work cannot arrive later. No uncertain operation is automatically replayed.
+- Child artifact verification bounds cumulative observed bytes, checks reported usage against observed input/output/artifact sizes, validates exact task linkage, and quarantines imports until verification passes.
+- `GET /tasks/{task_id}/delegations` retrieves immediate child traces through the parent, with a separately authorized content view. No peer credential is exposed.
+
+The initial execution profile accepts typed JSON/text inputs and produces bounded text artifacts. Only the two shipped verifier profiles are approved. Artifact preconditions without established immutable input evidence fail closed; arbitrary executable validators and external-write effects are not enabled.

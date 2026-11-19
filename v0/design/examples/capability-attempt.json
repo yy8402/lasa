@@ -1,0 +1,183 @@
+{
+  "definition_format": "lasa-capability/1.0",
+  "id": "https://contracts.example.net/capabilities/task.attempt",
+  "version": "1.0.0",
+  "title": "Bounded attempt at a supplied objective",
+  "outcome": "Attempt the authorized objective within its limits and report fulfilled or unable with requirement-level evidence.",
+  "non_guarantees": [
+    "Does not claim domain expertise or guarantee that the objective is achievable.",
+    "A result of unable does not fulfill the requested objective."
+  ],
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "objective": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 16000
+      },
+      "requirements": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "description": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            },
+            "acceptance": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2048
+              },
+              "minItems": 1
+            }
+          },
+          "required": [
+            "id",
+            "description",
+            "acceptance"
+          ],
+          "additionalProperties": false
+        },
+        "minItems": 1,
+        "maxItems": 32
+      },
+      "context": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 32000
+      }
+    },
+    "required": [
+      "objective",
+      "requirements"
+    ],
+    "additionalProperties": false
+  },
+  "output_schema": {
+    "oneOf": [
+      {
+        "type": "object",
+        "properties": {
+          "disposition": {
+            "const": "fulfilled"
+          },
+          "summary": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8192
+          },
+          "requirement_evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                },
+                "evidence": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 8192
+                }
+              },
+              "required": [
+                "id",
+                "evidence"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1,
+            "maxItems": 32
+          }
+        },
+        "required": [
+          "disposition",
+          "summary",
+          "requirement_evidence"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "disposition": {
+            "const": "unable"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8192
+          },
+          "unsatisfied_requirements": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "disposition",
+          "reason",
+          "unsatisfied_requirements"
+        ],
+        "additionalProperties": false
+      }
+    ]
+  },
+  "preconditions": [
+    {
+      "kind": "input_schema",
+      "description": "An objective and explicit acceptance requirements are supplied."
+    }
+  ],
+  "max_effects": [
+    "workspace.read",
+    "workspace.write",
+    "external.read"
+  ],
+  "postconditions": [
+    {
+      "id": "honest-disposition",
+      "criterion": "Report fulfilled only with evidence for each mandatory requested outcome; otherwise report unable.",
+      "method": "semantic_review",
+      "evidence_required": [
+        "coverage and supporting observations"
+      ]
+    }
+  ],
+  "failures": [
+    {
+      "code": "attempt_interrupted",
+      "meaning": "A known interruption prevented producing a disposition.",
+      "retry": "readmission",
+      "effect_disposition": "known"
+    },
+    {
+      "code": "effect_unknown",
+      "meaning": "The disposition of an authorized operation is not known.",
+      "retry": "reconcile",
+      "effect_disposition": "unknown_possible"
+    }
+  ],
+  "effect_safety": {
+    "external_write_commit_evidence_required": false,
+    "unknown_commit_possible": true,
+    "retry_rule": "reconcile_before_retry"
+  }
+}

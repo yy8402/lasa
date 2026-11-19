@@ -1,0 +1,1023 @@
+{
+  "case": "steady-delegation",
+  "passed": true,
+  "execution": "managed deployed services, real HTTPS, actual Codex App Server and gpt-5.5 inference",
+  "elapsed_seconds": 55.22,
+  "descriptor": {
+    "descriptor_version": "1.0",
+    "service_id": "https://localhost:8443/lasa",
+    "deployment_revision": "target-20261118-756da6a87ce1-steady",
+    "revision": "descriptor-4105e6bfb9e8a57267879d44021260e1",
+    "valid_until": "2026-11-18T12:56:42.762Z",
+    "protocols": [
+      {
+        "version": "lasa/1.0",
+        "base_url": "https://localhost:8443/lasa/v1",
+        "openapi_url": "https://localhost:8443/lasa/v1/openapi.json",
+        "wire_schema_digest": "sha256:9d64d7fc4df6e4f0d7504d1c2a3d6e1696816dccbf10b7edfe5df1dcc6135999",
+        "features": [
+          "metadata-diagnostics",
+          "content-diagnostics",
+          "clarification",
+          "artifacts",
+          "bounded-delegation"
+        ],
+        "required_features": [
+          "metadata-diagnostics",
+          "bounded-delegation"
+        ]
+      }
+    ],
+    "authentication": {
+      "issuer": "https://localhost:8443/lasa/development-issuer",
+      "audience": "https://localhost:8443/lasa"
+    },
+    "catalog_url": "https://localhost:8443/lasa/v1/capabilities",
+    "contract_url_template": "https://localhost:8443/lasa/v1/contracts/{digest}",
+    "idempotency_retention_seconds": 604800
+  },
+  "catalog_revision": "catalog-5a19669a91cad3e6522860087cebb4d6",
+  "session": {
+    "session_id": "session-32630ad2223049c7b2f82da197fe8405",
+    "service_id": "https://localhost:8443/lasa",
+    "created_at": "2026-11-18T12:56:12.932Z",
+    "retention_until": "2026-11-25T12:56:12.932Z",
+    "active_task_id": null
+  },
+  "task": {
+    "admission": {
+      "accepted_at": "2026-11-18T12:56:23.873Z",
+      "authorization_decision_id": "authority-575f55faa55f2aa25791c9edf8c93194",
+      "contract": {
+        "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce",
+        "id": "https://contracts.example.net/capabilities/design.review",
+        "version": "1.0.0"
+      },
+      "effective_limits": {
+        "budget": {
+          "artifact_bytes": 128000,
+          "delegations": 2,
+          "input_bytes": 128000,
+          "model_calls": 16,
+          "model_tokens": 500000,
+          "output_bytes": 32000,
+          "tool_calls": 12,
+          "wall_time_ms": 300000
+        },
+        "deadline": "2026-11-18T13:00:12.951Z",
+        "max_hops": 2
+      },
+      "plan_digest": "sha256:3ba5d5fde5355cf2621587214c90c102806bf81b9cc5b8f54e7a720f48822e1a",
+      "request_digest": "sha256:307de048a1c58a3b35d9fce47a3105e1d8bf124a0ff4f969a4783dc651abf5a3"
+    },
+    "operation_id": "deployment-task-1445df70fae84e3aa080689a495c1f7d",
+    "received_at": "2026-11-18T12:56:12.956Z",
+    "request_digest": "sha256:307de048a1c58a3b35d9fce47a3105e1d8bf124a0ff4f969a4783dc651abf5a3",
+    "result": {
+      "artifacts": [],
+      "contract": {
+        "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce",
+        "id": "https://contracts.example.net/capabilities/design.review",
+        "version": "1.0.0"
+      },
+      "effect_disposition": "none",
+      "evidence": [
+        {
+          "artifact_ids": [],
+          "criterion_id": "criterion-coverage",
+          "disposition": "passed",
+          "summary": "Reviewed the supplied design against the single criterion. The design explicitly states that the parent checks child evidence against original criteria and retains responsibility for final completion."
+        }
+      ],
+      "output": {
+        "coverage": [
+          {
+            "criterion_id": "criterion-accountability",
+            "disposition": "reviewed",
+            "evidence": "The supplied design says: \"The parent accepts a caller objective,\" \"checks returned evidence against the original criteria,\" and \"retains responsibility for final completion.\" This directly supports that the parent remains accountable for final completion rather than delegating accountability to the child."
+          }
+        ],
+        "findings": [
+          {
+            "criterion_id": "criterion-accountability",
+            "observation": "The design explicitly assigns final completion responsibility to the parent while limiting the child to bounded work in its own workspace.",
+            "recommendation": "Keep this responsibility boundary explicit in any implementation or protocol documentation, including that child evidence is advisory/input to the parent\u2019s final completion decision.",
+            "severity": "info"
+          }
+        ]
+      },
+      "request_digest": "sha256:307de048a1c58a3b35d9fce47a3105e1d8bf124a0ff4f969a4783dc651abf5a3",
+      "usage": {
+        "artifact_bytes": 0,
+        "delegations": 1,
+        "input_bytes": 860,
+        "model_calls": 6,
+        "model_tokens": 18545,
+        "output_bytes": 1688,
+        "tool_calls": 0,
+        "wall_time_ms": 50382
+      }
+    },
+    "revision": 5,
+    "selection": {
+      "catalog_view": "view-586d93693d0ce8d5cd64f4949530eee1",
+      "contract": {
+        "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce",
+        "id": "https://contracts.example.net/capabilities/design.review",
+        "version": "1.0.0"
+      },
+      "offer_id": "offer-4b3b2f5d6e6e97b764d3ea9e44f31f1f",
+      "offer_revision": "offer-7c6ce2536de751dd72aa55d36df4abff"
+    },
+    "service_id": "https://localhost:8443/lasa",
+    "session_id": "session-32630ad2223049c7b2f82da197fe8405",
+    "status": "completed",
+    "task_id": "task-3bbb761844ae46809da6ab48d0f004c4",
+    "updated_at": "2026-11-18T12:57:07.867Z"
+  },
+  "events": [
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"input\":[{\"content\":[{\"text\":\"{\\\"contracts\\\":{\\\"sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"readmit_if_no_uncertain_effect\\\",\\\"unknown_commit_possible\\\":false},\\\"failures\\\":[{\\\"code\\\":\\\"insufficient_input\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"The supplied design does not contain enough information to review the requested criteria.\\\",\\\"retry\\\":\\\"readmission\\\"},{\\\"code\\\":\\\"evaluation_failed\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"The bounded review could not be completed.\\\",\\\"retry\\\":\\\"readmission\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/design.review\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"criteria\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"description\\\":{\\\"maxLength\\\":2048,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"id\\\",\\\"description\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"design\\\":{\\\"maxLength\\\":32000,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"design\\\",\\\"criteria\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"workspace.read\\\"],\\\"non_guarantees\\\":[\\\"Does not prove correctness or inspect resources not supplied in the request.\\\"],\\\"outcome\\\":\\\"Return criterion coverage and actionable findings grounded in the supplied design.\\\",\\\"output_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"coverage\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"criterion_id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"disposition\\\":{\\\"enum\\\":[\\\"reviewed\\\",\\\"insufficient_input\\\"]},\\\"evidence\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"criterion_id\\\",\\\"disposition\\\",\\\"evidence\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"findings\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"criterion_id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"observation\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"recommendation\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"severity\\\":{\\\"enum\\\":[\\\"info\\\",\\\"warning\\\",\\\"error\\\"]}},\\\"required\\\":[\\\"criterion_id\\\",\\\"severity\\\",\\\"observation\\\",\\\"recommendation\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":128,\\\"type\\\":\\\"array\\\"}},\\\"required\\\":[\\\"findings\\\",\\\"coverage\\\"],\\\"type\\\":\\\"object\\\"},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Every supplied criterion has a coverage entry; findings cite supplied design evidence.\\\",\\\"evidence_required\\\":[\\\"coverage and supporting observations\\\"],\\\"id\\\":\\\"criterion-coverage\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"Design text and criteria must be supplied.\\\",\\\"kind\\\":\\\"input_schema\\\"},{\\\"description\\\":\\\"A bounded semantic assessment is required.\\\",\\\"kind\\\":\\\"budget_minimum\\\",\\\"minimum\\\":1,\\\"resource\\\":\\\"model_calls\\\"}],\\\"title\\\":\\\"Review supplied design against explicit criteria\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"reconcile_before_retry\\\",\\\"unknown_commit_possible\\\":true},\\\"failures\\\":[{\\\"code\\\":\\\"attempt_interrupted\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"A known interruption prevented producing a disposition.\\\",\\\"retry\\\":\\\"readmission\\\"},{\\\"code\\\":\\\"effect_unknown\\\",\\\"effect_disposition\\\":\\\"unknown_possible\\\",\\\"meaning\\\":\\\"The disposition of an authorized operation is not known.\\\",\\\"retry\\\":\\\"reconcile\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/task.attempt\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"context\\\":{\\\"maxLength\\\":32000,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"objective\\\":{\\\"maxLength\\\":16000,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"requirements\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"acceptance\\\":{\\\"items\\\":{\\\"maxLength\\\":2048,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"description\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"id\\\",\\\"description\\\",\\\"acceptance\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"}},\\\"required\\\":[\\\"objective\\\",\\\"requirements\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"workspace.read\\\",\\\"workspace.write\\\",\\\"external.read\\\"],\\\"non_guarantees\\\":[\\\"Does not claim domain expertise or guarantee that the objective is achievable.\\\",\\\"A result of unable does not fulfill the requested objective.\\\"],\\\"outcome\\\":\\\"Attempt the authorized objective within its limits and report fulfilled or unable with requirement-level evidence.\\\",\\\"output_schema\\\":{\\\"oneOf\\\":[{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"disposition\\\":{\\\"const\\\":\\\"fulfilled\\\"},\\\"requirement_evidence\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"evidence\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"id\\\",\\\"evidence\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"summary\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"disposition\\\",\\\"summary\\\",\\\"requirement_evidence\\\"],\\\"type\\\":\\\"object\\\"},{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"disposition\\\":{\\\"const\\\":\\\"unable\\\"},\\\"reason\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"unsatisfied_requirements\\\":{\\\"items\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\",\\\"uniqueItems\\\":true}},\\\"required\\\":[\\\"disposition\\\",\\\"reason\\\",\\\"unsatisfied_requirements\\\"],\\\"type\\\":\\\"object\\\"}]},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Report fulfilled only with evidence for each mandatory requested outcome; otherwise report unable.\\\",\\\"evidence_required\\\":[\\\"coverage and supporting observations\\\"],\\\"id\\\":\\\"honest-disposition\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"An objective and explicit acceptance requirements are supplied.\\\",\\\"kind\\\":\\\"input_schema\\\"}],\\\"title\\\":\\\"Bounded attempt at a supplied objective\\\",\\\"version\\\":\\\"1.0.0\\\"}},\\\"instruction\\\":\\\"Propose a small acyclic plan using only supplied contracts. Prefer the request contract when it directly expresses the needed outcome; decompose distinct outcomes where necessary. input_json is a JSON string conforming to the selected contract. Assess whether approved LOCAL bindings and resources can fulfill each step. A generic attempt does not assert domain expertise or missing resource access. Do not treat peer claims as permission. Preserve every requirement ID. Unknown access or knowledge is unknown, not sufficient.\\\",\\\"local_bindings\\\":[{\\\"allowed_effects\\\":[\\\"workspace.read\\\"],\\\"approved_resources\\\":[{\\\"actions\\\":[\\\"read\\\"],\\\"resource\\\":\\\"workspace:self\\\"}],\\\"contract\\\":{\\\"digest\\\":\\\"sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce\\\",\\\"id\\\":\\\"https://contracts.example.net/capabilities/design.review\\\",\\\"version\\\":\\\"1.0.0\\\"}},{\\\"allowed_effects\\\":[\\\"workspace.read\\\",\\\"workspace.write\\\"],\\\"approved_resources\\\":[{\\\"actions\\\":[\\\"read\\\",\\\"create\\\",\\\"update\\\"],\\\"resource\\\":\\\"workspace:self\\\"}],\\\"contract\\\":{\\\"digest\\\":\\\"sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23\\\",\\\"id\\\":\\\"https://contracts.example.net/capabilities/task.attempt\\\",\\\"version\\\":\\\"1.0.0\\\"}}],\\\"peer_offers\\\":[{\\\"catalog_view\\\":\\\"view-084a4143422211950c4760ebc0fc57db\\\",\\\"contract\\\":{\\\"digest\\\":\\\"sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23\\\",\\\"id\\\":\\\"https://contracts.example.net/capabilities/task.attempt\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"definition\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"reconcile_before_retry\\\",\\\"unknown_commit_possible\\\":true},\\\"failures\\\":[{\\\"code\\\":\\\"attempt_interrupted\\\",\\\"effect_disposition\\\""
+      },
+      "event_id": "event-8749ff0a33794ea4bde615110dc4fa3a",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 17366,
+        "input_digest": "sha256:a3fa505c0b03a28863c189e0a21dfcf60e784e7db8844cdc4f3b8c32fcb1f417",
+        "operation_id": "model-f7c5646cfc84469788d2e50762a55291",
+        "output_bytes": 0,
+        "output_digest": null,
+        "payload_truncated": true,
+        "phase": "started",
+        "purpose": "planning",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 22382,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 59242
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        }
+      },
+      "redacted": true,
+      "sequence": 1,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-3bbb761844ae46809da6ab48d0f004c4",
+      "timestamp": "2026-11-18T12:56:13.723Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"output\":{\"steps\":[{\"assessment_summary\":\"The request contract directly expresses the needed outcome: review the supplied design against the explicit criterion. A local approved binding exists for the design.review contract with workspace.read, matching the contract max effects, and the required design text and criterion are supplied. No decomposition or peer delegation is needed.\",\"contract_digest\":\"sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce\",\"depends_on\":[],\"input_json\":\"{\\\"design\\\":\\\"The parent accepts a caller objective, sends bounded child work over authenticated HTTPS, checks returned evidence against the original criteria, and retains responsibility for final completion. The child works in its own workspace.\\\",\\\"criteria\\\":[{\\\"id\\\":\\\"criterion-accountability\\\",\\\"description\\\":\\\"Determine whether the parent retains responsibility for final completion and support the answer from the supplied design.\\\"}]}\",\"local_assessment\":\"sufficient\",\"requirement_ids\":[\"criterion-coverage\"],\"step_id\":\"step-1\"}]}}"
+      },
+      "event_id": "event-0abc8b99eac34b4db081c1f5c243779c",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 57,
+        "input_digest": "sha256:cf47a417e43d2bc88a5f202d51a7cde329476f152f7f9d50e14f6e2f037d424c",
+        "operation_id": "model-f7c5646cfc84469788d2e50762a55291",
+        "output_bytes": 1038,
+        "output_digest": "sha256:b6f0554d3fe5eeda704ea8f2c6e0f1934513f8ef0e3bc12eef7c3b743f27cb81",
+        "payload_truncated": false,
+        "phase": "finished",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 4044,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 5570
+        }
+      },
+      "redacted": true,
+      "sequence": 2,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-3bbb761844ae46809da6ab48d0f004c4",
+      "timestamp": "2026-11-18T12:56:19.312Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-4e07df96378d4a3b97f3fda9e238436c",
+      "kind": "routing",
+      "payload": {
+        "assessment_summary": "The request contract directly expresses the needed outcome: review the supplied design against the explicit criterion. A local approved binding exists for the design.review contract with workspace.read, matching the contract max effects, and the required design text and criterion are supplied. No decomposition or peer delegation is needed.",
+        "authorization_decision_id": "authority-575f55faa55f2aa25791c9edf8c93194",
+        "catalog_revision": "catalog-410c2fbf0ca248bb6165efacbd7d7acb",
+        "contract": {
+          "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce",
+          "id": "https://contracts.example.net/capabilities/design.review",
+          "version": "1.0.0"
+        },
+        "decision_reason": "Both suitable; configured preference selects peer",
+        "local_assessment": "sufficient",
+        "offer_revision": "offer-7594497babcc3000e03c7413045a0b53",
+        "peer_assessment": "matched",
+        "policy": {
+          "preferred_executor": "peer",
+          "unclaimed_peer_fallback": "attempt"
+        },
+        "requirement_ids": [
+          "criterion-coverage"
+        ],
+        "selected_executor": "peer",
+        "step_id": "step-1"
+      },
+      "redacted": true,
+      "sequence": 3,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-3bbb761844ae46809da6ab48d0f004c4",
+      "timestamp": "2026-11-18T12:56:19.567Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"input\":[{\"content\":[{\"text\":\"{\\\"instruction\\\":\\\"Independently assess semantic requirement coverage. Reject a step that merely repeats/reviews the request text when the requirement is to retrieve missing external facts. Matching IDs and JSON schemas do not prove outcome coverage. Each declared step must actually target its assigned outcome. An explicitly allowed bounded fallback is an attempt, not a guarantee, and is permitted if it targets the correct outcome and later verification can report inability honestly. Authority, capacity, and actual routing are checked separately by controllers. Return passed=false for unsupported or mismatched decomposition.\\\",\\\"original_contract\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"readmit_if_no_uncertain_effect\\\",\\\"unknown_commit_possible\\\":false},\\\"failures\\\":[{\\\"code\\\":\\\"insufficient_input\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"The supplied design does not contain enough information to review the requested criteria.\\\",\\\"retry\\\":\\\"readmission\\\"},{\\\"code\\\":\\\"evaluation_failed\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"The bounded review could not be completed.\\\",\\\"retry\\\":\\\"readmission\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/design.review\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"criteria\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"description\\\":{\\\"maxLength\\\":2048,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"id\\\",\\\"description\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"design\\\":{\\\"maxLength\\\":32000,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"design\\\",\\\"criteria\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"workspace.read\\\"],\\\"non_guarantees\\\":[\\\"Does not prove correctness or inspect resources not supplied in the request.\\\"],\\\"outcome\\\":\\\"Return criterion coverage and actionable findings grounded in the supplied design.\\\",\\\"output_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"coverage\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"criterion_id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"disposition\\\":{\\\"enum\\\":[\\\"reviewed\\\",\\\"insufficient_input\\\"]},\\\"evidence\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"criterion_id\\\",\\\"disposition\\\",\\\"evidence\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"findings\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"criterion_id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"observation\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"recommendation\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"severity\\\":{\\\"enum\\\":[\\\"info\\\",\\\"warning\\\",\\\"error\\\"]}},\\\"required\\\":[\\\"criterion_id\\\",\\\"severity\\\",\\\"observation\\\",\\\"recommendation\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":128,\\\"type\\\":\\\"array\\\"}},\\\"required\\\":[\\\"findings\\\",\\\"coverage\\\"],\\\"type\\\":\\\"object\\\"},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Every supplied criterion has a coverage entry; findings cite supplied design evidence.\\\",\\\"evidence_required\\\":[\\\"coverage and supporting observations\\\"],\\\"id\\\":\\\"criterion-coverage\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"Design text and criteria must be supplied.\\\",\\\"kind\\\":\\\"input_schema\\\"},{\\\"description\\\":\\\"A bounded semantic assessment is required.\\\",\\\"kind\\\":\\\"budget_minimum\\\",\\\"minimum\\\":1,\\\"resource\\\":\\\"model_calls\\\"}],\\\"title\\\":\\\"Review supplied design against explicit criteria\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"original_request\\\":{\\\"criteria\\\":[{\\\"description\\\":\\\"Determine whether the parent retains responsibility for final completion and support the answer from the supplied design.\\\",\\\"id\\\":\\\"criterion-accountability\\\"}],\\\"design\\\":\\\"The parent accepts a caller objective, sends bounded child work over authenticated HTTPS, checks returned evidence against the original criteria, and retains responsibility for final completion. The child works in its own workspace.\\\"},\\\"requirements\\\":[{\\\"acceptance\\\":[{\\\"criterion\\\":\\\"Every supplied criterion has a coverage entry; findings cite supplied design evidence.\\\",\\\"evidence_required\\\":[\\\"coverage and supporting observations\\\"],\\\"id\\\":\\\"criterion-coverage\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"description\\\":\\\"Every supplied criterion has a coverage entry; findings cite supplied design evidence.\\\",\\\"mandatory\\\":true,\\\"requirement_id\\\":\\\"criterion-coverage\\\",\\\"source\\\":\\\"derived\\\"}],\\\"steps\\\":[{\\\"bounded_fallback\\\":false,\\\"contract\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"readmit_if_no_uncertain_effect\\\",\\\"unknown_commit_possible\\\":false},\\\"failures\\\":[{\\\"code\\\":\\\"insufficient_input\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"The supplied design does not contain enough information to review the requested criteria.\\\",\\\"retry\\\":\\\"readmission\\\"},{\\\"code\\\":\\\"evaluation_failed\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"The bounded review could not be completed.\\\",\\\"retry\\\":\\\"readmission\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/design.review\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"criteria\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"description\\\":{\\\"maxLength\\\":2048,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"id\\\",\\\"description\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"design\\\":{\\\"maxLength\\\":32000,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"design\\\",\\\"criteria\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"workspace.read\\\"],\\\"non_guarantees\\\":[\\\"Does not prove correctness or inspect resources not supplied in the request.\\\"],\\\"outcome\\\":\\\"Return criterion coverage and actionable findings grounded in the supplied design.\\\",\\\"output_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"coverage\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"criterion_id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"disposition\\\":{\\\"enum\\\":[\\\"reviewed\\\",\\\"insufficient_input\\\"]},\\\"evidence\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"criterion_id\\\",\\\"disposition\\\",\\\"evidence\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"findings\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"criterion_id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"observation\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"recommendation\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"severity\\\":{\\\"enum\\\":[\\\"info\\\",\\\"warning\\\",\\\"error\\\"]}},\\\"required\\\":[\\\"criterion_id\\\",\\\"severity\\\",\\\"observation\\\",\\\"recommendation\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":128,\\\"type\\\":\\\"array\\\"}},\\\"required\\\":[\\\"findings\\\",\\\"coverage\\\"],\\\"type\\\":\\\"object\\\"},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Every supplied criterion has a coverage entry; findings cite supplied design evidence.\\\",\\\"evidence_required\\\":[\\\"coverage and supporting observations\\\"],\\\"id\\\":\\\"criterion-coverage\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"Design text and criteria must be supplied.\\\",\\\"kind\\\":\\\"input_schema\\\"},{\\\"description\\\":\\\"A bounded semantic assessment is required.\\\",\\\"kind\\\":\\\"budget_minimum\\\",\\\"minimum\\\":1,\\\"resource\\\":\\\"model_calls\\\"}],\\\"title\\\":\\\"Review supplied design against explicit criteria\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"input\\\":{\\\"criteria\\\":[{\\\"description\\\":\\\"Determine whether the parent retains responsibility for final completion and support the answer from the supplied design.\\\",\\\"id\\\":\\\"criterion-accountability\\\"}],\\\"design\\\":\\\"The parent accepts a caller objective, sends bounded child work over authenticated HTTPS, checks returned evidence against the original criteria, and retains responsibility for final completion. The child works in its own workspace.\\\"},\\\"step\\\":{\\\"allocation\\\":{\\\"budget\\\":{\\\"artifact_bytes\\\":"
+      },
+      "event_id": "event-fde28f71fb0d4e3e98652e28d435000e",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 8863,
+        "input_digest": "sha256:3889ea9cce5a20b1b56593f2be77d1a08f7d855b43ef2037e5d3b2d489ac028c",
+        "operation_id": "model-a2534ac9aef04a63b64a4bd5eee70aea",
+        "output_bytes": 0,
+        "output_digest": null,
+        "payload_truncated": true,
+        "phase": "started",
+        "purpose": "planning",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 13389,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 53360
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        }
+      },
+      "redacted": true,
+      "sequence": 4,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-3bbb761844ae46809da6ab48d0f004c4",
+      "timestamp": "2026-11-18T12:56:19.609Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"output\":{\"passed\":true,\"reason\":\"The single step directly targets the mandatory criterion-coverage requirement by invoking the design.review capability on the supplied design and criterion. Its assigned outcome is to produce per-criterion coverage and grounded findings, which matches the original contract postcondition. No missing external facts are required for this request, and the step is not merely a request restatement; it allocates a bounded semantic review over the provided inputs.\"}}"
+      },
+      "event_id": "event-d8dcef5649f3462081b2caf6eff73f51",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 57,
+        "input_digest": "sha256:cb4c9ecd83789a9e129da4ca9df739a4e8fbbff3a7136248cac637d0001b266d",
+        "operation_id": "model-a2534ac9aef04a63b64a4bd5eee70aea",
+        "output_bytes": 487,
+        "output_digest": "sha256:58106c5a280a52694365ae43035217208c55f7c1f9ea8d5c91539061fef1e75f",
+        "payload_truncated": false,
+        "phase": "finished",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 2028,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 4203
+        }
+      },
+      "redacted": true,
+      "sequence": 5,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-3bbb761844ae46809da6ab48d0f004c4",
+      "timestamp": "2026-11-18T12:56:23.825Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"request\":{\"authorization_ref\":\"default\",\"delegation\":{\"allocation\":{\"budget\":{\"artifact_bytes\":128000,\"delegations\":1,\"input_bytes\":127570,\"model_calls\":8,\"model_tokens\":293928,\"output_bytes\":28000,\"tool_calls\":12,\"wall_time_ms\":200227},\"deadline\":\"2026-11-18T12:58:42.951Z\",\"max_hops\":1},\"ancestry\":[\"https://localhost:8443/lasa\"],\"authority_ceiling\":{\"allowed_delegated_contracts\":[{\"digest\":\"sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce\",\"id\":\"https://contracts.example.net/capabilities/design.review\",\"version\":\"1.0.0\"},{\"digest\":\"sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23\",\"id\":\"https://contracts.example.net/capabilities/task.attempt\",\"version\":\"1.0.0\"}],\"allowed_disclosure_services\":[\"https://192.168.0.188/lasa\"],\"allowed_effects\":[\"workspace.read\"],\"content_diagnostics_allowed\":true,\"resources\":[{\"actions\":[\"create\",\"read\",\"update\"],\"resource\":\"workspace:self\"}]},\"delegation_id\":\"delegation-15dee38112d240dd8687f59fe9c7be61\",\"disclosed_artifacts\":[],\"parent_service_id\":\"https://localhost:8443/lasa\",\"parent_task_id\":\"task-3bbb761844ae46809da6ab48d0f004c4\",\"remaining_hops\":1,\"request_digest\":\"sha256:8f0233bb3fc892f01e58af9b4ee86f0ce1dd6f1b1d24e87d78c07aa1026f4c0e\",\"requirement_ids\":[\"criterion-coverage\"],\"root_task_id\":\"task-3bbb761844ae46809da6ab48d0f004c4\",\"step_id\":\"step-1\"},\"diagnostics\":\"content\",\"input\":{\"criteria\":[{\"description\":\"Determine whether the parent retains responsibility for final completion and support the answer from the supplied design.\",\"id\":\"criterion-accountability\"}],\"design\":\"The parent accepts a caller objective, sends bounded child work over authenticated HTTPS, checks returned evidence against the original criteria, and retains responsibility for final completion. The child works in its own workspace.\"},\"operation_id\":\"delegation-15dee38112d240dd8687f59fe9c7be61-task\",\"requested_limits\":{\"budget\":{\"artifact_bytes\":128000,\"delegations\":1,\"input_bytes\":127570,\"model_calls\":8,\"model_tokens\":293928,\"output_bytes\":28000,\"tool_calls\":12,\"wall_time_ms\":200227},\"deadline\":\"2026-11-18T12:58:42.951Z\",\"max_hops\":1},\"selection\":{\"catalog_view\":\"view-084a4143422211950c4760ebc0fc57db\",\"contract\":{\"digest\":\"sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce\",\"id\":\"https://contracts.example.net/capabilities/design.review\",\"version\":\"1.0.0\"},\"offer_id\":\"offer-e32093cd447dd44c88b8265145772f23\",\"offer_revision\":\"offer-7594497babcc3000e03c7413045a0b53\"}},\"service_id\":\"https://192.168.0.188/lasa\"}"
+      },
+      "event_id": "event-fe78db48703d458bb747cca860ed236a",
+      "kind": "call",
+      "payload": {
+        "call_type": "child",
+        "contract": {
+          "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce",
+          "id": "https://contracts.example.net/capabilities/design.review",
+          "version": "1.0.0"
+        },
+        "input_bytes": 2471,
+        "input_digest": "sha256:37c39cabe30dcd7917b8bf8a660e9627392433b9ac69f7e8f579cf017a51e0dd",
+        "operation_id": "delegation-15dee38112d240dd8687f59fe9c7be61",
+        "output_bytes": 0,
+        "output_digest": null,
+        "payload_truncated": false,
+        "peer_service_id": "https://192.168.0.188/lasa",
+        "phase": "started",
+        "reserved": {
+          "artifact_bytes": 128000,
+          "delegations": 2,
+          "input_bytes": 127570,
+          "model_calls": 8,
+          "model_tokens": 293928,
+          "output_bytes": 28000,
+          "tool_calls": 12,
+          "wall_time_ms": 200227
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        }
+      },
+      "redacted": true,
+      "sequence": 6,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-3bbb761844ae46809da6ab48d0f004c4",
+      "timestamp": "2026-11-18T12:56:24.185Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"result\":{\"artifacts\":[],\"contract\":{\"digest\":\"sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce\",\"id\":\"https://contracts.example.net/capabilities/design.review\",\"version\":\"1.0.0\"},\"effect_disposition\":\"none\",\"evidence\":[{\"artifact_ids\":[],\"criterion_id\":\"criterion-coverage\",\"disposition\":\"passed\",\"summary\":\"Reviewed the supplied design against the single criterion. The design explicitly states that the parent checks child evidence against original criteria and retains responsibility for final completion.\"}],\"output\":{\"coverage\":[{\"criterion_id\":\"criterion-accountability\",\"disposition\":\"reviewed\",\"evidence\":\"The supplied design says: \\\"The parent accepts a caller objective,\\\" \\\"checks returned evidence against the original criteria,\\\" and \\\"retains responsibility for final completion.\\\" This directly supports that the parent remains accountable for final completion rather than delegating accountability to the child.\"}],\"findings\":[{\"criterion_id\":\"criterion-accountability\",\"observation\":\"The design explicitly assigns final completion responsibility to the parent while limiting the child to bounded work in its own workspace.\",\"recommendation\":\"Keep this responsibility boundary explicit in any implementation or protocol documentation, including that child evidence is advisory/input to the parent\u2019s final completion decision.\",\"severity\":\"info\"}]},\"request_digest\":\"sha256:8f0233bb3fc892f01e58af9b4ee86f0ce1dd6f1b1d24e87d78c07aa1026f4c0e\",\"usage\":{\"artifact_bytes\":0,\"delegations\":0,\"input_bytes\":430,\"model_calls\":2,\"model_tokens\":9607,\"output_bytes\":844,\"tool_calls\":0,\"wall_time_ms\":27120}},\"service_id\":\"https://192.168.0.188/lasa\"}"
+      },
+      "event_id": "event-da40852e01244c8aa6aedf342681cf55",
+      "kind": "call",
+      "payload": {
+        "call_type": "child",
+        "child_task_id": "task-3df89473646f4055b33edd6688a6abd5",
+        "contract": {
+          "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce",
+          "id": "https://contracts.example.net/capabilities/design.review",
+          "version": "1.0.0"
+        },
+        "input_bytes": 2471,
+        "input_digest": "sha256:37c39cabe30dcd7917b8bf8a660e9627392433b9ac69f7e8f579cf017a51e0dd",
+        "operation_id": "delegation-15dee38112d240dd8687f59fe9c7be61",
+        "output_bytes": 1626,
+        "output_digest": "sha256:626403a754b053a8227bbf446933b2959fd6afc72573c97c9b0eac45e4daaadf",
+        "payload_truncated": false,
+        "peer_service_id": "https://192.168.0.188/lasa",
+        "phase": "finished",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 1,
+          "input_bytes": 430,
+          "model_calls": 2,
+          "model_tokens": 9607,
+          "output_bytes": 844,
+          "tool_calls": 0,
+          "wall_time_ms": 27120
+        }
+      },
+      "redacted": true,
+      "sequence": 7,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-3bbb761844ae46809da6ab48d0f004c4",
+      "timestamp": "2026-11-18T12:56:54.172Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"input\":[{\"content\":[{\"text\":\"{\\\"candidate_output\\\":{\\\"coverage\\\":[{\\\"criterion_id\\\":\\\"criterion-accountability\\\",\\\"disposition\\\":\\\"reviewed\\\",\\\"evidence\\\":\\\"The supplied design says: \\\\\\\"The parent accepts a caller objective,\\\\\\\" \\\\\\\"checks returned evidence against the original criteria,\\\\\\\" and \\\\\\\"retains responsibility for final completion.\\\\\\\" This directly supports that the parent remains accountable for final completion rather than delegating accountability to the child.\\\"}],\\\"findings\\\":[{\\\"criterion_id\\\":\\\"criterion-accountability\\\",\\\"observation\\\":\\\"The design explicitly assigns final completion responsibility to the parent while limiting the child to bounded work in its own workspace.\\\",\\\"recommendation\\\":\\\"Keep this responsibility boundary explicit in any implementation or protocol documentation, including that child evidence is advisory/input to the parent\u2019s final completion decision.\\\",\\\"severity\\\":\\\"info\\\"}]},\\\"claimed_evidence\\\":[{\\\"artifact_ids\\\":[],\\\"criterion_id\\\":\\\"criterion-coverage\\\",\\\"disposition\\\":\\\"passed\\\",\\\"summary\\\":\\\"Reviewed the supplied design against the single criterion. The design explicitly states that the parent checks child evidence against original criteria and retains responsibility for final completion.\\\"}],\\\"contract\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"readmit_if_no_uncertain_effect\\\",\\\"unknown_commit_possible\\\":false},\\\"failures\\\":[{\\\"code\\\":\\\"insufficient_input\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"The supplied design does not contain enough information to review the requested criteria.\\\",\\\"retry\\\":\\\"readmission\\\"},{\\\"code\\\":\\\"evaluation_failed\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"The bounded review could not be completed.\\\",\\\"retry\\\":\\\"readmission\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/design.review\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"criteria\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"description\\\":{\\\"maxLength\\\":2048,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"id\\\",\\\"description\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"design\\\":{\\\"maxLength\\\":32000,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"design\\\",\\\"criteria\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"workspace.read\\\"],\\\"non_guarantees\\\":[\\\"Does not prove correctness or inspect resources not supplied in the request.\\\"],\\\"outcome\\\":\\\"Return criterion coverage and actionable findings grounded in the supplied design.\\\",\\\"output_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"coverage\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"criterion_id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"disposition\\\":{\\\"enum\\\":[\\\"reviewed\\\",\\\"insufficient_input\\\"]},\\\"evidence\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"criterion_id\\\",\\\"disposition\\\",\\\"evidence\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"findings\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"criterion_id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"observation\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"recommendation\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"severity\\\":{\\\"enum\\\":[\\\"info\\\",\\\"warning\\\",\\\"error\\\"]}},\\\"required\\\":[\\\"criterion_id\\\",\\\"severity\\\",\\\"observation\\\",\\\"recommendation\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":128,\\\"type\\\":\\\"array\\\"}},\\\"required\\\":[\\\"findings\\\",\\\"coverage\\\"],\\\"type\\\":\\\"object\\\"},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Every supplied criterion has a coverage entry; findings cite supplied design evidence.\\\",\\\"evidence_required\\\":[\\\"coverage and supporting observations\\\"],\\\"id\\\":\\\"criterion-coverage\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"Design text and criteria must be supplied.\\\",\\\"kind\\\":\\\"input_schema\\\"},{\\\"description\\\":\\\"A bounded semantic assessment is required.\\\",\\\"kind\\\":\\\"budget_minimum\\\",\\\"minimum\\\":1,\\\"resource\\\":\\\"model_calls\\\"}],\\\"title\\\":\\\"Review supplied design against explicit criteria\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"input\\\":{\\\"criteria\\\":[{\\\"description\\\":\\\"Determine whether the parent retains responsibility for final completion and support the answer from the supplied design.\\\",\\\"id\\\":\\\"criterion-accountability\\\"}],\\\"design\\\":\\\"The parent accepts a caller objective, sends bounded child work over authenticated HTTPS, checks returned evidence against the original criteria, and retains responsibility for final completion. The child works in its own workspace.\\\"},\\\"instruction\\\":\\\"Independently check whether the supplied evidence supports the output and required postconditions. A schema-valid answer or a peer saying complete is insufficient. A fulfilled attempt must satisfy every requirement; unable is an honest attempt outcome but cannot fulfill an actual requested subtask. Reject unsupported factual claims, missing criterion coverage, inadequate evidence, or unresolved effects. State uncertainty as passed=false.\\\",\\\"original_requirements\\\":[],\\\"trusted_execution_evidence\\\":{\\\"artifacts\\\":[],\\\"operations\\\":[],\\\"service_id\\\":\\\"https://localhost:8443/lasa\\\",\\\"source\\\":\\\"receiver_durable_store\\\",\\\"step_id\\\":\\\"step-1\\\",\\\"task_id\\\":\\\"task-3bbb761844ae46809da6ab48d0f004c4\\\",\\\"truncated\\\":false}}\",\"type\":\"input_text\"}],\"role\":\"user\"}],\"purpose\":\"verification\"}"
+      },
+      "event_id": "event-efe1d0c4d8d74ce89ddedaef647e733a",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 5551,
+        "input_digest": "sha256:ef8dcaa868282f3128acbd626a2f11aa8e5a67f80a9ff12b0eb701bbb06d2c87",
+        "operation_id": "model-0fa8c717e678415491eaa5ce8f0d71c4",
+        "output_bytes": 0,
+        "output_digest": null,
+        "payload_truncated": false,
+        "phase": "started",
+        "purpose": "verification",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 10081,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 60000
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        }
+      },
+      "redacted": true,
+      "sequence": 8,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-3bbb761844ae46809da6ab48d0f004c4",
+      "timestamp": "2026-11-18T12:56:54.222Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"output\":{\"passed\":true,\"reason\":\"The candidate output is supported by the supplied design and satisfies the contract postcondition. The single supplied criterion, criterion-accountability, has a coverage entry. The evidence quotes the design statement that the parent checks returned evidence against original criteria and retains responsibility for final completion, which directly supports the conclusion. The finding is grounded in the same supplied design and does not introduce unsupported factual claims. No unresolved external effects are indicated by the trusted execution evidence.\"}}"
+      },
+      "event_id": "event-0b6f171f1ac0409bac794cfda468e945",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 57,
+        "input_digest": "sha256:1d37894cffec215f7c2d3a1b256726d994bf066bb7c7b6fcafcf57ffe58f4a10",
+        "operation_id": "model-0fa8c717e678415491eaa5ce8f0d71c4",
+        "output_bytes": 584,
+        "output_digest": "sha256:4feaf226c55d7316a2fb38ec85148018332c56f9706b27c512cdda7777f9d1c7",
+        "payload_truncated": false,
+        "phase": "finished",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 1418,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 7513
+        }
+      },
+      "redacted": true,
+      "sequence": 9,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-3bbb761844ae46809da6ab48d0f004c4",
+      "timestamp": "2026-11-18T12:57:01.754Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-ea43218ee1224a8ba5bcdda6b45e67ac",
+      "kind": "verification",
+      "payload": {
+        "checks": [
+          {
+            "artifact_ids": [],
+            "criterion_id": "criterion-coverage",
+            "disposition": "passed",
+            "summary": "The candidate output is supported by the supplied design and satisfies the contract postcondition. The single supplied criterion, criterion-accountability, has a coverage entry. The evidence quotes the design statement that the parent checks returned evidence against original criteria and retains responsibility for final completion, which directly supports the conclusion. The finding is grounded in the same supplied design and does not introduce unsupported factual claims. No unresolved external effects are indicated by the trusted execution evidence."
+          }
+        ],
+        "contract": {
+          "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce",
+          "id": "https://contracts.example.net/capabilities/design.review",
+          "version": "1.0.0"
+        },
+        "release": "accepted",
+        "request_digest": "sha256:307de048a1c58a3b35d9fce47a3105e1d8bf124a0ff4f969a4783dc651abf5a3",
+        "step_id": "semantic-verification"
+      },
+      "redacted": true,
+      "sequence": 10,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-3bbb761844ae46809da6ab48d0f004c4",
+      "timestamp": "2026-11-18T12:57:01.774Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-a7838e72672d4006baa0d1deaee99496",
+      "kind": "verification",
+      "payload": {
+        "checks": [
+          {
+            "artifact_ids": [],
+            "criterion_id": "criterion-coverage",
+            "disposition": "passed",
+            "summary": "Reviewed the supplied design against the single criterion. The design explicitly states that the parent checks child evidence against original criteria and retains responsibility for final completion."
+          }
+        ],
+        "contract": {
+          "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce",
+          "id": "https://contracts.example.net/capabilities/design.review",
+          "version": "1.0.0"
+        },
+        "release": "accepted",
+        "request_digest": "sha256:8f0233bb3fc892f01e58af9b4ee86f0ce1dd6f1b1d24e87d78c07aa1026f4c0e",
+        "step_id": "step-1"
+      },
+      "redacted": true,
+      "sequence": 11,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-3bbb761844ae46809da6ab48d0f004c4",
+      "timestamp": "2026-11-18T12:57:01.784Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"input\":[{\"content\":[{\"text\":\"{\\\"candidate_output\\\":{\\\"coverage\\\":[{\\\"criterion_id\\\":\\\"criterion-accountability\\\",\\\"disposition\\\":\\\"reviewed\\\",\\\"evidence\\\":\\\"The supplied design says: \\\\\\\"The parent accepts a caller objective,\\\\\\\" \\\\\\\"checks returned evidence against the original criteria,\\\\\\\" and \\\\\\\"retains responsibility for final completion.\\\\\\\" This directly supports that the parent remains accountable for final completion rather than delegating accountability to the child.\\\"}],\\\"findings\\\":[{\\\"criterion_id\\\":\\\"criterion-accountability\\\",\\\"observation\\\":\\\"The design explicitly assigns final completion responsibility to the parent while limiting the child to bounded work in its own workspace.\\\",\\\"recommendation\\\":\\\"Keep this responsibility boundary explicit in any implementation or protocol documentation, including that child evidence is advisory/input to the parent\u2019s final completion decision.\\\",\\\"severity\\\":\\\"info\\\"}]},\\\"claimed_evidence\\\":[{\\\"artifact_ids\\\":[],\\\"criterion_id\\\":\\\"criterion-coverage\\\",\\\"disposition\\\":\\\"passed\\\",\\\"summary\\\":\\\"Reviewed the supplied design against the single criterion. The design explicitly states that the parent checks child evidence against original criteria and retains responsibility for final completion.\\\"}],\\\"contract\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"readmit_if_no_uncertain_effect\\\",\\\"unknown_commit_possible\\\":false},\\\"failures\\\":[{\\\"code\\\":\\\"insufficient_input\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"The supplied design does not contain enough information to review the requested criteria.\\\",\\\"retry\\\":\\\"readmission\\\"},{\\\"code\\\":\\\"evaluation_failed\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"The bounded review could not be completed.\\\",\\\"retry\\\":\\\"readmission\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/design.review\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"criteria\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"description\\\":{\\\"maxLength\\\":2048,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"id\\\",\\\"description\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"design\\\":{\\\"maxLength\\\":32000,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"design\\\",\\\"criteria\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"workspace.read\\\"],\\\"non_guarantees\\\":[\\\"Does not prove correctness or inspect resources not supplied in the request.\\\"],\\\"outcome\\\":\\\"Return criterion coverage and actionable findings grounded in the supplied design.\\\",\\\"output_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"coverage\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"criterion_id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"disposition\\\":{\\\"enum\\\":[\\\"reviewed\\\",\\\"insufficient_input\\\"]},\\\"evidence\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"criterion_id\\\",\\\"disposition\\\",\\\"evidence\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"findings\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"criterion_id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"observation\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"recommendation\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"severity\\\":{\\\"enum\\\":[\\\"info\\\",\\\"warning\\\",\\\"error\\\"]}},\\\"required\\\":[\\\"criterion_id\\\",\\\"severity\\\",\\\"observation\\\",\\\"recommendation\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":128,\\\"type\\\":\\\"array\\\"}},\\\"required\\\":[\\\"findings\\\",\\\"coverage\\\"],\\\"type\\\":\\\"object\\\"},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Every supplied criterion has a coverage entry; findings cite supplied design evidence.\\\",\\\"evidence_required\\\":[\\\"coverage and supporting observations\\\"],\\\"id\\\":\\\"criterion-coverage\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"Design text and criteria must be supplied.\\\",\\\"kind\\\":\\\"input_schema\\\"},{\\\"description\\\":\\\"A bounded semantic assessment is required.\\\",\\\"kind\\\":\\\"budget_minimum\\\",\\\"minimum\\\":1,\\\"resource\\\":\\\"model_calls\\\"}],\\\"title\\\":\\\"Review supplied design against explicit criteria\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"input\\\":{\\\"criteria\\\":[{\\\"description\\\":\\\"Determine whether the parent retains responsibility for final completion and support the answer from the supplied design.\\\",\\\"id\\\":\\\"criterion-accountability\\\"}],\\\"design\\\":\\\"The parent accepts a caller objective, sends bounded child work over authenticated HTTPS, checks returned evidence against the original criteria, and retains responsibility for final completion. The child works in its own workspace.\\\"},\\\"instruction\\\":\\\"Independently check whether the supplied evidence supports the output and required postconditions. A schema-valid answer or a peer saying complete is insufficient. A fulfilled attempt must satisfy every requirement; unable is an honest attempt outcome but cannot fulfill an actual requested subtask. Reject unsupported factual claims, missing criterion coverage, inadequate evidence, or unresolved effects. State uncertainty as passed=false.\\\",\\\"original_requirements\\\":[{\\\"acceptance\\\":[{\\\"criterion\\\":\\\"Every supplied criterion has a coverage entry; findings cite supplied design evidence.\\\",\\\"evidence_required\\\":[\\\"coverage and supporting observations\\\"],\\\"id\\\":\\\"criterion-coverage\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"description\\\":\\\"Every supplied criterion has a coverage entry; findings cite supplied design evidence.\\\",\\\"mandatory\\\":true,\\\"requirement_id\\\":\\\"criterion-coverage\\\",\\\"source\\\":\\\"derived\\\"}],\\\"trusted_execution_evidence\\\":{\\\"artifacts\\\":[],\\\"operations\\\":[],\\\"service_id\\\":\\\"https://localhost:8443/lasa\\\",\\\"source\\\":\\\"receiver_durable_store\\\",\\\"step_id\\\":null,\\\"task_id\\\":\\\"task-3bbb761844ae46809da6ab48d0f004c4\\\",\\\"truncated\\\":false}}\",\"type\":\"input_text\"}],\"role\":\"user\"}],\"purpose\":\"verification\"}"
+      },
+      "event_id": "event-8b2948fb0f3a4eadb9bacd1e0fb6ddc8",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 5987,
+        "input_digest": "sha256:55691f1fe132a35d8be4c65bfa0cb585b2c1cc9ff7fe710191cfa924af053f6f",
+        "operation_id": "model-ac643231c725454c94f122d55b648144",
+        "output_bytes": 0,
+        "output_digest": null,
+        "payload_truncated": false,
+        "phase": "started",
+        "purpose": "verification",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 10517,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 60000
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        }
+      },
+      "redacted": true,
+      "sequence": 12,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-3bbb761844ae46809da6ab48d0f004c4",
+      "timestamp": "2026-11-18T12:57:01.823Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"output\":{\"passed\":true,\"reason\":\"The candidate output covers the only supplied criterion, criterion-accountability, and its evidence is directly supported by the supplied design text, which states that the parent checks returned evidence against original criteria and \\\"retains responsibility for final completion.\\\" The finding is also grounded in the supplied design, including the bounded child work and child workspace. No unsupported factual claims, missing coverage, or unresolved effects are apparent from the provided verification materials.\"}}"
+      },
+      "event_id": "event-47930190e01f4d37846c7c2c9c49ec7f",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 57,
+        "input_digest": "sha256:bf6056ab73233b6f18cb18e891b423d3e2fefdaa5f235a5ceed0768d512a31f9",
+        "operation_id": "model-ac643231c725454c94f122d55b648144",
+        "output_bytes": 543,
+        "output_digest": "sha256:883dfcdcc9a55d328928f64a291700bebeb3eadeef3c98b016a53480eceffa48",
+        "payload_truncated": false,
+        "phase": "finished",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 1448,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 5976
+        }
+      },
+      "redacted": true,
+      "sequence": 13,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-3bbb761844ae46809da6ab48d0f004c4",
+      "timestamp": "2026-11-18T12:57:07.825Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-efb242295a2f4d508e9fb9e6f345c3e3",
+      "kind": "verification",
+      "payload": {
+        "checks": [
+          {
+            "artifact_ids": [],
+            "criterion_id": "criterion-coverage",
+            "disposition": "passed",
+            "summary": "The candidate output covers the only supplied criterion, criterion-accountability, and its evidence is directly supported by the supplied design text, which states that the parent checks returned evidence against original criteria and \"retains responsibility for final completion.\" The finding is also grounded in the supplied design, including the bounded child work and child workspace. No unsupported factual claims, missing coverage, or unresolved effects are apparent from the provided verification materials."
+          }
+        ],
+        "contract": {
+          "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce",
+          "id": "https://contracts.example.net/capabilities/design.review",
+          "version": "1.0.0"
+        },
+        "release": "accepted",
+        "request_digest": "sha256:307de048a1c58a3b35d9fce47a3105e1d8bf124a0ff4f969a4783dc651abf5a3",
+        "step_id": "semantic-verification"
+      },
+      "redacted": true,
+      "sequence": 14,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-3bbb761844ae46809da6ab48d0f004c4",
+      "timestamp": "2026-11-18T12:57:07.843Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-ac60c2a319fa4fa28a0b26bde03ea400",
+      "kind": "verification",
+      "payload": {
+        "checks": [
+          {
+            "artifact_ids": [],
+            "criterion_id": "criterion-coverage",
+            "disposition": "passed",
+            "summary": "Reviewed the supplied design against the single criterion. The design explicitly states that the parent checks child evidence against original criteria and retains responsibility for final completion."
+          }
+        ],
+        "contract": {
+          "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce",
+          "id": "https://contracts.example.net/capabilities/design.review",
+          "version": "1.0.0"
+        },
+        "release": "accepted",
+        "request_digest": "sha256:307de048a1c58a3b35d9fce47a3105e1d8bf124a0ff4f969a4783dc651abf5a3",
+        "step_id": "final-release"
+      },
+      "redacted": true,
+      "sequence": 15,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-3bbb761844ae46809da6ab48d0f004c4",
+      "timestamp": "2026-11-18T12:57:07.867Z"
+    }
+  ],
+  "children_via_parent": [
+    {
+      "delegation_id": "delegation-15dee38112d240dd8687f59fe9c7be61",
+      "service_id": "https://192.168.0.188/lasa",
+      "state": "completed",
+      "task_id": "task-3df89473646f4055b33edd6688a6abd5",
+      "trace": {
+        "task_id": "task-3df89473646f4055b33edd6688a6abd5",
+        "events": [
+          {
+            "causal_parent_event_id": null,
+            "event_id": "event-0a98f3308d8d4bd0b5c02d9ebd3cbf60",
+            "kind": "routing",
+            "payload": {
+              "assessment_summary": "No peer is configured; the approved local binding is the only execution path.",
+              "authorization_decision_id": "authority-6e68638418198177f8ccec531567d64d",
+              "catalog_revision": null,
+              "contract": {
+                "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce",
+                "id": "https://contracts.example.net/capabilities/design.review",
+                "version": "1.0.0"
+              },
+              "decision_reason": "No peer is configured; routing settings are ignored.",
+              "local_assessment": "sufficient",
+              "offer_revision": null,
+              "peer_assessment": "not_configured",
+              "policy": {
+                "preferred_executor": "local",
+                "unclaimed_peer_fallback": "reject"
+              },
+              "requirement_ids": [
+                "criterion-coverage"
+              ],
+              "selected_executor": "local",
+              "step_id": "step-local"
+            },
+            "redacted": true,
+            "sequence": 1,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-3df89473646f4055b33edd6688a6abd5",
+            "timestamp": "2026-11-18T12:56:26.591Z"
+          },
+          {
+            "causal_parent_event_id": null,
+            "content": {
+              "media_type": "application/json",
+              "text": "{\"input\":[{\"content\":[{\"text\":\"<environment_context>\\n  <cwd>/workspace</cwd>\\n  <shell>bash</shell>\\n  <current_date>2026-11-18</current_date>\\n  <timezone>Etc/UTC</timezone>\\n  <filesystem><workspace_roots><root>/workspace</root></workspace_roots><permission_profile type=\\\"managed\\\"><file_system type=\\\"restricted\\\"><entry access=\\\"read\\\"><special>:root</special></entry><entry access=\\\"write\\\"><path>/workspace</path></entry><entry access=\\\"write\\\"><special>:slash_tmp</special></entry><entry access=\\\"write\\\"><special>:tmpdir</special></entry><entry access=\\\"read\\\"><path>/workspace/.git</path></entry><entry access=\\\"read\\\"><path>/workspace/.agents</path></entry><entry access=\\\"read\\\"><path>/workspace/.codex</path></entry><entry access=\\\"read\\\"><path>/workspace/.aws</path></entry></file_system></permission_profile></filesystem>\\n</environment_context>\",\"type\":\"input_text\"}],\"id\":\"msg_01a1eeba-e580-71a3-88b6-17122f7e71a9\",\"role\":\"user\",\"type\":\"message\"},{\"content\":[{\"text\":\"{\\\"contract\\\":{\\\"digest\\\":\\\"sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce\\\",\\\"id\\\":\\\"https://contracts.example.net/capabilities/design.review\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"dependency_results\\\":{},\\\"input\\\":{\\\"criteria\\\":[{\\\"description\\\":\\\"Determine whether the parent retains responsibility for final completion and support the answer from the supplied design.\\\",\\\"id\\\":\\\"criterion-accountability\\\"}],\\\"design\\\":\\\"The parent accepts a caller objective, sends bounded child work over authenticated HTTPS, checks returned evidence against the original criteria, and retains responsibility for final completion. The child works in its own workspace.\\\"},\\\"outcome_contract\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"readmit_if_no_uncertain_effect\\\",\\\"unknown_commit_possible\\\":false},\\\"failures\\\":[{\\\"code\\\":\\\"insufficient_input\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"The supplied design does not contain enough information to review the requested criteria.\\\",\\\"retry\\\":\\\"readmission\\\"},{\\\"code\\\":\\\"evaluation_failed\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"The bounded review could not be completed.\\\",\\\"retry\\\":\\\"readmission\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/design.review\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"criteria\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"description\\\":{\\\"maxLength\\\":2048,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"id\\\",\\\"description\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"design\\\":{\\\"maxLength\\\":32000,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"design\\\",\\\"criteria\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"workspace.read\\\"],\\\"non_guarantees\\\":[\\\"Does not prove correctness or inspect resources not supplied in the request.\\\"],\\\"outcome\\\":\\\"Return criterion coverage and actionable findings grounded in the supplied design.\\\",\\\"output_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"coverage\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"criterion_id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"disposition\\\":{\\\"enum\\\":[\\\"reviewed\\\",\\\"insufficient_input\\\"]},\\\"evidence\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"criterion_id\\\",\\\"disposition\\\",\\\"evidence\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"findings\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"criterion_id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"observation\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"recommendation\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"severity\\\":{\\\"enum\\\":[\\\"info\\\",\\\"warning\\\",\\\"error\\\"]}},\\\"required\\\":[\\\"criterion_id\\\",\\\"severity\\\",\\\"observation\\\",\\\"recommendation\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":128,\\\"type\\\":\\\"array\\\"}},\\\"required\\\":[\\\"findings\\\",\\\"coverage\\\"],\\\"type\\\":\\\"object\\\"},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Every supplied criterion has a coverage entry; findings cite supplied design evidence.\\\",\\\"evidence_required\\\":[\\\"coverage and supporting observations\\\"],\\\"id\\\":\\\"criterion-coverage\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"Design text and criteria must be supplied.\\\",\\\"kind\\\":\\\"input_schema\\\"},{\\\"description\\\":\\\"A bounded semantic assessment is required.\\\",\\\"kind\\\":\\\"budget_minimum\\\",\\\"minimum\\\":1,\\\"resource\\\":\\\"model_calls\\\"}],\\\"title\\\":\\\"Review supplied design against explicit criteria\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"required_evidence_criterion_ids\\\":[\\\"criterion-coverage\\\"],\\\"requirements\\\":[\\\"criterion-coverage\\\"]}\",\"type\":\"input_text\"}],\"id\":\"msg_01a1eeba-e580-71a3-88b6-173569bc3ca4\",\"role\":\"user\",\"type\":\"message\"}],\"purpose\":\"execution\"}"
+            },
+            "event_id": "event-5863d8afd67f44c7bccc6962cb342027",
+            "kind": "call",
+            "payload": {
+              "call_type": "model",
+              "input_bytes": 4917,
+              "input_digest": "sha256:5afe900dd349b86626c4fc1f6f80a9e6c205c087f1c88ab1a44d2e61630b7e43",
+              "operation_id": "model-e59f71c2cf7f437bbfb3802e1f1d4810",
+              "output_bytes": 0,
+              "output_digest": null,
+              "payload_truncated": false,
+              "phase": "started",
+              "purpose": "execution",
+              "reserved": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 1,
+                "model_tokens": 44167,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 60000
+              },
+              "usage": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 0,
+                "model_tokens": 0,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 0
+              }
+            },
+            "redacted": true,
+            "sequence": 2,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-3df89473646f4055b33edd6688a6abd5",
+            "timestamp": "2026-11-18T12:56:28.405Z"
+          },
+          {
+            "causal_parent_event_id": null,
+            "content": {
+              "media_type": "application/json",
+              "text": "{\"output\":{\"output\":[{\"content\":[{\"annotations\":[],\"logprobs\":[],\"text\":\"{\\\"artifact_ids\\\":[],\\\"evidence\\\":[{\\\"artifact_ids\\\":[],\\\"criterion_id\\\":\\\"criterion-coverage\\\",\\\"disposition\\\":\\\"passed\\\",\\\"summary\\\":\\\"Reviewed the supplied design against the single criterion. The design explicitly states that the parent checks child evidence against original criteria and retains responsibility for final completion.\\\"}],\\\"output\\\":{\\\"coverage\\\":[{\\\"criterion_id\\\":\\\"criterion-accountability\\\",\\\"disposition\\\":\\\"reviewed\\\",\\\"evidence\\\":\\\"The supplied design says: \\\\\\\"The parent accepts a caller objective,\\\\\\\" \\\\\\\"checks returned evidence against the original criteria,\\\\\\\" and \\\\\\\"retains responsibility for final completion.\\\\\\\" This directly supports that the parent remains accountable for final completion rather than delegating accountability to the child.\\\"}],\\\"findings\\\":[{\\\"criterion_id\\\":\\\"criterion-accountability\\\",\\\"observation\\\":\\\"The design explicitly assigns final completion responsibility to the parent while limiting the child to bounded work in its own workspace.\\\",\\\"recommendation\\\":\\\"Keep this responsibility boundary explicit in any implementation or protocol documentation, including that child evidence is advisory/input to the parent\u2019s final completion decision.\\\",\\\"severity\\\":\\\"info\\\"}]}}\",\"type\":\"output_text\"}],\"id\":\"msg_0522cc346e43121a016afda08bb92487d2a8a01f4c25ab7726\",\"internal_chat_message_metadata_passthrough\":{\"content_token_count\":205,\"create_time\":1795006601.241245,\"turn_id\":\"01a1eeba-e576-7a00-af59-863891583cff\"},\"metadata\":{\"turn_id\":\"01a1eeba-e576-7a00-af59-863891583cff\"},\"phase\":\"final_answer\",\"role\":\"assistant\",\"status\":\"completed\",\"type\":\"message\"}]}}"
+            },
+            "event_id": "event-3a25dd624a8e4fb7b4dd1941b50cb2fe",
+            "kind": "call",
+            "payload": {
+              "call_type": "model",
+              "input_bytes": 57,
+              "input_digest": "sha256:a76e25bee38574bcaf7e2b9212c2308a3fc748f4ac86c56a86c3ed32bd17d2db",
+              "operation_id": "model-e59f71c2cf7f437bbfb3802e1f1d4810",
+              "output_bytes": 1690,
+              "output_digest": "sha256:f69b3f9c42cf025f4cd72405e87d6be8779434c82451df1bb55ccd451f4c9549",
+              "payload_truncated": false,
+              "phase": "finished",
+              "reserved": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 0,
+                "model_tokens": 0,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 0
+              },
+              "usage": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 1,
+                "model_tokens": 7994,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 19047
+              }
+            },
+            "redacted": true,
+            "sequence": 3,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-3df89473646f4055b33edd6688a6abd5",
+            "timestamp": "2026-11-18T12:56:47.474Z"
+          },
+          {
+            "causal_parent_event_id": null,
+            "content": {
+              "media_type": "application/json",
+              "text": "{\"input\":[{\"content\":[{\"text\":\"{\\\"candidate_output\\\":{\\\"coverage\\\":[{\\\"criterion_id\\\":\\\"criterion-accountability\\\",\\\"disposition\\\":\\\"reviewed\\\",\\\"evidence\\\":\\\"The supplied design says: \\\\\\\"The parent accepts a caller objective,\\\\\\\" \\\\\\\"checks returned evidence against the original criteria,\\\\\\\" and \\\\\\\"retains responsibility for final completion.\\\\\\\" This directly supports that the parent remains accountable for final completion rather than delegating accountability to the child.\\\"}],\\\"findings\\\":[{\\\"criterion_id\\\":\\\"criterion-accountability\\\",\\\"observation\\\":\\\"The design explicitly assigns final completion responsibility to the parent while limiting the child to bounded work in its own workspace.\\\",\\\"recommendation\\\":\\\"Keep this responsibility boundary explicit in any implementation or protocol documentation, including that child evidence is advisory/input to the parent\u2019s final completion decision.\\\",\\\"severity\\\":\\\"info\\\"}]},\\\"claimed_evidence\\\":[{\\\"artifact_ids\\\":[],\\\"criterion_id\\\":\\\"criterion-coverage\\\",\\\"disposition\\\":\\\"passed\\\",\\\"summary\\\":\\\"Reviewed the supplied design against the single criterion. The design explicitly states that the parent checks child evidence against original criteria and retains responsibility for final completion.\\\"}],\\\"contract\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"readmit_if_no_uncertain_effect\\\",\\\"unknown_commit_possible\\\":false},\\\"failures\\\":[{\\\"code\\\":\\\"insufficient_input\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"The supplied design does not contain enough information to review the requested criteria.\\\",\\\"retry\\\":\\\"readmission\\\"},{\\\"code\\\":\\\"evaluation_failed\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"The bounded review could not be completed.\\\",\\\"retry\\\":\\\"readmission\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/design.review\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"criteria\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"description\\\":{\\\"maxLength\\\":2048,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"id\\\",\\\"description\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"design\\\":{\\\"maxLength\\\":32000,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"design\\\",\\\"criteria\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"workspace.read\\\"],\\\"non_guarantees\\\":[\\\"Does not prove correctness or inspect resources not supplied in the request.\\\"],\\\"outcome\\\":\\\"Return criterion coverage and actionable findings grounded in the supplied design.\\\",\\\"output_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"coverage\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"criterion_id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"disposition\\\":{\\\"enum\\\":[\\\"reviewed\\\",\\\"insufficient_input\\\"]},\\\"evidence\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"criterion_id\\\",\\\"disposition\\\",\\\"evidence\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"findings\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"criterion_id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"observation\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"recommendation\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"severity\\\":{\\\"enum\\\":[\\\"info\\\",\\\"warning\\\",\\\"error\\\"]}},\\\"required\\\":[\\\"criterion_id\\\",\\\"severity\\\",\\\"observation\\\",\\\"recommendation\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":128,\\\"type\\\":\\\"array\\\"}},\\\"required\\\":[\\\"findings\\\",\\\"coverage\\\"],\\\"type\\\":\\\"object\\\"},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Every supplied criterion has a coverage entry; findings cite supplied design evidence.\\\",\\\"evidence_required\\\":[\\\"coverage and supporting observations\\\"],\\\"id\\\":\\\"criterion-coverage\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"Design text and criteria must be supplied.\\\",\\\"kind\\\":\\\"input_schema\\\"},{\\\"description\\\":\\\"A bounded semantic assessment is required.\\\",\\\"kind\\\":\\\"budget_minimum\\\",\\\"minimum\\\":1,\\\"resource\\\":\\\"model_calls\\\"}],\\\"title\\\":\\\"Review supplied design against explicit criteria\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"input\\\":{\\\"criteria\\\":[{\\\"description\\\":\\\"Determine whether the parent retains responsibility for final completion and support the answer from the supplied design.\\\",\\\"id\\\":\\\"criterion-accountability\\\"}],\\\"design\\\":\\\"The parent accepts a caller objective, sends bounded child work over authenticated HTTPS, checks returned evidence against the original criteria, and retains responsibility for final completion. The child works in its own workspace.\\\"},\\\"instruction\\\":\\\"Independently check whether the supplied evidence supports the output and required postconditions. A schema-valid answer or a peer saying complete is insufficient. A fulfilled attempt must satisfy every requirement; unable is an honest attempt outcome but cannot fulfill an actual requested subtask. Reject unsupported factual claims, missing criterion coverage, inadequate evidence, or unresolved effects. State uncertainty as passed=false.\\\",\\\"original_requirements\\\":[{\\\"acceptance\\\":[{\\\"criterion\\\":\\\"Every supplied criterion has a coverage entry; findings cite supplied design evidence.\\\",\\\"evidence_required\\\":[\\\"coverage and supporting observations\\\"],\\\"id\\\":\\\"criterion-coverage\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"description\\\":\\\"Every supplied criterion has a coverage entry; findings cite supplied design evidence.\\\",\\\"mandatory\\\":true,\\\"requirement_id\\\":\\\"criterion-coverage\\\",\\\"source\\\":\\\"derived\\\"}],\\\"trusted_execution_evidence\\\":{\\\"artifacts\\\":[],\\\"operations\\\":[],\\\"service_id\\\":\\\"https://192.168.0.188/lasa\\\",\\\"source\\\":\\\"receiver_durable_store\\\",\\\"step_id\\\":null,\\\"task_id\\\":\\\"task-3df89473646f4055b33edd6688a6abd5\\\",\\\"truncated\\\":false}}\",\"type\":\"input_text\"}],\"role\":\"user\"}],\"purpose\":\"verification\"}"
+            },
+            "event_id": "event-fb122704d8e549f885415c90f8251806",
+            "kind": "call",
+            "payload": {
+              "call_type": "model",
+              "input_bytes": 5986,
+              "input_digest": "sha256:5985a7e9b5e45ebfa8a5eaf626bf1ca763b40bc0596f3c63762b366aae9e9efa",
+              "operation_id": "model-be38f36df51b440ba1f1cc929fd45481",
+              "output_bytes": 0,
+              "output_digest": null,
+              "payload_truncated": false,
+              "phase": "started",
+              "purpose": "verification",
+              "reserved": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 1,
+                "model_tokens": 10516,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 60000
+              },
+              "usage": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 0,
+                "model_tokens": 0,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 0
+              }
+            },
+            "redacted": true,
+            "sequence": 4,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-3df89473646f4055b33edd6688a6abd5",
+            "timestamp": "2026-11-18T12:56:48.046Z"
+          },
+          {
+            "causal_parent_event_id": null,
+            "content": {
+              "media_type": "application/json",
+              "text": "{\"output\":{\"passed\":true,\"reason\":\"The candidate output covers the only supplied criterion, criterion-accountability, and its evidence is directly supported by the supplied design text: the design states that the parent checks returned evidence against original criteria and retains responsibility for final completion. The finding is also grounded in the supplied design, including the parent\u2019s final responsibility and the child working in its own workspace. No unsupported factual claims or unresolved effects are apparent from the provided record.\"}}"
+            },
+            "event_id": "event-91f51d982853439a9b82610130e3ce2b",
+            "kind": "call",
+            "payload": {
+              "call_type": "model",
+              "input_bytes": 57,
+              "input_digest": "sha256:1e80e10c416da5044c783b09b797e5b6e0c289ff74c70c5601d74e97bb46de85",
+              "operation_id": "model-be38f36df51b440ba1f1cc929fd45481",
+              "output_bytes": 545,
+              "output_digest": "sha256:6f17648cc685063a057b38ab8c3be9bc08d6a98877bb8bc084ac062dd11444b0",
+              "payload_truncated": false,
+              "phase": "finished",
+              "reserved": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 0,
+                "model_tokens": 0,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 0
+              },
+              "usage": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 1,
+                "model_tokens": 1613,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 8073
+              }
+            },
+            "redacted": true,
+            "sequence": 5,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-3df89473646f4055b33edd6688a6abd5",
+            "timestamp": "2026-11-18T12:56:56.145Z"
+          },
+          {
+            "causal_parent_event_id": null,
+            "event_id": "event-5365678aa41446caa8bb5ff71086267d",
+            "kind": "verification",
+            "payload": {
+              "checks": [
+                {
+                  "artifact_ids": [],
+                  "criterion_id": "criterion-coverage",
+                  "disposition": "passed",
+                  "summary": "The candidate output covers the only supplied criterion, criterion-accountability, and its evidence is directly supported by the supplied design text: the design states that the parent checks returned evidence against original criteria and retains responsibility for final completion. The finding is also grounded in the supplied design, including the parent\u2019s final responsibility and the child working in its own workspace. No unsupported factual claims or unresolved effects are apparent from the provided record."
+                }
+              ],
+              "contract": {
+                "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce",
+                "id": "https://contracts.example.net/capabilities/design.review",
+                "version": "1.0.0"
+              },
+              "release": "accepted",
+              "request_digest": "sha256:8f0233bb3fc892f01e58af9b4ee86f0ce1dd6f1b1d24e87d78c07aa1026f4c0e",
+              "step_id": "semantic-verification"
+            },
+            "redacted": true,
+            "sequence": 6,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-3df89473646f4055b33edd6688a6abd5",
+            "timestamp": "2026-11-18T12:56:56.170Z"
+          },
+          {
+            "causal_parent_event_id": null,
+            "event_id": "event-32d0f25166a54479b90bfcc90ace9cbb",
+            "kind": "verification",
+            "payload": {
+              "checks": [
+                {
+                  "artifact_ids": [],
+                  "criterion_id": "criterion-coverage",
+                  "disposition": "passed",
+                  "summary": "Reviewed the supplied design against the single criterion. The design explicitly states that the parent checks child evidence against original criteria and retains responsibility for final completion."
+                }
+              ],
+              "contract": {
+                "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce",
+                "id": "https://contracts.example.net/capabilities/design.review",
+                "version": "1.0.0"
+              },
+              "release": "accepted",
+              "request_digest": "sha256:8f0233bb3fc892f01e58af9b4ee86f0ce1dd6f1b1d24e87d78c07aa1026f4c0e",
+              "step_id": "final-release"
+            },
+            "redacted": true,
+            "sequence": 7,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-3df89473646f4055b33edd6688a6abd5",
+            "timestamp": "2026-11-18T12:56:56.231Z"
+          }
+        ],
+        "next_sequence": 8
+      }
+    }
+  ]
+}

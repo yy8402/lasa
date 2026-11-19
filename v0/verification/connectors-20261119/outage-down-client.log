@@ -1,0 +1,1 @@
+{"mode": "down", "layer2_states": {"design.review": "available", "task.attempt": "available", "documents.search": "available", "repository.inspect": "available", "documents.read": "unavailable"}, "both_core_services_ready": true, "evidence": "/Users/yyang/Dev/CodeX/LASA/v0/verification/connectors-20261119/outage-down.json"}

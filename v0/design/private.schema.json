@@ -1,0 +1,622 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.example.net/lasa/1.1/private.schema.json",
+  "$defs": {
+    "AuthorizationPolicy": {
+      "type": "object",
+      "properties": {
+        "revision": {
+          "type": "string",
+          "minLength": 1
+        },
+        "principals": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "subject": {
+                "type": "string",
+                "minLength": 1
+              },
+              "kind": {
+                "enum": [
+                  "user",
+                  "peer"
+                ]
+              },
+              "rules": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "authorization_ref": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "contracts": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "contracts.schema.json#/$defs/CapabilityRef"
+                      },
+                      "uniqueItems": true
+                    },
+                    "resources": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "contracts.schema.json#/$defs/ResourceRule"
+                      },
+                      "uniqueItems": true
+                    },
+                    "effects": {
+                      "type": "array",
+                      "items": {
+                        "enum": [
+                          "workspace.read",
+                          "workspace.write",
+                          "external.read",
+                          "external.write"
+                        ]
+                      },
+                      "uniqueItems": true
+                    },
+                    "disclosure_services": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "format": "uri"
+                      },
+                      "uniqueItems": true
+                    },
+                    "delegated_contracts": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "contracts.schema.json#/$defs/CapabilityRef"
+                      },
+                      "uniqueItems": true
+                    },
+                    "budget": {
+                      "$ref": "contracts.schema.json#/$defs/Budget"
+                    },
+                    "max_hops": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 32
+                    },
+                    "content_diagnostics": {
+                      "type": "boolean"
+                    },
+                    "offer_preconditions": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "contracts.schema.json#/$defs/Precondition"
+                      }
+                    }
+                  },
+                  "required": [
+                    "authorization_ref",
+                    "contracts",
+                    "resources",
+                    "effects",
+                    "disclosure_services",
+                    "delegated_contracts",
+                    "budget",
+                    "max_hops",
+                    "content_diagnostics"
+                  ],
+                  "additionalProperties": false
+                },
+                "uniqueItems": true
+              },
+              "service_id": {
+                "type": "string",
+                "pattern": "^https://"
+              }
+            },
+            "required": [
+              "subject",
+              "kind",
+              "rules"
+            ],
+            "additionalProperties": false,
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "peer"
+                    }
+                  }
+                },
+                "then": {
+                  "required": [
+                    "service_id"
+                  ]
+                }
+              }
+            ]
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "revision",
+        "principals"
+      ],
+      "additionalProperties": false
+    },
+    "RuntimeProfile": {
+      "type": "object",
+      "properties": {
+        "image": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "executable": {
+          "const": "/usr/local/bin/codex"
+        },
+        "expected_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "startup_timeout_ms": {
+          "type": "integer",
+          "minimum": 1000,
+          "maximum": 60000
+        }
+      },
+      "required": [
+        "image",
+        "executable",
+        "expected_version",
+        "startup_timeout_ms"
+      ],
+      "additionalProperties": false
+    },
+    "McpOperation": {
+      "type": "object",
+      "properties": {
+        "operation_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "effect": {
+          "const": "external.read"
+        },
+        "resource": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "input_schema": {
+          "type": "object"
+        },
+        "argument_constraints": {
+          "type": "object"
+        },
+        "output_schema": {
+          "type": "object"
+        },
+        "upstream_tool": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "upstream_output_schema": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "result_format": {
+          "enum": [
+            "structured",
+            "text"
+          ]
+        },
+        "task_input_bindings": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "type": "object",
+            "properties": {
+              "input_field": {
+                "type": "string",
+                "minLength": 1
+              },
+              "argument_field": {
+                "type": "string",
+                "minLength": 1
+              },
+              "comparison": {
+                "enum": [
+                  "exact",
+                  "basename"
+                ]
+              }
+            },
+            "required": [
+              "input_field",
+              "argument_field",
+              "comparison"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "operation_id",
+        "description",
+        "effect",
+        "resource",
+        "input_schema",
+        "argument_constraints",
+        "output_schema",
+        "upstream_tool",
+        "upstream_output_schema",
+        "result_format",
+        "task_input_bindings"
+      ],
+      "additionalProperties": false
+    },
+    "JsonGetOperation": {
+      "type": "object",
+      "properties": {
+        "operation_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "effect": {
+          "const": "external.read"
+        },
+        "resource": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "input_schema": {
+          "type": "object"
+        },
+        "argument_constraints": {
+          "type": "object"
+        },
+        "output_schema": {
+          "type": "object"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://"
+        },
+        "response_schema": {
+          "type": "object"
+        },
+        "result_fields": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "maxItems": 32,
+          "uniqueItems": true
+        },
+        "probe_arguments": {
+          "type": "object"
+        },
+        "task_input_bindings": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "type": "object",
+            "properties": {
+              "input_field": {
+                "type": "string",
+                "minLength": 1
+              },
+              "argument_field": {
+                "type": "string",
+                "minLength": 1
+              },
+              "comparison": {
+                "enum": [
+                  "exact",
+                  "basename"
+                ]
+              }
+            },
+            "required": [
+              "input_field",
+              "argument_field",
+              "comparison"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "operation_id",
+        "description",
+        "effect",
+        "resource",
+        "input_schema",
+        "argument_constraints",
+        "output_schema",
+        "url",
+        "response_schema",
+        "result_fields",
+        "probe_arguments",
+        "task_input_bindings"
+      ],
+      "additionalProperties": false
+    },
+    "ConnectorLimits": {
+      "type": "object",
+      "properties": {
+        "max_queue": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64
+        },
+        "request_timeout_seconds": {
+          "type": "number",
+          "minimum": 0.05,
+          "maximum": 120
+        },
+        "response_bytes": {
+          "type": "integer",
+          "minimum": 1024,
+          "maximum": 1048576
+        },
+        "recovery_interval_seconds": {
+          "type": "number",
+          "minimum": 0.05,
+          "maximum": 3600
+        },
+        "schema_refresh_seconds": {
+          "type": "number",
+          "minimum": 0.05,
+          "maximum": 3600
+        }
+      },
+      "required": [
+        "max_queue",
+        "request_timeout_seconds",
+        "response_bytes",
+        "recovery_interval_seconds",
+        "schema_refresh_seconds"
+      ],
+      "additionalProperties": false
+    },
+    "ConnectorPolicy": {
+      "type": "object",
+      "properties": {
+        "connectors": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
+                  },
+                  "limits": {
+                    "$ref": "#/$defs/ConnectorLimits"
+                  },
+                  "operations": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/McpOperation"
+                    },
+                    "minItems": 1,
+                    "maxItems": 128
+                  },
+                  "kind": {
+                    "const": "mcp-stdio"
+                  },
+                  "command": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2048
+                  },
+                  "args": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "secret_env": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 2048
+                    }
+                  }
+                },
+                "required": [
+                  "id",
+                  "limits",
+                  "operations",
+                  "kind",
+                  "command",
+                  "args",
+                  "secret_env"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
+                  },
+                  "limits": {
+                    "$ref": "#/$defs/ConnectorLimits"
+                  },
+                  "operations": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/McpOperation"
+                    },
+                    "minItems": 1,
+                    "maxItems": 128
+                  },
+                  "kind": {
+                    "const": "mcp-http"
+                  },
+                  "url": {
+                    "type": "string",
+                    "format": "uri",
+                    "pattern": "^https://"
+                  },
+                  "credential_ref": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2048
+                  },
+                  "ca_file": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2048
+                  }
+                },
+                "required": [
+                  "id",
+                  "limits",
+                  "operations",
+                  "kind",
+                  "url"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
+                  },
+                  "limits": {
+                    "$ref": "#/$defs/ConnectorLimits"
+                  },
+                  "operations": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/JsonGetOperation"
+                    },
+                    "minItems": 1,
+                    "maxItems": 128
+                  },
+                  "kind": {
+                    "const": "json-get"
+                  },
+                  "base_url": {
+                    "type": "string",
+                    "format": "uri",
+                    "pattern": "^https://"
+                  },
+                  "headers": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  },
+                  "credential_ref": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2048
+                  },
+                  "ca_file": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2048
+                  }
+                },
+                "required": [
+                  "id",
+                  "limits",
+                  "operations",
+                  "kind",
+                  "base_url",
+                  "headers"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "maxItems": 32
+        }
+      },
+      "required": [
+        "connectors"
+      ],
+      "additionalProperties": false
+    },
+    "FulfillmentBinding": {
+      "type": "object",
+      "properties": {
+        "binding_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
+        },
+        "contract": {
+          "$ref": "https://schemas.example.net/lasa/1.1/contracts.schema.json#/$defs/CapabilityRef"
+        },
+        "executor_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
+        },
+        "approved_resources": {
+          "type": "array",
+          "items": {
+            "$ref": "https://schemas.example.net/lasa/1.1/contracts.schema.json#/$defs/ResourceRule"
+          }
+        },
+        "allowed_effects": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "workspace.read",
+              "workspace.write",
+              "external.read",
+              "external.write"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "required_operations": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
+          },
+          "uniqueItems": true,
+          "maxItems": 128
+        }
+      },
+      "required": [
+        "binding_id",
+        "contract",
+        "executor_id",
+        "approved_resources",
+        "allowed_effects",
+        "required_operations"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

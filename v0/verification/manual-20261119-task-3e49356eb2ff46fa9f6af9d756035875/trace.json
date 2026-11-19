@@ -1,0 +1,973 @@
+{
+  "captured_at": "2026-11-19T00:39:57.324446+00:00",
+  "execution": "exact requested command, deployed services, real HTTPS/Codex/model inference",
+  "task": {
+    "admission": {
+      "accepted_at": "2026-11-19T00:38:34.309Z",
+      "authorization_decision_id": "authority-e3eddbd81861a90ba9df80a649cfb2dd",
+      "contract": {
+        "digest": "sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23",
+        "id": "https://contracts.example.net/capabilities/task.attempt",
+        "version": "1.0.0"
+      },
+      "effective_limits": {
+        "budget": {
+          "artifact_bytes": 128000,
+          "delegations": 2,
+          "input_bytes": 128000,
+          "model_calls": 16,
+          "model_tokens": 500000,
+          "output_bytes": 32000,
+          "tool_calls": 12,
+          "wall_time_ms": 300000
+        },
+        "deadline": "2026-11-19T00:42:13.198Z",
+        "max_hops": 2
+      },
+      "plan_digest": "sha256:23b17400925dd5093afd765b705f97f79a15c3637e381cddf184dea5d3a3ee18",
+      "request_digest": "sha256:5af15cb1a492ebddd99f5818aa65ac588978a008bb7896cec943ace34713531b"
+    },
+    "operation_id": "task-2feb147e79304e42807c09a8ed64bb22",
+    "received_at": "2026-11-19T00:38:13.233Z",
+    "request_digest": "sha256:5af15cb1a492ebddd99f5818aa65ac588978a008bb7896cec943ace34713531b",
+    "result": {
+      "artifacts": [],
+      "contract": {
+        "digest": "sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23",
+        "id": "https://contracts.example.net/capabilities/task.attempt",
+        "version": "1.0.0"
+      },
+      "effect_disposition": "none",
+      "evidence": [
+        {
+          "artifact_ids": [],
+          "criterion_id": "honest-disposition",
+          "disposition": "passed",
+          "summary": "The response directly explains the parent's retained responsibility and includes requirement-level evidence for the single mandatory objective."
+        }
+      ],
+      "output": {
+        "disposition": "fulfilled",
+        "requirement_evidence": [
+          {
+            "evidence": "Explained that a LASA parent does not delegate authority or accountability merely because a child performs work. The parent binds the child to explicit contracts, schemas, preconditions, allowed resources/effects, budgets, and postconditions; treats child and peer outputs as untrusted until checked; verifies results against acceptance criteria; reconciles uncertain effects before retrying; and reports inability or uncertainty honestly when evidence is missing.",
+            "id": "requirement-objective"
+          }
+        ],
+        "summary": "A LASA parent retains responsibility by controlling authorization, scope, and verification. The child may execute bounded work, but the parent remains accountable for deciding whether the work is suitable, whether the child was actually authorized through approved local bindings/resources, whether outputs satisfy the contract, and whether any side effects are known. Peer offers or child claims are evidence to evaluate, not permission or proof by themselves. The parent must preserve the original requirements, verify postconditions before claiming success, reconcile unknown effects when needed, and report `unable` or uncertainty instead of treating bounded delegation as a transfer of responsibility."
+      },
+      "request_digest": "sha256:5af15cb1a492ebddd99f5818aa65ac588978a008bb7896cec943ace34713531b",
+      "usage": {
+        "artifact_bytes": 0,
+        "delegations": 1,
+        "input_bytes": 1206,
+        "model_calls": 6,
+        "model_tokens": 19750,
+        "output_bytes": 2560,
+        "tool_calls": 0,
+        "wall_time_ms": 43970
+      }
+    },
+    "revision": 5,
+    "selection": {
+      "catalog_view": "view-586d93693d0ce8d5cd64f4949530eee1",
+      "contract": {
+        "digest": "sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23",
+        "id": "https://contracts.example.net/capabilities/task.attempt",
+        "version": "1.0.0"
+      },
+      "offer_id": "offer-87118c69dffb6d83735184f20cdd6f8a",
+      "offer_revision": "offer-18b9b0a3ca7d78ff3067f0e2dfb8cd50"
+    },
+    "service_id": "https://localhost:8443/lasa",
+    "session_id": "session-8639a3834e0142d48469826787f3599b",
+    "status": "completed",
+    "task_id": "task-3e49356eb2ff46fa9f6af9d756035875",
+    "updated_at": "2026-11-19T00:39:01.384Z"
+  },
+  "layer1_events": [
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"input\":[{\"content\":[{\"text\":\"{\\\"contracts\\\":{\\\"sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"readmit_if_no_uncertain_effect\\\",\\\"unknown_commit_possible\\\":false},\\\"failures\\\":[{\\\"code\\\":\\\"insufficient_input\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"The supplied design does not contain enough information to review the requested criteria.\\\",\\\"retry\\\":\\\"readmission\\\"},{\\\"code\\\":\\\"evaluation_failed\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"The bounded review could not be completed.\\\",\\\"retry\\\":\\\"readmission\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/design.review\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"criteria\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"description\\\":{\\\"maxLength\\\":2048,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"id\\\",\\\"description\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"design\\\":{\\\"maxLength\\\":32000,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"design\\\",\\\"criteria\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"workspace.read\\\"],\\\"non_guarantees\\\":[\\\"Does not prove correctness or inspect resources not supplied in the request.\\\"],\\\"outcome\\\":\\\"Return criterion coverage and actionable findings grounded in the supplied design.\\\",\\\"output_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"coverage\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"criterion_id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"disposition\\\":{\\\"enum\\\":[\\\"reviewed\\\",\\\"insufficient_input\\\"]},\\\"evidence\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"criterion_id\\\",\\\"disposition\\\",\\\"evidence\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"findings\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"criterion_id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"observation\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"recommendation\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"severity\\\":{\\\"enum\\\":[\\\"info\\\",\\\"warning\\\",\\\"error\\\"]}},\\\"required\\\":[\\\"criterion_id\\\",\\\"severity\\\",\\\"observation\\\",\\\"recommendation\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":128,\\\"type\\\":\\\"array\\\"}},\\\"required\\\":[\\\"findings\\\",\\\"coverage\\\"],\\\"type\\\":\\\"object\\\"},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Every supplied criterion has a coverage entry; findings cite supplied design evidence.\\\",\\\"evidence_required\\\":[\\\"coverage and supporting observations\\\"],\\\"id\\\":\\\"criterion-coverage\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"Design text and criteria must be supplied.\\\",\\\"kind\\\":\\\"input_schema\\\"},{\\\"description\\\":\\\"A bounded semantic assessment is required.\\\",\\\"kind\\\":\\\"budget_minimum\\\",\\\"minimum\\\":1,\\\"resource\\\":\\\"model_calls\\\"}],\\\"title\\\":\\\"Review supplied design against explicit criteria\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"reconcile_before_retry\\\",\\\"unknown_commit_possible\\\":true},\\\"failures\\\":[{\\\"code\\\":\\\"attempt_interrupted\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"A known interruption prevented producing a disposition.\\\",\\\"retry\\\":\\\"readmission\\\"},{\\\"code\\\":\\\"effect_unknown\\\",\\\"effect_disposition\\\":\\\"unknown_possible\\\",\\\"meaning\\\":\\\"The disposition of an authorized operation is not known.\\\",\\\"retry\\\":\\\"reconcile\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/task.attempt\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"context\\\":{\\\"maxLength\\\":32000,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"objective\\\":{\\\"maxLength\\\":16000,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"requirements\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"acceptance\\\":{\\\"items\\\":{\\\"maxLength\\\":2048,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"description\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"id\\\",\\\"description\\\",\\\"acceptance\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"}},\\\"required\\\":[\\\"objective\\\",\\\"requirements\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"workspace.read\\\",\\\"workspace.write\\\",\\\"external.read\\\"],\\\"non_guarantees\\\":[\\\"Does not claim domain expertise or guarantee that the objective is achievable.\\\",\\\"A result of unable does not fulfill the requested objective.\\\"],\\\"outcome\\\":\\\"Attempt the authorized objective within its limits and report fulfilled or unable with requirement-level evidence.\\\",\\\"output_schema\\\":{\\\"oneOf\\\":[{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"disposition\\\":{\\\"const\\\":\\\"fulfilled\\\"},\\\"requirement_evidence\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"evidence\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"id\\\",\\\"evidence\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"summary\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"disposition\\\",\\\"summary\\\",\\\"requirement_evidence\\\"],\\\"type\\\":\\\"object\\\"},{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"disposition\\\":{\\\"const\\\":\\\"unable\\\"},\\\"reason\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"unsatisfied_requirements\\\":{\\\"items\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\",\\\"uniqueItems\\\":true}},\\\"required\\\":[\\\"disposition\\\",\\\"reason\\\",\\\"unsatisfied_requirements\\\"],\\\"type\\\":\\\"object\\\"}]},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Report fulfilled only with evidence for each mandatory requested outcome; otherwise report unable.\\\",\\\"evidence_required\\\":[\\\"coverage and supporting observations\\\"],\\\"id\\\":\\\"honest-disposition\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"An objective and explicit acceptance requirements are supplied.\\\",\\\"kind\\\":\\\"input_schema\\\"}],\\\"title\\\":\\\"Bounded attempt at a supplied objective\\\",\\\"version\\\":\\\"1.0.0\\\"}},\\\"instruction\\\":\\\"Propose a small acyclic plan using only supplied contracts. Prefer the request contract when it directly expresses the needed outcome; decompose distinct outcomes where necessary. input_json is a JSON string conforming to the selected contract. Assess whether approved LOCAL bindings and resources can fulfill each step. A generic attempt does not assert domain expertise or missing resource access. Do not treat peer claims as permission. Preserve every requirement ID. Unknown access or knowledge is unknown, not sufficient.\\\",\\\"local_bindings\\\":[{\\\"allowed_effects\\\":[\\\"workspace.read\\\"],\\\"approved_resources\\\":[{\\\"actions\\\":[\\\"read\\\"],\\\"resource\\\":\\\"workspace:self\\\"}],\\\"contract\\\":{\\\"digest\\\":\\\"sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce\\\",\\\"id\\\":\\\"https://contracts.example.net/capabilities/design.review\\\",\\\"version\\\":\\\"1.0.0\\\"}},{\\\"allowed_effects\\\":[\\\"workspace.read\\\",\\\"workspace.write\\\"],\\\"approved_resources\\\":[{\\\"actions\\\":[\\\"read\\\",\\\"create\\\",\\\"update\\\"],\\\"resource\\\":\\\"workspace:self\\\"}],\\\"contract\\\":{\\\"digest\\\":\\\"sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23\\\",\\\"id\\\":\\\"https://contracts.example.net/capabilities/task.attempt\\\",\\\"version\\\":\\\"1.0.0\\\"}}],\\\"peer_offers\\\":[{\\\"catalog_view\\\":\\\"view-084a4143422211950c4760ebc0fc57db\\\",\\\"contract\\\":{\\\"digest\\\":\\\"sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23\\\",\\\"id\\\":\\\"https://contracts.example.net/capabilities/task.attempt\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"definition\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"reconcile_before_retry\\\",\\\"unknown_commit_possible\\\":true},\\\"failures\\\":[{\\\"code\\\":\\\"attempt_interrupted\\\",\\\"effect_disposition\\\""
+      },
+      "event_id": "event-2a145243310a41f88796b0e2f5835f85",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 17279,
+        "input_digest": "sha256:8c11402bd7817d38924d13160e49adf153aa657dedfcab2aa087221d0c26a284",
+        "operation_id": "model-80a22d27d50241869b960b18cc652d49",
+        "output_bytes": 0,
+        "output_digest": null,
+        "payload_truncated": true,
+        "phase": "started",
+        "purpose": "planning",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 22295,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 59326
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        }
+      },
+      "redacted": true,
+      "sequence": 1,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-3e49356eb2ff46fa9f6af9d756035875",
+      "timestamp": "2026-11-19T00:38:13.979Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"output\":{\"steps\":[{\"assessment_summary\":\"The request contract directly expresses the requested outcome, and an approved local binding exists for this contract with workspace read/write effects. The step requires only a bounded explanatory attempt using supplied context and does not require external access or peer authority. Fulfillment still depends on the child output providing evidence for the preserved requirement ID and honestly reporting inability if it cannot support the explanation.\",\"contract_digest\":\"sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23\",\"depends_on\":[],\"input_json\":\"{\\\"objective\\\":\\\"Explain how a LASA parent retains responsibility while a child performs bounded work.\\\",\\\"context\\\":\\\"Use the supplied LASA planning context: child work is bounded by explicit contracts, input schemas, preconditions, allowed effects/resources, budgets, and postconditions. Peer offers are not permission by themselves; only approved local bindings/resources authorize execution. The parent must assess suitability, preserve requirements, verify outputs against acceptance/postconditions, and report inability or uncertainty honestly rather than treating child claims as automatically sufficient.\\\",\\\"requirements\\\":[{\\\"id\\\":\\\"requirement-objective\\\",\\\"description\\\":\\\"Explain how a LASA parent retains responsibility while a child performs bounded work.\\\",\\\"acceptance\\\":[\\\"Fulfill the stated objective with supporting evidence; report inability honestly.\\\"]}]}\",\"local_assessment\":\"sufficient\",\"requirement_ids\":[\"requirement-objective\"],\"step_id\":\"step-1-explain-parent-responsibility\"}]}}"
+      },
+      "event_id": "event-00e236de26e44d578cdadeeac7051555",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 57,
+        "input_digest": "sha256:7f34d54d4bba81c74dcfd97253013b6d818f74914546bd6ec34c9c4c144cd98a",
+        "operation_id": "model-80a22d27d50241869b960b18cc652d49",
+        "output_bytes": 1617,
+        "output_digest": "sha256:c19693a8c763204bde5fe151178425213ec86a2a5e8b3862a346d274c4eb9f6b",
+        "payload_truncated": false,
+        "phase": "finished",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 4667,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 15760
+        }
+      },
+      "redacted": true,
+      "sequence": 2,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-3e49356eb2ff46fa9f6af9d756035875",
+      "timestamp": "2026-11-19T00:38:29.759Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-ae671ccaa13144d4a94bee126c10df14",
+      "kind": "routing",
+      "payload": {
+        "assessment_summary": "The request contract directly expresses the requested outcome, and an approved local binding exists for this contract with workspace read/write effects. The step requires only a bounded explanatory attempt using supplied context and does not require external access or peer authority. Fulfillment still depends on the child output providing evidence for the preserved requirement ID and honestly reporting inability if it cannot support the explanation.",
+        "authorization_decision_id": "authority-e3eddbd81861a90ba9df80a649cfb2dd",
+        "catalog_revision": "catalog-6aed7b4bca4604c1430e16713f0b3c54",
+        "contract": {
+          "digest": "sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23",
+          "id": "https://contracts.example.net/capabilities/task.attempt",
+          "version": "1.0.0"
+        },
+        "decision_reason": "Both suitable; configured preference selects peer",
+        "local_assessment": "sufficient",
+        "offer_revision": "offer-970b13b48f8c452fd88f3482efb4537d",
+        "peer_assessment": "matched",
+        "policy": {
+          "preferred_executor": "peer",
+          "unclaimed_peer_fallback": "attempt"
+        },
+        "requirement_ids": [
+          "requirement-objective"
+        ],
+        "selected_executor": "peer",
+        "step_id": "step-1-explain-parent-responsibility"
+      },
+      "redacted": true,
+      "sequence": 3,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-3e49356eb2ff46fa9f6af9d756035875",
+      "timestamp": "2026-11-19T00:38:29.972Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"input\":[{\"content\":[{\"text\":\"{\\\"instruction\\\":\\\"Independently assess semantic requirement coverage. Reject a step that merely repeats/reviews the request text when the requirement is to retrieve missing external facts. Matching IDs and JSON schemas do not prove outcome coverage. Each declared step must actually target its assigned outcome. An explicitly allowed bounded fallback is an attempt, not a guarantee, and is permitted if it targets the correct outcome and later verification can report inability honestly. Authority, capacity, and actual routing are checked separately by controllers. Return passed=false for unsupported or mismatched decomposition.\\\",\\\"original_contract\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"reconcile_before_retry\\\",\\\"unknown_commit_possible\\\":true},\\\"failures\\\":[{\\\"code\\\":\\\"attempt_interrupted\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"A known interruption prevented producing a disposition.\\\",\\\"retry\\\":\\\"readmission\\\"},{\\\"code\\\":\\\"effect_unknown\\\",\\\"effect_disposition\\\":\\\"unknown_possible\\\",\\\"meaning\\\":\\\"The disposition of an authorized operation is not known.\\\",\\\"retry\\\":\\\"reconcile\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/task.attempt\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"context\\\":{\\\"maxLength\\\":32000,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"objective\\\":{\\\"maxLength\\\":16000,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"requirements\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"acceptance\\\":{\\\"items\\\":{\\\"maxLength\\\":2048,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"description\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"id\\\",\\\"description\\\",\\\"acceptance\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"}},\\\"required\\\":[\\\"objective\\\",\\\"requirements\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"workspace.read\\\",\\\"workspace.write\\\",\\\"external.read\\\"],\\\"non_guarantees\\\":[\\\"Does not claim domain expertise or guarantee that the objective is achievable.\\\",\\\"A result of unable does not fulfill the requested objective.\\\"],\\\"outcome\\\":\\\"Attempt the authorized objective within its limits and report fulfilled or unable with requirement-level evidence.\\\",\\\"output_schema\\\":{\\\"oneOf\\\":[{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"disposition\\\":{\\\"const\\\":\\\"fulfilled\\\"},\\\"requirement_evidence\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"evidence\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"id\\\",\\\"evidence\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"summary\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"disposition\\\",\\\"summary\\\",\\\"requirement_evidence\\\"],\\\"type\\\":\\\"object\\\"},{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"disposition\\\":{\\\"const\\\":\\\"unable\\\"},\\\"reason\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"unsatisfied_requirements\\\":{\\\"items\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\",\\\"uniqueItems\\\":true}},\\\"required\\\":[\\\"disposition\\\",\\\"reason\\\",\\\"unsatisfied_requirements\\\"],\\\"type\\\":\\\"object\\\"}]},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Report fulfilled only with evidence for each mandatory requested outcome; otherwise report unable.\\\",\\\"evidence_required\\\":[\\\"coverage and supporting observations\\\"],\\\"id\\\":\\\"honest-disposition\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"An objective and explicit acceptance requirements are supplied.\\\",\\\"kind\\\":\\\"input_schema\\\"}],\\\"title\\\":\\\"Bounded attempt at a supplied objective\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"original_request\\\":{\\\"objective\\\":\\\"Explain how a LASA parent retains responsibility while a child performs bounded work.\\\",\\\"requirements\\\":[{\\\"acceptance\\\":[\\\"Fulfill the stated objective with supporting evidence; report inability honestly.\\\"],\\\"description\\\":\\\"Explain how a LASA parent retains responsibility while a child performs bounded work.\\\",\\\"id\\\":\\\"requirement-objective\\\"}]},\\\"requirements\\\":[{\\\"acceptance\\\":[{\\\"criterion\\\":\\\"Fulfill the stated objective with supporting evidence; report inability honestly.\\\",\\\"evidence_required\\\":[\\\"outcome evidence\\\"],\\\"id\\\":\\\"requirement-objective-acceptance\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"description\\\":\\\"Explain how a LASA parent retains responsibility while a child performs bounded work.\\\",\\\"mandatory\\\":true,\\\"requirement_id\\\":\\\"requirement-objective\\\",\\\"source\\\":\\\"caller\\\"}],\\\"steps\\\":[{\\\"bounded_fallback\\\":false,\\\"contract\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"reconcile_before_retry\\\",\\\"unknown_commit_possible\\\":true},\\\"failures\\\":[{\\\"code\\\":\\\"attempt_interrupted\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"A known interruption prevented producing a disposition.\\\",\\\"retry\\\":\\\"readmission\\\"},{\\\"code\\\":\\\"effect_unknown\\\",\\\"effect_disposition\\\":\\\"unknown_possible\\\",\\\"meaning\\\":\\\"The disposition of an authorized operation is not known.\\\",\\\"retry\\\":\\\"reconcile\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/task.attempt\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"context\\\":{\\\"maxLength\\\":32000,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"objective\\\":{\\\"maxLength\\\":16000,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"requirements\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"acceptance\\\":{\\\"items\\\":{\\\"maxLength\\\":2048,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"description\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"id\\\",\\\"description\\\",\\\"acceptance\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"}},\\\"required\\\":[\\\"objective\\\",\\\"requirements\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"workspace.read\\\",\\\"workspace.write\\\",\\\"external.read\\\"],\\\"non_guarantees\\\":[\\\"Does not claim domain expertise or guarantee that the objective is achievable.\\\",\\\"A result of unable does not fulfill the requested objective.\\\"],\\\"outcome\\\":\\\"Attempt the authorized objective within its limits and report fulfilled or unable with requirement-level evidence.\\\",\\\"output_schema\\\":{\\\"oneOf\\\":[{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"disposition\\\":{\\\"const\\\":\\\"fulfilled\\\"},\\\"requirement_evidence\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"evidence\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"id\\\",\\\"evidence\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"summary\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"disposition\\\",\\\"summary\\\",\\\"requirement_evidence\\\"],\\\"type\\\":\\\"object\\\"},{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"disposition\\\":{\\\"const\\\":\\\"unable\\\"},\\\"reason\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"unsatisfied_requirements\\\":{\\\"items\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\",\\\"uniqueItems\\\":true}},\\\"required\\\":[\\\"disposition\\\",\\\"reason\\\",\\\"unsatisfied_requirements\\\"],\\\"type\\\":\\\"object\\\"}]},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Report fulfilled only with evidence for each mandatory requested outcome; otherwise report unable.\\\",\\\"evidence_required\\\":[\\\"coverage and supporting observations\\\"],\\\"id\\\":\\\"honest-disposition\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"An objective and explicit acceptance requirements are supplied.\\\",\\\"kind\\\":\\\"input_schema\\\"}],\\\"title\\\":\\\"Bounded attempt at a supplied objective\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"input\\\":{\\\"context\\\":\\\"Use the supplied LASA planning context: child work is bounded by explicit contracts, input schemas, preconditions, allowed effects/resources, budgets, and postconditions. Peer offers are no"
+      },
+      "event_id": "event-4751b063787a472485cac252ea792ab6",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 9627,
+        "input_digest": "sha256:eec5864de13cb13adb67deea6fec7a0e897b93aadc253b7eafef03ee93a54558",
+        "operation_id": "model-82ccf0cc55a4429bb64e1dedc51d386b",
+        "output_bytes": 0,
+        "output_digest": null,
+        "payload_truncated": true,
+        "phase": "started",
+        "purpose": "planning",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 14153,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 43227
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        }
+      },
+      "redacted": true,
+      "sequence": 4,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-3e49356eb2ff46fa9f6af9d756035875",
+      "timestamp": "2026-11-19T00:38:30.021Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"output\":{\"passed\":true,\"reason\":\"The single step directly targets the mandatory requirement by invoking a bounded attempt to explain how a LASA parent retains responsibility while a child performs bounded work, using supplied LASA planning context that contains the needed substantive points: bounded child contracts, local authorization, parent suitability assessment, requirement preservation, output verification, and honest uncertainty/inability reporting. It is not merely a schema/ID match or a request restatement; the step input provides relevant context and asks for the required explanatory outcome with requirement-level evidence. Actual executor authority, routing, and capacity are separate controller checks.\"}}"
+      },
+      "event_id": "event-8a080611d94c4f3692d115a6cb110e25",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 57,
+        "input_digest": "sha256:b1431c108c0f806231b441de4230c77b8749d4525821ce24859100eea487efd5",
+        "operation_id": "model-82ccf0cc55a4429bb64e1dedc51d386b",
+        "output_bytes": 716,
+        "output_digest": "sha256:8f4b4d95bb2496a6e6ef78722a0453a2cdcb38d1cf0adf9295419cea7e734123",
+        "payload_truncated": false,
+        "phase": "finished",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 2243,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 4200
+        }
+      },
+      "redacted": true,
+      "sequence": 5,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-3e49356eb2ff46fa9f6af9d756035875",
+      "timestamp": "2026-11-19T00:38:34.229Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"request\":{\"authorization_ref\":\"default\",\"delegation\":{\"allocation\":{\"budget\":{\"artifact_bytes\":128000,\"delegations\":1,\"input_bytes\":127650,\"model_calls\":8,\"model_tokens\":293090,\"output_bytes\":28000,\"tool_calls\":12,\"wall_time_ms\":190040},\"deadline\":\"2026-11-19T00:40:43.198Z\",\"max_hops\":1},\"ancestry\":[\"https://localhost:8443/lasa\"],\"authority_ceiling\":{\"allowed_delegated_contracts\":[{\"digest\":\"sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce\",\"id\":\"https://contracts.example.net/capabilities/design.review\",\"version\":\"1.0.0\"},{\"digest\":\"sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23\",\"id\":\"https://contracts.example.net/capabilities/task.attempt\",\"version\":\"1.0.0\"}],\"allowed_disclosure_services\":[\"https://192.168.0.188/lasa\"],\"allowed_effects\":[\"workspace.read\",\"workspace.write\"],\"content_diagnostics_allowed\":true,\"resources\":[{\"actions\":[\"create\",\"read\",\"update\"],\"resource\":\"workspace:self\"}]},\"delegation_id\":\"delegation-32c7c4d0469043b7bb313fc7d521384f\",\"disclosed_artifacts\":[],\"parent_service_id\":\"https://localhost:8443/lasa\",\"parent_task_id\":\"task-3e49356eb2ff46fa9f6af9d756035875\",\"remaining_hops\":1,\"request_digest\":\"sha256:ddd104e9764f851667556598d1d0b3c00d627ca0630ed09688274364444a8c65\",\"requirement_ids\":[\"requirement-objective\"],\"root_task_id\":\"task-3e49356eb2ff46fa9f6af9d756035875\",\"step_id\":\"step-1-explain-parent-responsibility\"},\"diagnostics\":\"content\",\"input\":{\"context\":\"Use the supplied LASA planning context: child work is bounded by explicit contracts, input schemas, preconditions, allowed effects/resources, budgets, and postconditions. Peer offers are not permission by themselves; only approved local bindings/resources authorize execution. The parent must assess suitability, preserve requirements, verify outputs against acceptance/postconditions, and report inability or uncertainty honestly rather than treating child claims as automatically sufficient.\",\"objective\":\"Explain how a LASA parent retains responsibility while a child performs bounded work.\",\"requirements\":[{\"acceptance\":[\"Fulfill the stated objective with supporting evidence; report inability honestly.\"],\"description\":\"Explain how a LASA parent retains responsibility while a child performs bounded work.\",\"id\":\"requirement-objective\"}]},\"operation_id\":\"delegation-32c7c4d0469043b7bb313fc7d521384f-task\",\"requested_limits\":{\"budget\":{\"artifact_bytes\":128000,\"delegations\":1,\"input_bytes\":127650,\"model_calls\":8,\"model_tokens\":293090,\"output_bytes\":28000,\"tool_calls\":12,\"wall_time_ms\":190040},\"deadline\":\"2026-11-19T00:40:43.198Z\",\"max_hops\":1},\"selection\":{\"catalog_view\":\"view-084a4143422211950c4760ebc0fc57db\",\"contract\":{\"digest\":\"sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23\",\"id\":\"https://contracts.example.net/capabilities/task.attempt\",\"version\":\"1.0.0\"},\"offer_id\":\"offer-84644d0b985505668cc412af52f2330f\",\"offer_revision\":\"offer-970b13b48f8c452fd88f3482efb4537d\"}},\"service_id\":\"https://192.168.0.188/lasa\"}"
+      },
+      "event_id": "event-3350328d452a405b9ed360f763cff52d",
+      "kind": "call",
+      "payload": {
+        "call_type": "child",
+        "contract": {
+          "digest": "sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23",
+          "id": "https://contracts.example.net/capabilities/task.attempt",
+          "version": "1.0.0"
+        },
+        "input_bytes": 2947,
+        "input_digest": "sha256:c5292d76c501de6b072a8e6a803016630090a6eeadbb8fd32be978f9536f1909",
+        "operation_id": "delegation-32c7c4d0469043b7bb313fc7d521384f",
+        "output_bytes": 0,
+        "output_digest": null,
+        "payload_truncated": false,
+        "peer_service_id": "https://192.168.0.188/lasa",
+        "phase": "started",
+        "reserved": {
+          "artifact_bytes": 128000,
+          "delegations": 2,
+          "input_bytes": 127650,
+          "model_calls": 8,
+          "model_tokens": 293090,
+          "output_bytes": 28000,
+          "tool_calls": 12,
+          "wall_time_ms": 190040
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        }
+      },
+      "redacted": true,
+      "sequence": 6,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-3e49356eb2ff46fa9f6af9d756035875",
+      "timestamp": "2026-11-19T00:38:34.488Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"result\":{\"artifacts\":[],\"contract\":{\"digest\":\"sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23\",\"id\":\"https://contracts.example.net/capabilities/task.attempt\",\"version\":\"1.0.0\"},\"effect_disposition\":\"none\",\"evidence\":[{\"artifact_ids\":[],\"criterion_id\":\"honest-disposition\",\"disposition\":\"passed\",\"summary\":\"The response directly explains the parent's retained responsibility and includes requirement-level evidence for the single mandatory objective.\"}],\"output\":{\"disposition\":\"fulfilled\",\"requirement_evidence\":[{\"evidence\":\"Explained that a LASA parent does not delegate authority or accountability merely because a child performs work. The parent binds the child to explicit contracts, schemas, preconditions, allowed resources/effects, budgets, and postconditions; treats child and peer outputs as untrusted until checked; verifies results against acceptance criteria; reconciles uncertain effects before retrying; and reports inability or uncertainty honestly when evidence is missing.\",\"id\":\"requirement-objective\"}],\"summary\":\"A LASA parent retains responsibility by controlling authorization, scope, and verification. The child may execute bounded work, but the parent remains accountable for deciding whether the work is suitable, whether the child was actually authorized through approved local bindings/resources, whether outputs satisfy the contract, and whether any side effects are known. Peer offers or child claims are evidence to evaluate, not permission or proof by themselves. The parent must preserve the original requirements, verify postconditions before claiming success, reconcile unknown effects when needed, and report `unable` or uncertainty instead of treating bounded delegation as a transfer of responsibility.\"},\"request_digest\":\"sha256:ddd104e9764f851667556598d1d0b3c00d627ca0630ed09688274364444a8c65\",\"usage\":{\"artifact_bytes\":0,\"delegations\":0,\"input_bytes\":856,\"model_calls\":2,\"model_tokens\":9774,\"output_bytes\":1280,\"tool_calls\":0,\"wall_time_ms\":13696}},\"service_id\":\"https://192.168.0.188/lasa\"}"
+      },
+      "event_id": "event-6be70d76498f4167af31d9364e617499",
+      "kind": "call",
+      "payload": {
+        "call_type": "child",
+        "child_task_id": "task-eae0e59a63b54ccda65ba659dc3cc93f",
+        "contract": {
+          "digest": "sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23",
+          "id": "https://contracts.example.net/capabilities/task.attempt",
+          "version": "1.0.0"
+        },
+        "input_bytes": 2947,
+        "input_digest": "sha256:c5292d76c501de6b072a8e6a803016630090a6eeadbb8fd32be978f9536f1909",
+        "operation_id": "delegation-32c7c4d0469043b7bb313fc7d521384f",
+        "output_bytes": 2005,
+        "output_digest": "sha256:1649764b8faa49aba5ca23921781a681048abfce590fa68bd96e90dfcb781c71",
+        "payload_truncated": false,
+        "peer_service_id": "https://192.168.0.188/lasa",
+        "phase": "finished",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 1,
+          "input_bytes": 856,
+          "model_calls": 2,
+          "model_tokens": 9774,
+          "output_bytes": 1280,
+          "tool_calls": 0,
+          "wall_time_ms": 13696
+        }
+      },
+      "redacted": true,
+      "sequence": 7,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-3e49356eb2ff46fa9f6af9d756035875",
+      "timestamp": "2026-11-19T00:38:50.864Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"input\":[{\"content\":[{\"text\":\"{\\\"candidate_output\\\":{\\\"disposition\\\":\\\"fulfilled\\\",\\\"requirement_evidence\\\":[{\\\"evidence\\\":\\\"Explained that a LASA parent does not delegate authority or accountability merely because a child performs work. The parent binds the child to explicit contracts, schemas, preconditions, allowed resources/effects, budgets, and postconditions; treats child and peer outputs as untrusted until checked; verifies results against acceptance criteria; reconciles uncertain effects before retrying; and reports inability or uncertainty honestly when evidence is missing.\\\",\\\"id\\\":\\\"requirement-objective\\\"}],\\\"summary\\\":\\\"A LASA parent retains responsibility by controlling authorization, scope, and verification. The child may execute bounded work, but the parent remains accountable for deciding whether the work is suitable, whether the child was actually authorized through approved local bindings/resources, whether outputs satisfy the contract, and whether any side effects are known. Peer offers or child claims are evidence to evaluate, not permission or proof by themselves. The parent must preserve the original requirements, verify postconditions before claiming success, reconcile unknown effects when needed, and report `unable` or uncertainty instead of treating bounded delegation as a transfer of responsibility.\\\"},\\\"claimed_evidence\\\":[{\\\"artifact_ids\\\":[],\\\"criterion_id\\\":\\\"honest-disposition\\\",\\\"disposition\\\":\\\"passed\\\",\\\"summary\\\":\\\"The response directly explains the parent's retained responsibility and includes requirement-level evidence for the single mandatory objective.\\\"}],\\\"contract\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"reconcile_before_retry\\\",\\\"unknown_commit_possible\\\":true},\\\"failures\\\":[{\\\"code\\\":\\\"attempt_interrupted\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"A known interruption prevented producing a disposition.\\\",\\\"retry\\\":\\\"readmission\\\"},{\\\"code\\\":\\\"effect_unknown\\\",\\\"effect_disposition\\\":\\\"unknown_possible\\\",\\\"meaning\\\":\\\"The disposition of an authorized operation is not known.\\\",\\\"retry\\\":\\\"reconcile\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/task.attempt\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"context\\\":{\\\"maxLength\\\":32000,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"objective\\\":{\\\"maxLength\\\":16000,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"requirements\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"acceptance\\\":{\\\"items\\\":{\\\"maxLength\\\":2048,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"description\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"id\\\",\\\"description\\\",\\\"acceptance\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"}},\\\"required\\\":[\\\"objective\\\",\\\"requirements\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"workspace.read\\\",\\\"workspace.write\\\",\\\"external.read\\\"],\\\"non_guarantees\\\":[\\\"Does not claim domain expertise or guarantee that the objective is achievable.\\\",\\\"A result of unable does not fulfill the requested objective.\\\"],\\\"outcome\\\":\\\"Attempt the authorized objective within its limits and report fulfilled or unable with requirement-level evidence.\\\",\\\"output_schema\\\":{\\\"oneOf\\\":[{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"disposition\\\":{\\\"const\\\":\\\"fulfilled\\\"},\\\"requirement_evidence\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"evidence\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"id\\\",\\\"evidence\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"summary\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"disposition\\\",\\\"summary\\\",\\\"requirement_evidence\\\"],\\\"type\\\":\\\"object\\\"},{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"disposition\\\":{\\\"const\\\":\\\"unable\\\"},\\\"reason\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"unsatisfied_requirements\\\":{\\\"items\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\",\\\"uniqueItems\\\":true}},\\\"required\\\":[\\\"disposition\\\",\\\"reason\\\",\\\"unsatisfied_requirements\\\"],\\\"type\\\":\\\"object\\\"}]},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Report fulfilled only with evidence for each mandatory requested outcome; otherwise report unable.\\\",\\\"evidence_required\\\":[\\\"coverage and supporting observations\\\"],\\\"id\\\":\\\"honest-disposition\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"An objective and explicit acceptance requirements are supplied.\\\",\\\"kind\\\":\\\"input_schema\\\"}],\\\"title\\\":\\\"Bounded attempt at a supplied objective\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"input\\\":{\\\"context\\\":\\\"Use the supplied LASA planning context: child work is bounded by explicit contracts, input schemas, preconditions, allowed effects/resources, budgets, and postconditions. Peer offers are not permission by themselves; only approved local bindings/resources authorize execution. The parent must assess suitability, preserve requirements, verify outputs against acceptance/postconditions, and report inability or uncertainty honestly rather than treating child claims as automatically sufficient.\\\",\\\"objective\\\":\\\"Explain how a LASA parent retains responsibility while a child performs bounded work.\\\",\\\"requirements\\\":[{\\\"acceptance\\\":[\\\"Fulfill the stated objective with supporting evidence; report inability honestly.\\\"],\\\"description\\\":\\\"Explain how a LASA parent retains responsibility while a child performs bounded work.\\\",\\\"id\\\":\\\"requirement-objective\\\"}]},\\\"instruction\\\":\\\"Independently check whether the supplied evidence supports the output and required postconditions. A schema-valid answer or a peer saying complete is insufficient. A fulfilled attempt must satisfy every requirement; unable is an honest attempt outcome but cannot fulfill an actual requested subtask. Reject unsupported factual claims, missing criterion coverage, inadequate evidence, or unresolved effects. State uncertainty as passed=false.\\\",\\\"original_requirements\\\":[],\\\"trusted_execution_evidence\\\":{\\\"artifacts\\\":[],\\\"operations\\\":[],\\\"service_id\\\":\\\"https://localhost:8443/lasa\\\",\\\"source\\\":\\\"receiver_durable_store\\\",\\\"step_id\\\":\\\"step-1-explain-parent-responsibility\\\",\\\"task_id\\\":\\\"task-3e49356eb2ff46fa9f6af9d756035875\\\",\\\"truncated\\\":false}}\",\"type\":\"input_text\"}],\"role\":\"user\"}],\"purpose\":\"verification\"}"
+      },
+      "event_id": "event-7a30eecb9c374eb1be92c2719c0c6fe8",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 6560,
+        "input_digest": "sha256:18f6e9ab42a0c01af372ea88ed272ee4de1fe75afda7f22e9f4f8ae9a33906c4",
+        "operation_id": "model-33421b10fc6e4a08adb62f25260d0c51",
+        "output_bytes": 0,
+        "output_digest": null,
+        "payload_truncated": false,
+        "phase": "started",
+        "purpose": "verification",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 11090,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 60000
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        }
+      },
+      "redacted": true,
+      "sequence": 8,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-3e49356eb2ff46fa9f6af9d756035875",
+      "timestamp": "2026-11-19T00:38:50.939Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"output\":{\"passed\":true,\"reason\":\"The candidate output is schema-consistent for a fulfilled attempt and addresses the supplied objective. It explains that bounded child work does not transfer authority or accountability, identifies the parent's duties to define contracts/scope/resources, preserve requirements, treat child/peer claims as untrusted evidence, verify outputs/postconditions, reconcile uncertain effects, and report inability or uncertainty honestly. This provides supporting evidence for the sole requirement and satisfies the honest-disposition postcondition. No unresolved effects are indicated in the supplied execution evidence.\"}}"
+      },
+      "event_id": "event-d5d5fd59c3dc4ded9ae43273eb41d24b",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 57,
+        "input_digest": "sha256:d5e30199d371f3b3302d2cafe1bbf7dc6220f92213fb2be3a19c8f78cc452644",
+        "operation_id": "model-33421b10fc6e4a08adb62f25260d0c51",
+        "output_bytes": 640,
+        "output_digest": "sha256:1ce495f783ac0e960eb954c898538e3d2e43eb9defcdf6e85593ae24f3441f8f",
+        "payload_truncated": false,
+        "phase": "finished",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 1522,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 5815
+        }
+      },
+      "redacted": true,
+      "sequence": 9,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-3e49356eb2ff46fa9f6af9d756035875",
+      "timestamp": "2026-11-19T00:38:56.761Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-38f4e6cf7ab74c7a9494ccb303ae56db",
+      "kind": "verification",
+      "payload": {
+        "checks": [
+          {
+            "artifact_ids": [],
+            "criterion_id": "honest-disposition",
+            "disposition": "passed",
+            "summary": "The candidate output is schema-consistent for a fulfilled attempt and addresses the supplied objective. It explains that bounded child work does not transfer authority or accountability, identifies the parent's duties to define contracts/scope/resources, preserve requirements, treat child/peer claims as untrusted evidence, verify outputs/postconditions, reconcile uncertain effects, and report inability or uncertainty honestly. This provides supporting evidence for the sole requirement and satisfies the honest-disposition postcondition. No unresolved effects are indicated in the supplied execution evidence."
+          }
+        ],
+        "contract": {
+          "digest": "sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23",
+          "id": "https://contracts.example.net/capabilities/task.attempt",
+          "version": "1.0.0"
+        },
+        "release": "accepted",
+        "request_digest": "sha256:5af15cb1a492ebddd99f5818aa65ac588978a008bb7896cec943ace34713531b",
+        "step_id": "semantic-verification"
+      },
+      "redacted": true,
+      "sequence": 10,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-3e49356eb2ff46fa9f6af9d756035875",
+      "timestamp": "2026-11-19T00:38:56.774Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-44fcb28ffc1e4d1698f20381e4b9db65",
+      "kind": "verification",
+      "payload": {
+        "checks": [
+          {
+            "artifact_ids": [],
+            "criterion_id": "honest-disposition",
+            "disposition": "passed",
+            "summary": "The response directly explains the parent's retained responsibility and includes requirement-level evidence for the single mandatory objective."
+          }
+        ],
+        "contract": {
+          "digest": "sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23",
+          "id": "https://contracts.example.net/capabilities/task.attempt",
+          "version": "1.0.0"
+        },
+        "release": "accepted",
+        "request_digest": "sha256:ddd104e9764f851667556598d1d0b3c00d627ca0630ed09688274364444a8c65",
+        "step_id": "step-1-explain-parent-responsibility"
+      },
+      "redacted": true,
+      "sequence": 11,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-3e49356eb2ff46fa9f6af9d756035875",
+      "timestamp": "2026-11-19T00:38:56.785Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"input\":[{\"content\":[{\"text\":\"{\\\"candidate_output\\\":{\\\"disposition\\\":\\\"fulfilled\\\",\\\"requirement_evidence\\\":[{\\\"evidence\\\":\\\"Explained that a LASA parent does not delegate authority or accountability merely because a child performs work. The parent binds the child to explicit contracts, schemas, preconditions, allowed resources/effects, budgets, and postconditions; treats child and peer outputs as untrusted until checked; verifies results against acceptance criteria; reconciles uncertain effects before retrying; and reports inability or uncertainty honestly when evidence is missing.\\\",\\\"id\\\":\\\"requirement-objective\\\"}],\\\"summary\\\":\\\"A LASA parent retains responsibility by controlling authorization, scope, and verification. The child may execute bounded work, but the parent remains accountable for deciding whether the work is suitable, whether the child was actually authorized through approved local bindings/resources, whether outputs satisfy the contract, and whether any side effects are known. Peer offers or child claims are evidence to evaluate, not permission or proof by themselves. The parent must preserve the original requirements, verify postconditions before claiming success, reconcile unknown effects when needed, and report `unable` or uncertainty instead of treating bounded delegation as a transfer of responsibility.\\\"},\\\"claimed_evidence\\\":[{\\\"artifact_ids\\\":[],\\\"criterion_id\\\":\\\"honest-disposition\\\",\\\"disposition\\\":\\\"passed\\\",\\\"summary\\\":\\\"The response directly explains the parent's retained responsibility and includes requirement-level evidence for the single mandatory objective.\\\"}],\\\"contract\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"reconcile_before_retry\\\",\\\"unknown_commit_possible\\\":true},\\\"failures\\\":[{\\\"code\\\":\\\"attempt_interrupted\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"A known interruption prevented producing a disposition.\\\",\\\"retry\\\":\\\"readmission\\\"},{\\\"code\\\":\\\"effect_unknown\\\",\\\"effect_disposition\\\":\\\"unknown_possible\\\",\\\"meaning\\\":\\\"The disposition of an authorized operation is not known.\\\",\\\"retry\\\":\\\"reconcile\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/task.attempt\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"context\\\":{\\\"maxLength\\\":32000,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"objective\\\":{\\\"maxLength\\\":16000,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"requirements\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"acceptance\\\":{\\\"items\\\":{\\\"maxLength\\\":2048,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"description\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"id\\\",\\\"description\\\",\\\"acceptance\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"}},\\\"required\\\":[\\\"objective\\\",\\\"requirements\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"workspace.read\\\",\\\"workspace.write\\\",\\\"external.read\\\"],\\\"non_guarantees\\\":[\\\"Does not claim domain expertise or guarantee that the objective is achievable.\\\",\\\"A result of unable does not fulfill the requested objective.\\\"],\\\"outcome\\\":\\\"Attempt the authorized objective within its limits and report fulfilled or unable with requirement-level evidence.\\\",\\\"output_schema\\\":{\\\"oneOf\\\":[{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"disposition\\\":{\\\"const\\\":\\\"fulfilled\\\"},\\\"requirement_evidence\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"evidence\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"id\\\",\\\"evidence\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"summary\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"disposition\\\",\\\"summary\\\",\\\"requirement_evidence\\\"],\\\"type\\\":\\\"object\\\"},{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"disposition\\\":{\\\"const\\\":\\\"unable\\\"},\\\"reason\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"unsatisfied_requirements\\\":{\\\"items\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\",\\\"uniqueItems\\\":true}},\\\"required\\\":[\\\"disposition\\\",\\\"reason\\\",\\\"unsatisfied_requirements\\\"],\\\"type\\\":\\\"object\\\"}]},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Report fulfilled only with evidence for each mandatory requested outcome; otherwise report unable.\\\",\\\"evidence_required\\\":[\\\"coverage and supporting observations\\\"],\\\"id\\\":\\\"honest-disposition\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"An objective and explicit acceptance requirements are supplied.\\\",\\\"kind\\\":\\\"input_schema\\\"}],\\\"title\\\":\\\"Bounded attempt at a supplied objective\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"input\\\":{\\\"objective\\\":\\\"Explain how a LASA parent retains responsibility while a child performs bounded work.\\\",\\\"requirements\\\":[{\\\"acceptance\\\":[\\\"Fulfill the stated objective with supporting evidence; report inability honestly.\\\"],\\\"description\\\":\\\"Explain how a LASA parent retains responsibility while a child performs bounded work.\\\",\\\"id\\\":\\\"requirement-objective\\\"}]},\\\"instruction\\\":\\\"Independently check whether the supplied evidence supports the output and required postconditions. A schema-valid answer or a peer saying complete is insufficient. A fulfilled attempt must satisfy every requirement; unable is an honest attempt outcome but cannot fulfill an actual requested subtask. Reject unsupported factual claims, missing criterion coverage, inadequate evidence, or unresolved effects. State uncertainty as passed=false.\\\",\\\"original_requirements\\\":[{\\\"acceptance\\\":[{\\\"criterion\\\":\\\"Fulfill the stated objective with supporting evidence; report inability honestly.\\\",\\\"evidence_required\\\":[\\\"outcome evidence\\\"],\\\"id\\\":\\\"requirement-objective-acceptance\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"description\\\":\\\"Explain how a LASA parent retains responsibility while a child performs bounded work.\\\",\\\"mandatory\\\":true,\\\"requirement_id\\\":\\\"requirement-objective\\\",\\\"source\\\":\\\"caller\\\"}],\\\"trusted_execution_evidence\\\":{\\\"artifacts\\\":[],\\\"operations\\\":[],\\\"service_id\\\":\\\"https://localhost:8443/lasa\\\",\\\"source\\\":\\\"receiver_durable_store\\\",\\\"step_id\\\":null,\\\"task_id\\\":\\\"task-3e49356eb2ff46fa9f6af9d756035875\\\",\\\"truncated\\\":false}}\",\"type\":\"input_text\"}],\"role\":\"user\"}],\"purpose\":\"verification\"}"
+      },
+      "event_id": "event-71a5d44d961a44ad9711bfdae8de0a08",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 6446,
+        "input_digest": "sha256:88770a3cfe5eed137b3804f93a3dd73156cd3b84b3787a102bb565d2b3e5a026",
+        "operation_id": "model-184e1f485e9b4e099a205af0a39bbd89",
+        "output_bytes": 0,
+        "output_digest": null,
+        "payload_truncated": false,
+        "phase": "started",
+        "purpose": "verification",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 10976,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 60000
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        }
+      },
+      "redacted": true,
+      "sequence": 12,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-3e49356eb2ff46fa9f6af9d756035875",
+      "timestamp": "2026-11-19T00:38:56.836Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"output\":{\"passed\":true,\"reason\":\"The candidate output directly addresses the mandatory requirement: it explains that a LASA parent retains responsibility by defining and enforcing the child\u2019s bounded contract, authorization, scope, resources/effects, budgets, pre/postconditions, and verification duties. It also states that child or peer outputs remain untrusted until checked, that the parent must verify acceptance criteria and reconcile uncertain effects before retrying, and that uncertainty or inability must be reported honestly. This provides requirement-level evidence for the stated objective. No external effects or unresolved operations are indicated in the trusted execution evidence, so there is no effects concern blocking acceptance.\"}}"
+      },
+      "event_id": "event-f9ca0d259ef64065bed023edc4db9f67",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 57,
+        "input_digest": "sha256:efb67e380a0234a72c60e74f4c37903083c071d3c36f7ed1199d66f5d2861d18",
+        "operation_id": "model-184e1f485e9b4e099a205af0a39bbd89",
+        "output_bytes": 745,
+        "output_digest": "sha256:dae69c93643c871ebd0e700253b295d8d6553e29079667d2f2f3e959a57ce7fa",
+        "payload_truncated": false,
+        "phase": "finished",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 1544,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 4499
+        }
+      },
+      "redacted": true,
+      "sequence": 13,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-3e49356eb2ff46fa9f6af9d756035875",
+      "timestamp": "2026-11-19T00:39:01.343Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-60e4546d902d40e6b1326b62b0898667",
+      "kind": "verification",
+      "payload": {
+        "checks": [
+          {
+            "artifact_ids": [],
+            "criterion_id": "honest-disposition",
+            "disposition": "passed",
+            "summary": "The candidate output directly addresses the mandatory requirement: it explains that a LASA parent retains responsibility by defining and enforcing the child\u2019s bounded contract, authorization, scope, resources/effects, budgets, pre/postconditions, and verification duties. It also states that child or peer outputs remain untrusted until checked, that the parent must verify acceptance criteria and reconcile uncertain effects before retrying, and that uncertainty or inability must be reported honestly. This provides requirement-level evidence for the stated objective. No external effects or unresolved operations are indicated in the trusted execution evidence, so there is no effects concern blocking acceptance."
+          }
+        ],
+        "contract": {
+          "digest": "sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23",
+          "id": "https://contracts.example.net/capabilities/task.attempt",
+          "version": "1.0.0"
+        },
+        "release": "accepted",
+        "request_digest": "sha256:5af15cb1a492ebddd99f5818aa65ac588978a008bb7896cec943ace34713531b",
+        "step_id": "semantic-verification"
+      },
+      "redacted": true,
+      "sequence": 14,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-3e49356eb2ff46fa9f6af9d756035875",
+      "timestamp": "2026-11-19T00:39:01.360Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-52d35a517b17428c89b6bb1a97d94540",
+      "kind": "verification",
+      "payload": {
+        "checks": [
+          {
+            "artifact_ids": [],
+            "criterion_id": "honest-disposition",
+            "disposition": "passed",
+            "summary": "The response directly explains the parent's retained responsibility and includes requirement-level evidence for the single mandatory objective."
+          }
+        ],
+        "contract": {
+          "digest": "sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23",
+          "id": "https://contracts.example.net/capabilities/task.attempt",
+          "version": "1.0.0"
+        },
+        "release": "accepted",
+        "request_digest": "sha256:5af15cb1a492ebddd99f5818aa65ac588978a008bb7896cec943ace34713531b",
+        "step_id": "final-release"
+      },
+      "redacted": true,
+      "sequence": 15,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-3e49356eb2ff46fa9f6af9d756035875",
+      "timestamp": "2026-11-19T00:39:01.385Z"
+    }
+  ],
+  "children_via_layer1": [
+    {
+      "delegation_id": "delegation-32c7c4d0469043b7bb313fc7d521384f",
+      "service_id": "https://192.168.0.188/lasa",
+      "state": "completed",
+      "task_id": "task-eae0e59a63b54ccda65ba659dc3cc93f",
+      "trace": {
+        "task_id": "task-eae0e59a63b54ccda65ba659dc3cc93f",
+        "events": [
+          {
+            "causal_parent_event_id": null,
+            "event_id": "event-b6ad9b257e774f708e5bd46dbc0c4a06",
+            "kind": "routing",
+            "payload": {
+              "assessment_summary": "No peer is configured; the approved local binding is the only execution path.",
+              "authorization_decision_id": "authority-86fa83fb8d50fdc02bedfcce7c96d033",
+              "catalog_revision": null,
+              "contract": {
+                "digest": "sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23",
+                "id": "https://contracts.example.net/capabilities/task.attempt",
+                "version": "1.0.0"
+              },
+              "decision_reason": "No peer is configured; routing settings are ignored.",
+              "local_assessment": "sufficient",
+              "offer_revision": null,
+              "peer_assessment": "not_configured",
+              "policy": {
+                "preferred_executor": "local",
+                "unclaimed_peer_fallback": "reject"
+              },
+              "requirement_ids": [
+                "requirement-objective"
+              ],
+              "selected_executor": "local",
+              "step_id": "step-local"
+            },
+            "redacted": true,
+            "sequence": 1,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-eae0e59a63b54ccda65ba659dc3cc93f",
+            "timestamp": "2026-11-19T00:38:34.981Z"
+          },
+          {
+            "causal_parent_event_id": null,
+            "content": {
+              "media_type": "application/json",
+              "text": "{\"input\":[{\"content\":[{\"text\":\"<environment_context>\\n  <cwd>/workspace</cwd>\\n  <shell>bash</shell>\\n  <current_date>2026-11-19</current_date>\\n  <timezone>Etc/UTC</timezone>\\n  <filesystem><workspace_roots><root>/workspace</root></workspace_roots><permission_profile type=\\\"managed\\\"><file_system type=\\\"restricted\\\"><entry access=\\\"read\\\"><special>:root</special></entry><entry access=\\\"write\\\"><path>/workspace</path></entry><entry access=\\\"write\\\"><special>:slash_tmp</special></entry><entry access=\\\"write\\\"><special>:tmpdir</special></entry><entry access=\\\"read\\\"><path>/workspace/.git</path></entry><entry access=\\\"read\\\"><path>/workspace/.agents</path></entry><entry access=\\\"read\\\"><path>/workspace/.codex</path></entry><entry access=\\\"read\\\"><path>/workspace/.aws</path></entry></file_system></permission_profile></filesystem>\\n</environment_context>\",\"type\":\"input_text\"}],\"id\":\"msg_01a1f13d-b99d-7933-90e5-47b9dbca06ab\",\"role\":\"user\",\"type\":\"message\"},{\"content\":[{\"text\":\"{\\\"contract\\\":{\\\"digest\\\":\\\"sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23\\\",\\\"id\\\":\\\"https://contracts.example.net/capabilities/task.attempt\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"dependency_results\\\":{},\\\"input\\\":{\\\"context\\\":\\\"Use the supplied LASA planning context: child work is bounded by explicit contracts, input schemas, preconditions, allowed effects/resources, budgets, and postconditions. Peer offers are not permission by themselves; only approved local bindings/resources authorize execution. The parent must assess suitability, preserve requirements, verify outputs against acceptance/postconditions, and report inability or uncertainty honestly rather than treating child claims as automatically sufficient.\\\",\\\"objective\\\":\\\"Explain how a LASA parent retains responsibility while a child performs bounded work.\\\",\\\"requirements\\\":[{\\\"acceptance\\\":[\\\"Fulfill the stated objective with supporting evidence; report inability honestly.\\\"],\\\"description\\\":\\\"Explain how a LASA parent retains responsibility while a child performs bounded work.\\\",\\\"id\\\":\\\"requirement-objective\\\"}]},\\\"outcome_contract\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"reconcile_before_retry\\\",\\\"unknown_commit_possible\\\":true},\\\"failures\\\":[{\\\"code\\\":\\\"attempt_interrupted\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"A known interruption prevented producing a disposition.\\\",\\\"retry\\\":\\\"readmission\\\"},{\\\"code\\\":\\\"effect_unknown\\\",\\\"effect_disposition\\\":\\\"unknown_possible\\\",\\\"meaning\\\":\\\"The disposition of an authorized operation is not known.\\\",\\\"retry\\\":\\\"reconcile\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/task.attempt\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"context\\\":{\\\"maxLength\\\":32000,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"objective\\\":{\\\"maxLength\\\":16000,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"requirements\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"acceptance\\\":{\\\"items\\\":{\\\"maxLength\\\":2048,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"description\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"id\\\",\\\"description\\\",\\\"acceptance\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"}},\\\"required\\\":[\\\"objective\\\",\\\"requirements\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"workspace.read\\\",\\\"workspace.write\\\",\\\"external.read\\\"],\\\"non_guarantees\\\":[\\\"Does not claim domain expertise or guarantee that the objective is achievable.\\\",\\\"A result of unable does not fulfill the requested objective.\\\"],\\\"outcome\\\":\\\"Attempt the authorized objective within its limits and report fulfilled or unable with requirement-level evidence.\\\",\\\"output_schema\\\":{\\\"oneOf\\\":[{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"disposition\\\":{\\\"const\\\":\\\"fulfilled\\\"},\\\"requirement_evidence\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"evidence\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"id\\\",\\\"evidence\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"summary\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"disposition\\\",\\\"summary\\\",\\\"requirement_evidence\\\"],\\\"type\\\":\\\"object\\\"},{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"disposition\\\":{\\\"const\\\":\\\"unable\\\"},\\\"reason\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"unsatisfied_requirements\\\":{\\\"items\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\",\\\"uniqueItems\\\":true}},\\\"required\\\":[\\\"disposition\\\",\\\"reason\\\",\\\"unsatisfied_requirements\\\"],\\\"type\\\":\\\"object\\\"}]},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Report fulfilled only with evidence for each mandatory requested outcome; otherwise report unable.\\\",\\\"evidence_required\\\":[\\\"coverage and supporting observations\\\"],\\\"id\\\":\\\"honest-disposition\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"An objective and explicit acceptance requirements are supplied.\\\",\\\"kind\\\":\\\"input_schema\\\"}],\\\"title\\\":\\\"Bounded attempt at a supplied objective\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"required_evidence_criterion_ids\\\":[\\\"honest-disposition\\\"],\\\"requirements\\\":[\\\"requirement-objective\\\"]}\",\"type\":\"input_text\"}],\"id\":\"msg_01a1f13d-b99e-7342-844a-cfcc569f6f67\",\"role\":\"user\",\"type\":\"message\"}],\"purpose\":\"execution\"}"
+            },
+            "event_id": "event-778fe6d9a3c2497cbed2dda611b2e13d",
+            "kind": "call",
+            "payload": {
+              "call_type": "model",
+              "input_bytes": 5545,
+              "input_digest": "sha256:fd29cd39bf26faec5af64fff06bcb82b9aa189b8fed3efedbb1ef3159c4be840",
+              "operation_id": "model-22fc4c0adcbd4000b324c23c31cf5a79",
+              "output_bytes": 0,
+              "output_digest": null,
+              "payload_truncated": false,
+              "phase": "started",
+              "purpose": "execution",
+              "reserved": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 1,
+                "model_tokens": 44757,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 60000
+              },
+              "usage": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 0,
+                "model_tokens": 0,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 0
+              }
+            },
+            "redacted": true,
+            "sequence": 2,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-eae0e59a63b54ccda65ba659dc3cc93f",
+            "timestamp": "2026-11-19T00:38:36.798Z"
+          },
+          {
+            "causal_parent_event_id": null,
+            "content": {
+              "media_type": "application/json",
+              "text": "{\"output\":{\"output\":[{\"content\":[{\"annotations\":[],\"logprobs\":[],\"text\":\"{\\\"artifact_ids\\\":[],\\\"evidence\\\":[{\\\"artifact_ids\\\":[],\\\"criterion_id\\\":\\\"honest-disposition\\\",\\\"disposition\\\":\\\"passed\\\",\\\"summary\\\":\\\"The response directly explains the parent's retained responsibility and includes requirement-level evidence for the single mandatory objective.\\\"}],\\\"output\\\":{\\\"disposition\\\":\\\"fulfilled\\\",\\\"requirement_evidence\\\":[{\\\"evidence\\\":\\\"Explained that a LASA parent does not delegate authority or accountability merely because a child performs work. The parent binds the child to explicit contracts, schemas, preconditions, allowed resources/effects, budgets, and postconditions; treats child and peer outputs as untrusted until checked; verifies results against acceptance criteria; reconciles uncertain effects before retrying; and reports inability or uncertainty honestly when evidence is missing.\\\",\\\"id\\\":\\\"requirement-objective\\\"}],\\\"summary\\\":\\\"A LASA parent retains responsibility by controlling authorization, scope, and verification. The child may execute bounded work, but the parent remains accountable for deciding whether the work is suitable, whether the child was actually authorized through approved local bindings/resources, whether outputs satisfy the contract, and whether any side effects are known. Peer offers or child claims are evidence to evaluate, not permission or proof by themselves. The parent must preserve the original requirements, verify postconditions before claiming success, reconcile unknown effects when needed, and report `unable` or uncertainty instead of treating bounded delegation as a transfer of responsibility.\\\"}}\",\"type\":\"output_text\"}],\"id\":\"msg_08380c4f0552d5cc016afe4511066487d1982327fb8bb29de8\",\"internal_chat_message_metadata_passthrough\":{\"content_token_count\":275,\"create_time\":1795048718.951328,\"turn_id\":\"01a1f13d-b994-72a1-a178-497b0b949fc1\"},\"metadata\":{\"turn_id\":\"01a1f13d-b994-72a1-a178-497b0b949fc1\"},\"phase\":\"final_answer\",\"role\":\"assistant\",\"status\":\"completed\",\"type\":\"message\"}]}}"
+            },
+            "event_id": "event-adb55a2385ad43c7885f52f2f600338c",
+            "kind": "call",
+            "payload": {
+              "call_type": "model",
+              "input_bytes": 57,
+              "input_digest": "sha256:a56c79cf2bff35e8d6ba683112f1ee7f76252831cad4376ac988afd9836294f9",
+              "operation_id": "model-22fc4c0adcbd4000b324c23c31cf5a79",
+              "output_bytes": 2043,
+              "output_digest": "sha256:5726f5678f3fb83c557626340da56a99d83eb17db100c26de46413152d4a0b6a",
+              "payload_truncated": false,
+              "phase": "finished",
+              "reserved": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 0,
+                "model_tokens": 0,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 0
+              },
+              "usage": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 1,
+                "model_tokens": 8181,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 8757
+              }
+            },
+            "redacted": true,
+            "sequence": 3,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-eae0e59a63b54ccda65ba659dc3cc93f",
+            "timestamp": "2026-11-19T00:38:45.579Z"
+          },
+          {
+            "causal_parent_event_id": null,
+            "content": {
+              "media_type": "application/json",
+              "text": "{\"input\":[{\"content\":[{\"text\":\"{\\\"candidate_output\\\":{\\\"disposition\\\":\\\"fulfilled\\\",\\\"requirement_evidence\\\":[{\\\"evidence\\\":\\\"Explained that a LASA parent does not delegate authority or accountability merely because a child performs work. The parent binds the child to explicit contracts, schemas, preconditions, allowed resources/effects, budgets, and postconditions; treats child and peer outputs as untrusted until checked; verifies results against acceptance criteria; reconciles uncertain effects before retrying; and reports inability or uncertainty honestly when evidence is missing.\\\",\\\"id\\\":\\\"requirement-objective\\\"}],\\\"summary\\\":\\\"A LASA parent retains responsibility by controlling authorization, scope, and verification. The child may execute bounded work, but the parent remains accountable for deciding whether the work is suitable, whether the child was actually authorized through approved local bindings/resources, whether outputs satisfy the contract, and whether any side effects are known. Peer offers or child claims are evidence to evaluate, not permission or proof by themselves. The parent must preserve the original requirements, verify postconditions before claiming success, reconcile unknown effects when needed, and report `unable` or uncertainty instead of treating bounded delegation as a transfer of responsibility.\\\"},\\\"claimed_evidence\\\":[{\\\"artifact_ids\\\":[],\\\"criterion_id\\\":\\\"honest-disposition\\\",\\\"disposition\\\":\\\"passed\\\",\\\"summary\\\":\\\"The response directly explains the parent's retained responsibility and includes requirement-level evidence for the single mandatory objective.\\\"}],\\\"contract\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"reconcile_before_retry\\\",\\\"unknown_commit_possible\\\":true},\\\"failures\\\":[{\\\"code\\\":\\\"attempt_interrupted\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"A known interruption prevented producing a disposition.\\\",\\\"retry\\\":\\\"readmission\\\"},{\\\"code\\\":\\\"effect_unknown\\\",\\\"effect_disposition\\\":\\\"unknown_possible\\\",\\\"meaning\\\":\\\"The disposition of an authorized operation is not known.\\\",\\\"retry\\\":\\\"reconcile\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/task.attempt\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"context\\\":{\\\"maxLength\\\":32000,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"objective\\\":{\\\"maxLength\\\":16000,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"requirements\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"acceptance\\\":{\\\"items\\\":{\\\"maxLength\\\":2048,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"description\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"id\\\",\\\"description\\\",\\\"acceptance\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"}},\\\"required\\\":[\\\"objective\\\",\\\"requirements\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"workspace.read\\\",\\\"workspace.write\\\",\\\"external.read\\\"],\\\"non_guarantees\\\":[\\\"Does not claim domain expertise or guarantee that the objective is achievable.\\\",\\\"A result of unable does not fulfill the requested objective.\\\"],\\\"outcome\\\":\\\"Attempt the authorized objective within its limits and report fulfilled or unable with requirement-level evidence.\\\",\\\"output_schema\\\":{\\\"oneOf\\\":[{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"disposition\\\":{\\\"const\\\":\\\"fulfilled\\\"},\\\"requirement_evidence\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"evidence\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"id\\\",\\\"evidence\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"summary\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"disposition\\\",\\\"summary\\\",\\\"requirement_evidence\\\"],\\\"type\\\":\\\"object\\\"},{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"disposition\\\":{\\\"const\\\":\\\"unable\\\"},\\\"reason\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"unsatisfied_requirements\\\":{\\\"items\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\",\\\"uniqueItems\\\":true}},\\\"required\\\":[\\\"disposition\\\",\\\"reason\\\",\\\"unsatisfied_requirements\\\"],\\\"type\\\":\\\"object\\\"}]},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Report fulfilled only with evidence for each mandatory requested outcome; otherwise report unable.\\\",\\\"evidence_required\\\":[\\\"coverage and supporting observations\\\"],\\\"id\\\":\\\"honest-disposition\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"An objective and explicit acceptance requirements are supplied.\\\",\\\"kind\\\":\\\"input_schema\\\"}],\\\"title\\\":\\\"Bounded attempt at a supplied objective\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"input\\\":{\\\"context\\\":\\\"Use the supplied LASA planning context: child work is bounded by explicit contracts, input schemas, preconditions, allowed effects/resources, budgets, and postconditions. Peer offers are not permission by themselves; only approved local bindings/resources authorize execution. The parent must assess suitability, preserve requirements, verify outputs against acceptance/postconditions, and report inability or uncertainty honestly rather than treating child claims as automatically sufficient.\\\",\\\"objective\\\":\\\"Explain how a LASA parent retains responsibility while a child performs bounded work.\\\",\\\"requirements\\\":[{\\\"acceptance\\\":[\\\"Fulfill the stated objective with supporting evidence; report inability honestly.\\\"],\\\"description\\\":\\\"Explain how a LASA parent retains responsibility while a child performs bounded work.\\\",\\\"id\\\":\\\"requirement-objective\\\"}]},\\\"instruction\\\":\\\"Independently check whether the supplied evidence supports the output and required postconditions. A schema-valid answer or a peer saying complete is insufficient. A fulfilled attempt must satisfy every requirement; unable is an honest attempt outcome but cannot fulfill an actual requested subtask. Reject unsupported factual claims, missing criterion coverage, inadequate evidence, or unresolved effects. State uncertainty as passed=false.\\\",\\\"original_requirements\\\":[{\\\"acceptance\\\":[{\\\"criterion\\\":\\\"Fulfill the stated objective with supporting evidence; report inability honestly.\\\",\\\"evidence_required\\\":[\\\"outcome evidence\\\"],\\\"id\\\":\\\"requirement-objective-acceptance\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"description\\\":\\\"Explain how a LASA parent retains responsibility while a child performs bounded work.\\\",\\\"mandatory\\\":true,\\\"requirement_id\\\":\\\"requirement-objective\\\",\\\"source\\\":\\\"caller\\\"}],\\\"trusted_execution_evidence\\\":{\\\"artifacts\\\":[],\\\"operations\\\":[],\\\"service_id\\\":\\\"https://192.168.0.188/lasa\\\",\\\"source\\\":\\\"receiver_durable_store\\\",\\\"step_id\\\":null,\\\"task_id\\\":\\\"task-eae0e59a63b54ccda65ba659dc3cc93f\\\",\\\"truncated\\\":false}}\",\"type\":\"input_text\"}],\"role\":\"user\"}],\"purpose\":\"verification\"}"
+            },
+            "event_id": "event-8777c054f0a74da2b92ae3fb0bf8a66e",
+            "kind": "call",
+            "payload": {
+              "call_type": "model",
+              "input_bytes": 6955,
+              "input_digest": "sha256:9e1d026f5bf78ffd1c23aac6546b7e9d81a5da4fa95179df739490a9c1c4dff2",
+              "operation_id": "model-7a30492115a24f1093aaad1063e1e603",
+              "output_bytes": 0,
+              "output_digest": null,
+              "payload_truncated": false,
+              "phase": "started",
+              "purpose": "verification",
+              "reserved": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 1,
+                "model_tokens": 11485,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 60000
+              },
+              "usage": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 0,
+                "model_tokens": 0,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 0
+              }
+            },
+            "redacted": true,
+            "sequence": 4,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-eae0e59a63b54ccda65ba659dc3cc93f",
+            "timestamp": "2026-11-19T00:38:46.134Z"
+          },
+          {
+            "causal_parent_event_id": null,
+            "content": {
+              "media_type": "application/json",
+              "text": "{\"output\":{\"passed\":true,\"reason\":\"The candidate output satisfies the single mandatory requirement: it explains that a LASA parent retains responsibility by defining authorization and scope, preserving requirements, treating child/peer outputs as untrusted, verifying outputs against postconditions and acceptance criteria, reconciling uncertain effects, and reporting inability or uncertainty when evidence is missing. This provides supporting semantic evidence for the required objective. No external operations or unresolved effects are indicated in the trusted execution evidence.\"}}"
+            },
+            "event_id": "event-4cb5d77e9029411ab39a9917507cb44b",
+            "kind": "call",
+            "payload": {
+              "call_type": "model",
+              "input_bytes": 57,
+              "input_digest": "sha256:160d7116899b353bd0417d0ceb4ff6f3745066b692abad487926dcb6423001ba",
+              "operation_id": "model-7a30492115a24f1093aaad1063e1e603",
+              "output_bytes": 576,
+              "output_digest": "sha256:499e426120458b17790c49249895b5360bad224939fd981b1336d8b9a4c16401",
+              "payload_truncated": false,
+              "phase": "finished",
+              "reserved": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 0,
+                "model_tokens": 0,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 0
+              },
+              "usage": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 1,
+                "model_tokens": 1593,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 4939
+              }
+            },
+            "redacted": true,
+            "sequence": 5,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-eae0e59a63b54ccda65ba659dc3cc93f",
+            "timestamp": "2026-11-19T00:38:51.101Z"
+          },
+          {
+            "causal_parent_event_id": null,
+            "event_id": "event-59850bd2b65042f9b6a50d14af749a3a",
+            "kind": "verification",
+            "payload": {
+              "checks": [
+                {
+                  "artifact_ids": [],
+                  "criterion_id": "honest-disposition",
+                  "disposition": "passed",
+                  "summary": "The candidate output satisfies the single mandatory requirement: it explains that a LASA parent retains responsibility by defining authorization and scope, preserving requirements, treating child/peer outputs as untrusted, verifying outputs against postconditions and acceptance criteria, reconciling uncertain effects, and reporting inability or uncertainty when evidence is missing. This provides supporting semantic evidence for the required objective. No external operations or unresolved effects are indicated in the trusted execution evidence."
+                }
+              ],
+              "contract": {
+                "digest": "sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23",
+                "id": "https://contracts.example.net/capabilities/task.attempt",
+                "version": "1.0.0"
+              },
+              "release": "accepted",
+              "request_digest": "sha256:ddd104e9764f851667556598d1d0b3c00d627ca0630ed09688274364444a8c65",
+              "step_id": "semantic-verification"
+            },
+            "redacted": true,
+            "sequence": 6,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-eae0e59a63b54ccda65ba659dc3cc93f",
+            "timestamp": "2026-11-19T00:38:51.144Z"
+          },
+          {
+            "causal_parent_event_id": null,
+            "event_id": "event-5f01f7002c1a4ff2bb4c6ebef3a78b15",
+            "kind": "verification",
+            "payload": {
+              "checks": [
+                {
+                  "artifact_ids": [],
+                  "criterion_id": "honest-disposition",
+                  "disposition": "passed",
+                  "summary": "The response directly explains the parent's retained responsibility and includes requirement-level evidence for the single mandatory objective."
+                }
+              ],
+              "contract": {
+                "digest": "sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23",
+                "id": "https://contracts.example.net/capabilities/task.attempt",
+                "version": "1.0.0"
+              },
+              "release": "accepted",
+              "request_digest": "sha256:ddd104e9764f851667556598d1d0b3c00d627ca0630ed09688274364444a8c65",
+              "step_id": "final-release"
+            },
+            "redacted": true,
+            "sequence": 7,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-eae0e59a63b54ccda65ba659dc3cc93f",
+            "timestamp": "2026-11-19T00:38:51.187Z"
+          }
+        ],
+        "next_sequence": 8
+      }
+    }
+  ]
+}

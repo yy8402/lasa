@@ -1,0 +1,98 @@
+{
+  "definition_format": "lasa-capability/1.0",
+  "id": "https://contracts.example.net/capabilities/documents.read",
+  "version": "1.0.0",
+  "title": "Read an approved LASA document",
+  "outcome": "Return the exact authorized document content, source identifier, and SHA-256 of its UTF-8 bytes. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.",
+  "non_guarantees": [
+    "Does not cover unapproved collections or assert that source-provided content is universally correct."
+  ],
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "collection": {
+        "const": "lasa-docs"
+      },
+      "document_id": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9._-]+\\.md$",
+        "maxLength": 128
+      }
+    },
+    "required": [
+      "collection",
+      "document_id"
+    ],
+    "additionalProperties": false
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "document_id": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 4096
+      },
+      "content": {
+        "type": "string",
+        "maxLength": 8192
+      },
+      "content_digest": {
+        "type": "string",
+        "pattern": "^sha256:[0-9a-f]{64}$"
+      },
+      "source_uri": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 4096
+      }
+    },
+    "required": [
+      "document_id",
+      "content",
+      "content_digest",
+      "source_uri"
+    ],
+    "additionalProperties": false
+  },
+  "preconditions": [
+    {
+      "kind": "input_schema",
+      "description": "Inputs select an approved read-only collection."
+    },
+    {
+      "kind": "resource_authorized",
+      "description": "Read authority for the approved source is required.",
+      "resource": "documents:lasa",
+      "actions": [
+        "read"
+      ]
+    }
+  ],
+  "max_effects": [
+    "external.read"
+  ],
+  "postconditions": [
+    {
+      "id": "verified-source-content",
+      "criterion": "Return the exact authorized document content, source identifier, and SHA-256 of its UTF-8 bytes. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.",
+      "method": "semantic_review",
+      "evidence_required": [
+        "Receiver-generated successful source-operation receipts and digest-verified source artifacts."
+      ]
+    }
+  ],
+  "failures": [
+    {
+      "code": "source_unavailable",
+      "meaning": "A required approved source is unavailable, denied, or outside the allocation.",
+      "retry": "readmission",
+      "effect_disposition": "known"
+    }
+  ],
+  "effect_safety": {
+    "external_write_commit_evidence_required": false,
+    "unknown_commit_possible": false,
+    "retry_rule": "readmit_if_no_uncertain_effect"
+  }
+}

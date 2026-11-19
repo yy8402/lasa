@@ -1,0 +1,35 @@
+.venv/
+.test-tmp/
+.pytest_cache/
+.ruff_cache/
+.artifacts/
+__pycache__/
+*.egg-info/
+build/
+dist/
+.state/
+.workspaces/
+config/local*.json
+.deploy/
+
+# Generated evaluation environments and private receiver/runtime state.
+verification/package-env/
+verification/package-provision-*/
+verification/provisioning-smoke/
+verification/**/parent/
+verification/**/child/
+verification/**/private/
+verification/**/workspaces/
+verification/**/home/
+
+# Certificates, credentials, databases, and built archives stay local.
+*.pem
+*.key
+*.sqlite*
+*-token.txt
+credentials*.json
+.env
+.env.*
+*.whl
+*.tar.gz
+*.zip

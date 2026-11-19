@@ -1,0 +1,1200 @@
+{
+  "case": "local-tools-with-receipts",
+  "passed": true,
+  "execution": "managed deployed services, real HTTPS, actual Codex App Server and gpt-5.5 inference",
+  "elapsed_seconds": 57.88,
+  "descriptor": {
+    "descriptor_version": "1.0",
+    "service_id": "https://localhost:8443/lasa",
+    "deployment_revision": "target-20261118-756da6a87ce1-local_first",
+    "revision": "descriptor-12a196c0ae781fb9b22a8c807039e924",
+    "valid_until": "2026-11-18T12:54:54.175Z",
+    "protocols": [
+      {
+        "version": "lasa/1.0",
+        "base_url": "https://localhost:8443/lasa/v1",
+        "openapi_url": "https://localhost:8443/lasa/v1/openapi.json",
+        "wire_schema_digest": "sha256:9d64d7fc4df6e4f0d7504d1c2a3d6e1696816dccbf10b7edfe5df1dcc6135999",
+        "features": [
+          "metadata-diagnostics",
+          "content-diagnostics",
+          "clarification",
+          "artifacts",
+          "bounded-delegation"
+        ],
+        "required_features": [
+          "metadata-diagnostics",
+          "bounded-delegation"
+        ]
+      }
+    ],
+    "authentication": {
+      "issuer": "https://localhost:8443/lasa/development-issuer",
+      "audience": "https://localhost:8443/lasa"
+    },
+    "catalog_url": "https://localhost:8443/lasa/v1/capabilities",
+    "contract_url_template": "https://localhost:8443/lasa/v1/contracts/{digest}",
+    "idempotency_retention_seconds": 604800
+  },
+  "catalog_revision": "catalog-bdde3d50c6470693d134f565616d713d",
+  "session": {
+    "session_id": "session-df538c7b2c5f4db4acad8b2c485ebc05",
+    "service_id": "https://localhost:8443/lasa",
+    "created_at": "2026-11-18T12:54:24.346Z",
+    "retention_until": "2026-11-25T12:54:24.346Z",
+    "active_task_id": null
+  },
+  "task": {
+    "admission": {
+      "accepted_at": "2026-11-18T12:54:42.010Z",
+      "authorization_decision_id": "authority-ee4024ca74a18501c0005ca19e2fd864",
+      "contract": {
+        "digest": "sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23",
+        "id": "https://contracts.example.net/capabilities/task.attempt",
+        "version": "1.0.0"
+      },
+      "effective_limits": {
+        "budget": {
+          "artifact_bytes": 128000,
+          "delegations": 2,
+          "input_bytes": 128000,
+          "model_calls": 16,
+          "model_tokens": 500000,
+          "output_bytes": 32000,
+          "tool_calls": 12,
+          "wall_time_ms": 300000
+        },
+        "deadline": "2026-11-18T12:58:24.350Z",
+        "max_hops": 2
+      },
+      "plan_digest": "sha256:0434ed6d649a6822fee45a528efe7bc91e84db5e0dc52ab6783cb8197425cff0",
+      "request_digest": "sha256:55a0b4172b745d56f79588726b05df164c3f09206a7c0b7852c2c445cf5260ee"
+    },
+    "operation_id": "deployment-task-9c5158b2f25546d1ba8037b3feb57360",
+    "received_at": "2026-11-18T12:54:24.355Z",
+    "request_digest": "sha256:55a0b4172b745d56f79588726b05df164c3f09206a7c0b7852c2c445cf5260ee",
+    "result": {
+      "artifacts": [],
+      "contract": {
+        "digest": "sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23",
+        "id": "https://contracts.example.net/capabilities/task.attempt",
+        "version": "1.0.0"
+      },
+      "effect_disposition": "known",
+      "evidence": [
+        {
+          "artifact_ids": [],
+          "criterion_id": "honest-disposition",
+          "disposition": "passed",
+          "summary": "The requested file was written through LASA workspace_write and then read back through LASA workspace_read; the read content exactly matched the required text."
+        }
+      ],
+      "output": {
+        "disposition": "fulfilled",
+        "requirement_evidence": [
+          {
+            "evidence": "Created deployment-check.txt with LASA workspace_write (41 bytes written). Subsequent LASA workspace_read returned exact text: LASA parent retains final responsibility.",
+            "id": "verified-file"
+          }
+        ],
+        "summary": "deployment-check.txt was created and verified. Exact text: LASA parent retains final responsibility."
+      },
+      "request_digest": "sha256:55a0b4172b745d56f79588726b05df164c3f09206a7c0b7852c2c445cf5260ee",
+      "usage": {
+        "artifact_bytes": 0,
+        "delegations": 0,
+        "input_bytes": 424,
+        "model_calls": 9,
+        "model_tokens": 60078,
+        "output_bytes": 370,
+        "tool_calls": 2,
+        "wall_time_ms": 53115
+      }
+    },
+    "revision": 4,
+    "selection": {
+      "catalog_view": "view-81f6038329be8ff5fe232b31d037e062",
+      "contract": {
+        "digest": "sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23",
+        "id": "https://contracts.example.net/capabilities/task.attempt",
+        "version": "1.0.0"
+      },
+      "offer_id": "offer-87118c69dffb6d83735184f20cdd6f8a",
+      "offer_revision": "offer-037d388084f10a3c7a56bc9b8e2c7882"
+    },
+    "service_id": "https://localhost:8443/lasa",
+    "session_id": "session-df538c7b2c5f4db4acad8b2c485ebc05",
+    "status": "completed",
+    "task_id": "task-49f0c81ac34f4883a579624a19c06d4f",
+    "updated_at": "2026-11-18T12:55:22.160Z"
+  },
+  "events": [
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"input\":[{\"content\":[{\"text\":\"{\\\"contracts\\\":{\\\"sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"readmit_if_no_uncertain_effect\\\",\\\"unknown_commit_possible\\\":false},\\\"failures\\\":[{\\\"code\\\":\\\"insufficient_input\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"The supplied design does not contain enough information to review the requested criteria.\\\",\\\"retry\\\":\\\"readmission\\\"},{\\\"code\\\":\\\"evaluation_failed\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"The bounded review could not be completed.\\\",\\\"retry\\\":\\\"readmission\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/design.review\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"criteria\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"description\\\":{\\\"maxLength\\\":2048,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"id\\\",\\\"description\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"design\\\":{\\\"maxLength\\\":32000,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"design\\\",\\\"criteria\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"workspace.read\\\"],\\\"non_guarantees\\\":[\\\"Does not prove correctness or inspect resources not supplied in the request.\\\"],\\\"outcome\\\":\\\"Return criterion coverage and actionable findings grounded in the supplied design.\\\",\\\"output_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"coverage\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"criterion_id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"disposition\\\":{\\\"enum\\\":[\\\"reviewed\\\",\\\"insufficient_input\\\"]},\\\"evidence\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"criterion_id\\\",\\\"disposition\\\",\\\"evidence\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"findings\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"criterion_id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"observation\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"recommendation\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"severity\\\":{\\\"enum\\\":[\\\"info\\\",\\\"warning\\\",\\\"error\\\"]}},\\\"required\\\":[\\\"criterion_id\\\",\\\"severity\\\",\\\"observation\\\",\\\"recommendation\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":128,\\\"type\\\":\\\"array\\\"}},\\\"required\\\":[\\\"findings\\\",\\\"coverage\\\"],\\\"type\\\":\\\"object\\\"},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Every supplied criterion has a coverage entry; findings cite supplied design evidence.\\\",\\\"evidence_required\\\":[\\\"coverage and supporting observations\\\"],\\\"id\\\":\\\"criterion-coverage\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"Design text and criteria must be supplied.\\\",\\\"kind\\\":\\\"input_schema\\\"},{\\\"description\\\":\\\"A bounded semantic assessment is required.\\\",\\\"kind\\\":\\\"budget_minimum\\\",\\\"minimum\\\":1,\\\"resource\\\":\\\"model_calls\\\"}],\\\"title\\\":\\\"Review supplied design against explicit criteria\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"reconcile_before_retry\\\",\\\"unknown_commit_possible\\\":true},\\\"failures\\\":[{\\\"code\\\":\\\"attempt_interrupted\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"A known interruption prevented producing a disposition.\\\",\\\"retry\\\":\\\"readmission\\\"},{\\\"code\\\":\\\"effect_unknown\\\",\\\"effect_disposition\\\":\\\"unknown_possible\\\",\\\"meaning\\\":\\\"The disposition of an authorized operation is not known.\\\",\\\"retry\\\":\\\"reconcile\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/task.attempt\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"context\\\":{\\\"maxLength\\\":32000,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"objective\\\":{\\\"maxLength\\\":16000,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"requirements\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"acceptance\\\":{\\\"items\\\":{\\\"maxLength\\\":2048,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"description\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"id\\\",\\\"description\\\",\\\"acceptance\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"}},\\\"required\\\":[\\\"objective\\\",\\\"requirements\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"workspace.read\\\",\\\"workspace.write\\\",\\\"external.read\\\"],\\\"non_guarantees\\\":[\\\"Does not claim domain expertise or guarantee that the objective is achievable.\\\",\\\"A result of unable does not fulfill the requested objective.\\\"],\\\"outcome\\\":\\\"Attempt the authorized objective within its limits and report fulfilled or unable with requirement-level evidence.\\\",\\\"output_schema\\\":{\\\"oneOf\\\":[{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"disposition\\\":{\\\"const\\\":\\\"fulfilled\\\"},\\\"requirement_evidence\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"evidence\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"id\\\",\\\"evidence\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"summary\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"disposition\\\",\\\"summary\\\",\\\"requirement_evidence\\\"],\\\"type\\\":\\\"object\\\"},{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"disposition\\\":{\\\"const\\\":\\\"unable\\\"},\\\"reason\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"unsatisfied_requirements\\\":{\\\"items\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\",\\\"uniqueItems\\\":true}},\\\"required\\\":[\\\"disposition\\\",\\\"reason\\\",\\\"unsatisfied_requirements\\\"],\\\"type\\\":\\\"object\\\"}]},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Report fulfilled only with evidence for each mandatory requested outcome; otherwise report unable.\\\",\\\"evidence_required\\\":[\\\"coverage and supporting observations\\\"],\\\"id\\\":\\\"honest-disposition\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"An objective and explicit acceptance requirements are supplied.\\\",\\\"kind\\\":\\\"input_schema\\\"}],\\\"title\\\":\\\"Bounded attempt at a supplied objective\\\",\\\"version\\\":\\\"1.0.0\\\"}},\\\"instruction\\\":\\\"Propose a small acyclic plan using only supplied contracts. Prefer the request contract when it directly expresses the needed outcome; decompose distinct outcomes where necessary. input_json is a JSON string conforming to the selected contract. Assess whether approved LOCAL bindings and resources can fulfill each step. A generic attempt does not assert domain expertise or missing resource access. Do not treat peer claims as permission. Preserve every requirement ID. Unknown access or knowledge is unknown, not sufficient.\\\",\\\"local_bindings\\\":[{\\\"allowed_effects\\\":[\\\"workspace.read\\\"],\\\"approved_resources\\\":[{\\\"actions\\\":[\\\"read\\\"],\\\"resource\\\":\\\"workspace:self\\\"}],\\\"contract\\\":{\\\"digest\\\":\\\"sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce\\\",\\\"id\\\":\\\"https://contracts.example.net/capabilities/design.review\\\",\\\"version\\\":\\\"1.0.0\\\"}},{\\\"allowed_effects\\\":[\\\"workspace.read\\\",\\\"workspace.write\\\"],\\\"approved_resources\\\":[{\\\"actions\\\":[\\\"read\\\",\\\"create\\\",\\\"update\\\"],\\\"resource\\\":\\\"workspace:self\\\"}],\\\"contract\\\":{\\\"digest\\\":\\\"sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23\\\",\\\"id\\\":\\\"https://contracts.example.net/capabilities/task.attempt\\\",\\\"version\\\":\\\"1.0.0\\\"}}],\\\"peer_offers\\\":[{\\\"catalog_view\\\":\\\"view-b5ace63fc4267e895ace42ea03178190\\\",\\\"contract\\\":{\\\"digest\\\":\\\"sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23\\\",\\\"id\\\":\\\"https://contracts.example.net/capabilities/task.attempt\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"definition\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"reconcile_before_retry\\\",\\\"unknown_commit_possible\\\":true},\\\"failures\\\":[{\\\"code\\\":\\\"attempt_interrupted\\\",\\\"effect_disposition\\\""
+      },
+      "event_id": "event-60388a6283e24e1596b93f7ae77b4ac5",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 17321,
+        "input_digest": "sha256:a86c283c5365775b1af8101bd52c19ad1955f65c610098b1413bb676effb555c",
+        "operation_id": "model-1529926906f44671aec3ee54011c46ee",
+        "output_bytes": 0,
+        "output_digest": null,
+        "payload_truncated": true,
+        "phase": "started",
+        "purpose": "planning",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 22337,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 59290
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        }
+      },
+      "redacted": true,
+      "sequence": 1,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-49f0c81ac34f4883a579624a19c06d4f",
+      "timestamp": "2026-11-18T12:54:25.072Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"output\":{\"steps\":[{\"assessment_summary\":\"The request contract directly expresses the needed outcome. A local binding for task.attempt is approved with workspace.read and workspace.write effects and workspace:self read/create/update resources, which matches creating deployment-check.txt and subsequently reading it back. No peer offer is needed.\",\"contract_digest\":\"sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23\",\"depends_on\":[],\"input_json\":\"{\\\"objective\\\":\\\"Use the approved workspace tools to create deployment-check.txt containing exactly LASA parent retains final responsibility. Then read it back and report its exact text with evidence.\\\",\\\"requirements\\\":[{\\\"id\\\":\\\"verified-file\\\",\\\"description\\\":\\\"Create the specified workspace file and read it back through approved tools.\\\",\\\"acceptance\\\":[\\\"The file is created and its exact text is reported from a subsequent read.\\\"]}]}\",\"local_assessment\":\"sufficient\",\"requirement_ids\":[\"verified-file\"],\"step_id\":\"attempt-verified-file\"}]}}"
+      },
+      "event_id": "event-7efd3ef855cf468fb760fa96ffbae43d",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 57,
+        "input_digest": "sha256:43a5036dd73d4955a7a5f2064173f9a95eb75ef5a8a2b5c725fa6a0785138dc4",
+        "operation_id": "model-1529926906f44671aec3ee54011c46ee",
+        "output_bytes": 1009,
+        "output_digest": "sha256:8ef34e9593361b52a80d39e979ad84e710206a7385ef9b68a524e9449719a3c2",
+        "payload_truncated": false,
+        "phase": "finished",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 4299,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 10675
+        }
+      },
+      "redacted": true,
+      "sequence": 2,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-49f0c81ac34f4883a579624a19c06d4f",
+      "timestamp": "2026-11-18T12:54:35.753Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-f7140272988542ff92239a99e8be2535",
+      "kind": "routing",
+      "payload": {
+        "assessment_summary": "The request contract directly expresses the needed outcome. A local binding for task.attempt is approved with workspace.read and workspace.write effects and workspace:self read/create/update resources, which matches creating deployment-check.txt and subsequently reading it back. No peer offer is needed.",
+        "authorization_decision_id": "authority-ee4024ca74a18501c0005ca19e2fd864",
+        "catalog_revision": "catalog-3213b632d0dfcb66d95b3be40e674fd8",
+        "contract": {
+          "digest": "sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23",
+          "id": "https://contracts.example.net/capabilities/task.attempt",
+          "version": "1.0.0"
+        },
+        "decision_reason": "Both suitable; configured preference selects local",
+        "local_assessment": "sufficient",
+        "offer_revision": null,
+        "peer_assessment": "matched",
+        "policy": {
+          "preferred_executor": "local",
+          "unclaimed_peer_fallback": "reject"
+        },
+        "requirement_ids": [
+          "verified-file"
+        ],
+        "selected_executor": "local",
+        "step_id": "attempt-verified-file"
+      },
+      "redacted": true,
+      "sequence": 3,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-49f0c81ac34f4883a579624a19c06d4f",
+      "timestamp": "2026-11-18T12:54:36.112Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"input\":[{\"content\":[{\"text\":\"{\\\"instruction\\\":\\\"Independently assess semantic requirement coverage. Reject a step that merely repeats/reviews the request text when the requirement is to retrieve missing external facts. Matching IDs and JSON schemas do not prove outcome coverage. Each declared step must actually target its assigned outcome. An explicitly allowed bounded fallback is an attempt, not a guarantee, and is permitted if it targets the correct outcome and later verification can report inability honestly. Authority, capacity, and actual routing are checked separately by controllers. Return passed=false for unsupported or mismatched decomposition.\\\",\\\"original_contract\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"reconcile_before_retry\\\",\\\"unknown_commit_possible\\\":true},\\\"failures\\\":[{\\\"code\\\":\\\"attempt_interrupted\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"A known interruption prevented producing a disposition.\\\",\\\"retry\\\":\\\"readmission\\\"},{\\\"code\\\":\\\"effect_unknown\\\",\\\"effect_disposition\\\":\\\"unknown_possible\\\",\\\"meaning\\\":\\\"The disposition of an authorized operation is not known.\\\",\\\"retry\\\":\\\"reconcile\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/task.attempt\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"context\\\":{\\\"maxLength\\\":32000,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"objective\\\":{\\\"maxLength\\\":16000,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"requirements\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"acceptance\\\":{\\\"items\\\":{\\\"maxLength\\\":2048,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"description\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"id\\\",\\\"description\\\",\\\"acceptance\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"}},\\\"required\\\":[\\\"objective\\\",\\\"requirements\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"workspace.read\\\",\\\"workspace.write\\\",\\\"external.read\\\"],\\\"non_guarantees\\\":[\\\"Does not claim domain expertise or guarantee that the objective is achievable.\\\",\\\"A result of unable does not fulfill the requested objective.\\\"],\\\"outcome\\\":\\\"Attempt the authorized objective within its limits and report fulfilled or unable with requirement-level evidence.\\\",\\\"output_schema\\\":{\\\"oneOf\\\":[{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"disposition\\\":{\\\"const\\\":\\\"fulfilled\\\"},\\\"requirement_evidence\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"evidence\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"id\\\",\\\"evidence\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"summary\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"disposition\\\",\\\"summary\\\",\\\"requirement_evidence\\\"],\\\"type\\\":\\\"object\\\"},{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"disposition\\\":{\\\"const\\\":\\\"unable\\\"},\\\"reason\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"unsatisfied_requirements\\\":{\\\"items\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\",\\\"uniqueItems\\\":true}},\\\"required\\\":[\\\"disposition\\\",\\\"reason\\\",\\\"unsatisfied_requirements\\\"],\\\"type\\\":\\\"object\\\"}]},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Report fulfilled only with evidence for each mandatory requested outcome; otherwise report unable.\\\",\\\"evidence_required\\\":[\\\"coverage and supporting observations\\\"],\\\"id\\\":\\\"honest-disposition\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"An objective and explicit acceptance requirements are supplied.\\\",\\\"kind\\\":\\\"input_schema\\\"}],\\\"title\\\":\\\"Bounded attempt at a supplied objective\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"original_request\\\":{\\\"objective\\\":\\\"Use the approved workspace tools to create deployment-check.txt containing exactly LASA parent retains final responsibility. Then read it back and report its exact text with evidence.\\\",\\\"requirements\\\":[{\\\"acceptance\\\":[\\\"The file is created and its exact text is reported from a subsequent read.\\\"],\\\"description\\\":\\\"Create the specified workspace file and read it back through approved tools.\\\",\\\"id\\\":\\\"verified-file\\\"}]},\\\"requirements\\\":[{\\\"acceptance\\\":[{\\\"criterion\\\":\\\"The file is created and its exact text is reported from a subsequent read.\\\",\\\"evidence_required\\\":[\\\"outcome evidence\\\"],\\\"id\\\":\\\"verified-file-acceptance\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"description\\\":\\\"Create the specified workspace file and read it back through approved tools.\\\",\\\"mandatory\\\":true,\\\"requirement_id\\\":\\\"verified-file\\\",\\\"source\\\":\\\"caller\\\"}],\\\"steps\\\":[{\\\"bounded_fallback\\\":false,\\\"contract\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"reconcile_before_retry\\\",\\\"unknown_commit_possible\\\":true},\\\"failures\\\":[{\\\"code\\\":\\\"attempt_interrupted\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"A known interruption prevented producing a disposition.\\\",\\\"retry\\\":\\\"readmission\\\"},{\\\"code\\\":\\\"effect_unknown\\\",\\\"effect_disposition\\\":\\\"unknown_possible\\\",\\\"meaning\\\":\\\"The disposition of an authorized operation is not known.\\\",\\\"retry\\\":\\\"reconcile\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/task.attempt\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"context\\\":{\\\"maxLength\\\":32000,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"objective\\\":{\\\"maxLength\\\":16000,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"requirements\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"acceptance\\\":{\\\"items\\\":{\\\"maxLength\\\":2048,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"description\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"id\\\",\\\"description\\\",\\\"acceptance\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"}},\\\"required\\\":[\\\"objective\\\",\\\"requirements\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"workspace.read\\\",\\\"workspace.write\\\",\\\"external.read\\\"],\\\"non_guarantees\\\":[\\\"Does not claim domain expertise or guarantee that the objective is achievable.\\\",\\\"A result of unable does not fulfill the requested objective.\\\"],\\\"outcome\\\":\\\"Attempt the authorized objective within its limits and report fulfilled or unable with requirement-level evidence.\\\",\\\"output_schema\\\":{\\\"oneOf\\\":[{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"disposition\\\":{\\\"const\\\":\\\"fulfilled\\\"},\\\"requirement_evidence\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"evidence\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"id\\\",\\\"evidence\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"summary\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"disposition\\\",\\\"summary\\\",\\\"requirement_evidence\\\"],\\\"type\\\":\\\"object\\\"},{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"disposition\\\":{\\\"const\\\":\\\"unable\\\"},\\\"reason\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"unsatisfied_requirements\\\":{\\\"items\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\",\\\"uniqueItems\\\":true}},\\\"required\\\":[\\\"disposition\\\",\\\"reason\\\",\\\"unsatisfied_requirements\\\"],\\\"type\\\":\\\"object\\\"}]},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Report fulfilled only with evidence for each mandatory requested outcome; otherwise report unable.\\\",\\\"evidence_required\\\":[\\\"coverage and supporting observations\\\"],\\\"id\\\":\\\"honest-disposition\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"An objective and explicit acceptance requirements are supplied.\\\",\\\"kind\\\":\\\"input_schema\\\"}],\\\"title\\\":\\\"Bounded attempt at a supplied objective\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"input\\\":{\\\"objective\\\":\\\"Use the approved workspace tools to create deployment-check.txt containing exactly LASA parent retains final responsibility. Then read it back an"
+      },
+      "event_id": "event-27d54a0ff83f4809a874d1a4008fb5cd",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 9211,
+        "input_digest": "sha256:8ac837c84d14e5560441166863e2f757392d57ac20959459a05d0a90723a799f",
+        "operation_id": "model-e183294413f7413faa05e6aae9b7e2d2",
+        "output_bytes": 0,
+        "output_digest": null,
+        "payload_truncated": true,
+        "phase": "started",
+        "purpose": "planning",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 13737,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 48212
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        }
+      },
+      "redacted": true,
+      "sequence": 4,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-49f0c81ac34f4883a579624a19c06d4f",
+      "timestamp": "2026-11-18T12:54:36.158Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"output\":{\"passed\":true,\"reason\":\"The decomposition contains a step assigned to the mandatory requirement `verified-file` and its input objective explicitly targets creating `deployment-check.txt` with the exact specified text, then reading it back and reporting the exact text with evidence. This is not merely a restatement for review; it is an attempt-capability step whose permitted effects include workspace.write and workspace.read, which semantically covers the required outcome. Actual tool authority, execution capacity, and final evidence quality remain for downstream controllers/execution verification.\"}}"
+      },
+      "event_id": "event-cf48c65f167445d8b6df7668f85c7f4f",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 57,
+        "input_digest": "sha256:96e7c895d9456cde42bd9db463eeb725fc92ad362290e6007a9d0a212252fd22",
+        "operation_id": "model-e183294413f7413faa05e6aae9b7e2d2",
+        "output_bytes": 607,
+        "output_digest": "sha256:778c76c5596ad133881d244a1e7d3e4601cb9a4c4a5193b13ca875b52c3286b0",
+        "payload_truncated": false,
+        "phase": "finished",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 2202,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 5759
+        }
+      },
+      "redacted": true,
+      "sequence": 5,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-49f0c81ac34f4883a579624a19c06d4f",
+      "timestamp": "2026-11-18T12:54:41.930Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"input\":[{\"content\":[{\"text\":\"<environment_context>\\n  <cwd>/workspace</cwd>\\n  <shell>bash</shell>\\n  <current_date>2026-11-18</current_date>\\n  <timezone>Etc/UTC</timezone>\\n  <filesystem><workspace_roots><root>/workspace</root></workspace_roots><permission_profile type=\\\"managed\\\"><file_system type=\\\"restricted\\\"><entry access=\\\"read\\\"><special>:root</special></entry><entry access=\\\"write\\\"><path>/workspace</path></entry><entry access=\\\"write\\\"><special>:slash_tmp</special></entry><entry access=\\\"write\\\"><special>:tmpdir</special></entry><entry access=\\\"read\\\"><path>/workspace/.git</path></entry><entry access=\\\"read\\\"><path>/workspace/.agents</path></entry><entry access=\\\"read\\\"><path>/workspace/.codex</path></entry><entry access=\\\"read\\\"><path>/workspace/.aws</path></entry></file_system></permission_profile></filesystem>\\n</environment_context>\",\"type\":\"input_text\"}],\"id\":\"msg_01a1eeb9-4e81-72a2-8e05-8fcb37635d45\",\"role\":\"user\",\"type\":\"message\"},{\"content\":[{\"text\":\"{\\\"contract\\\":{\\\"digest\\\":\\\"sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23\\\",\\\"id\\\":\\\"https://contracts.example.net/capabilities/task.attempt\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"dependency_results\\\":{},\\\"input\\\":{\\\"objective\\\":\\\"Use the approved workspace tools to create deployment-check.txt containing exactly LASA parent retains final responsibility. Then read it back and report its exact text with evidence.\\\",\\\"requirements\\\":[{\\\"acceptance\\\":[\\\"The file is created and its exact text is reported from a subsequent read.\\\"],\\\"description\\\":\\\"Create the specified workspace file and read it back through approved tools.\\\",\\\"id\\\":\\\"verified-file\\\"}]},\\\"outcome_contract\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"reconcile_before_retry\\\",\\\"unknown_commit_possible\\\":true},\\\"failures\\\":[{\\\"code\\\":\\\"attempt_interrupted\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"A known interruption prevented producing a disposition.\\\",\\\"retry\\\":\\\"readmission\\\"},{\\\"code\\\":\\\"effect_unknown\\\",\\\"effect_disposition\\\":\\\"unknown_possible\\\",\\\"meaning\\\":\\\"The disposition of an authorized operation is not known.\\\",\\\"retry\\\":\\\"reconcile\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/task.attempt\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"context\\\":{\\\"maxLength\\\":32000,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"objective\\\":{\\\"maxLength\\\":16000,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"requirements\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"acceptance\\\":{\\\"items\\\":{\\\"maxLength\\\":2048,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"description\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"id\\\",\\\"description\\\",\\\"acceptance\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"}},\\\"required\\\":[\\\"objective\\\",\\\"requirements\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"workspace.read\\\",\\\"workspace.write\\\",\\\"external.read\\\"],\\\"non_guarantees\\\":[\\\"Does not claim domain expertise or guarantee that the objective is achievable.\\\",\\\"A result of unable does not fulfill the requested objective.\\\"],\\\"outcome\\\":\\\"Attempt the authorized objective within its limits and report fulfilled or unable with requirement-level evidence.\\\",\\\"output_schema\\\":{\\\"oneOf\\\":[{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"disposition\\\":{\\\"const\\\":\\\"fulfilled\\\"},\\\"requirement_evidence\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"evidence\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"id\\\",\\\"evidence\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"summary\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"disposition\\\",\\\"summary\\\",\\\"requirement_evidence\\\"],\\\"type\\\":\\\"object\\\"},{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"disposition\\\":{\\\"const\\\":\\\"unable\\\"},\\\"reason\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"unsatisfied_requirements\\\":{\\\"items\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\",\\\"uniqueItems\\\":true}},\\\"required\\\":[\\\"disposition\\\",\\\"reason\\\",\\\"unsatisfied_requirements\\\"],\\\"type\\\":\\\"object\\\"}]},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Report fulfilled only with evidence for each mandatory requested outcome; otherwise report unable.\\\",\\\"evidence_required\\\":[\\\"coverage and supporting observations\\\"],\\\"id\\\":\\\"honest-disposition\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"An objective and explicit acceptance requirements are supplied.\\\",\\\"kind\\\":\\\"input_schema\\\"}],\\\"title\\\":\\\"Bounded attempt at a supplied objective\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"required_evidence_criterion_ids\\\":[\\\"honest-disposition\\\"],\\\"requirements\\\":[\\\"verified-file\\\"]}\",\"type\":\"input_text\"}],\"id\":\"msg_01a1eeb9-4e93-7b01-9d87-2255cda24412\",\"role\":\"user\",\"type\":\"message\"}],\"purpose\":\"execution\"}"
+      },
+      "event_id": "event-c768252d231f44df956e2a07a942ac2d",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 5101,
+        "input_digest": "sha256:aa9bfa69fb0e8a3f5461f54526c242f624236a906177333a4f0a3e20dc004e0d",
+        "operation_id": "model-2bb4d06156d14f21a8a8f98d81fe0026",
+        "output_bytes": 0,
+        "output_digest": null,
+        "payload_truncated": false,
+        "phase": "started",
+        "purpose": "execution",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 44313,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 60000
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        }
+      },
+      "redacted": true,
+      "sequence": 6,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-49f0c81ac34f4883a579624a19c06d4f",
+      "timestamp": "2026-11-18T12:54:44.256Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"output\":{\"output\":[{\"content\":[{\"annotations\":[],\"logprobs\":[],\"text\":\"{\\\"artifact_ids\\\":[],\\\"evidence\\\":[],\\\"output\\\":{\\\"disposition\\\":\\\"unable\\\",\\\"reason\\\":\\\"Need to discover the approved LASA workspace tools before making the bounded file change.\\\",\\\"unsatisfied_requirements\\\":[\\\"verified-file\\\"]}}\",\"type\":\"output_text\"}],\"id\":\"msg_0c5bfc57ab03357c016afda01ba65487d09f8906eb7993611c\",\"internal_chat_message_metadata_passthrough\":{\"content_token_count\":44,\"create_time\":1795006489.993419,\"turn_id\":\"01a1eeb9-4e1c-72d0-9ad7-f287f854f08a\"},\"metadata\":{\"turn_id\":\"01a1eeb9-4e1c-72d0-9ad7-f287f854f08a\"},\"phase\":\"commentary\",\"role\":\"assistant\",\"status\":\"completed\",\"type\":\"message\"}]}}"
+      },
+      "event_id": "event-7c4fffe1191149e68b1a4cd621977eba",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 57,
+        "input_digest": "sha256:aaf29d57cde00f5c1e464d06ec6cf1f9f9ccce1c9b2833784a8a500e88d2c944",
+        "operation_id": "model-2bb4d06156d14f21a8a8f98d81fe0026",
+        "output_bytes": 676,
+        "output_digest": "sha256:b4efd4c7ba7281f55578c1077c8f7da84f93eea0f26c4c277a3766d7ffca88a9",
+        "payload_truncated": false,
+        "phase": "finished",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 7949,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 7089
+        }
+      },
+      "redacted": true,
+      "sequence": 7,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-49f0c81ac34f4883a579624a19c06d4f",
+      "timestamp": "2026-11-18T12:54:51.369Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"input\":[{\"content\":[{\"text\":\"<environment_context>\\n  <cwd>/workspace</cwd>\\n  <shell>bash</shell>\\n  <current_date>2026-11-18</current_date>\\n  <timezone>Etc/UTC</timezone>\\n  <filesystem><workspace_roots><root>/workspace</root></workspace_roots><permission_profile type=\\\"managed\\\"><file_system type=\\\"restricted\\\"><entry access=\\\"read\\\"><special>:root</special></entry><entry access=\\\"write\\\"><path>/workspace</path></entry><entry access=\\\"write\\\"><special>:slash_tmp</special></entry><entry access=\\\"write\\\"><special>:tmpdir</special></entry><entry access=\\\"read\\\"><path>/workspace/.git</path></entry><entry access=\\\"read\\\"><path>/workspace/.agents</path></entry><entry access=\\\"read\\\"><path>/workspace/.codex</path></entry><entry access=\\\"read\\\"><path>/workspace/.aws</path></entry></file_system></permission_profile></filesystem>\\n</environment_context>\",\"type\":\"input_text\"}],\"id\":\"msg_01a1eeb9-4e81-72a2-8e05-8fcb37635d45\",\"role\":\"user\",\"type\":\"message\"},{\"content\":[{\"text\":\"{\\\"contract\\\":{\\\"digest\\\":\\\"sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23\\\",\\\"id\\\":\\\"https://contracts.example.net/capabilities/task.attempt\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"dependency_results\\\":{},\\\"input\\\":{\\\"objective\\\":\\\"Use the approved workspace tools to create deployment-check.txt containing exactly LASA parent retains final responsibility. Then read it back and report its exact text with evidence.\\\",\\\"requirements\\\":[{\\\"acceptance\\\":[\\\"The file is created and its exact text is reported from a subsequent read.\\\"],\\\"description\\\":\\\"Create the specified workspace file and read it back through approved tools.\\\",\\\"id\\\":\\\"verified-file\\\"}]},\\\"outcome_contract\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"reconcile_before_retry\\\",\\\"unknown_commit_possible\\\":true},\\\"failures\\\":[{\\\"code\\\":\\\"attempt_interrupted\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"A known interruption prevented producing a disposition.\\\",\\\"retry\\\":\\\"readmission\\\"},{\\\"code\\\":\\\"effect_unknown\\\",\\\"effect_disposition\\\":\\\"unknown_possible\\\",\\\"meaning\\\":\\\"The disposition of an authorized operation is not known.\\\",\\\"retry\\\":\\\"reconcile\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/task.attempt\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"context\\\":{\\\"maxLength\\\":32000,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"objective\\\":{\\\"maxLength\\\":16000,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"requirements\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"acceptance\\\":{\\\"items\\\":{\\\"maxLength\\\":2048,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"description\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"id\\\",\\\"description\\\",\\\"acceptance\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"}},\\\"required\\\":[\\\"objective\\\",\\\"requirements\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"workspace.read\\\",\\\"workspace.write\\\",\\\"external.read\\\"],\\\"non_guarantees\\\":[\\\"Does not claim domain expertise or guarantee that the objective is achievable.\\\",\\\"A result of unable does not fulfill the requested objective.\\\"],\\\"outcome\\\":\\\"Attempt the authorized objective within its limits and report fulfilled or unable with requirement-level evidence.\\\",\\\"output_schema\\\":{\\\"oneOf\\\":[{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"disposition\\\":{\\\"const\\\":\\\"fulfilled\\\"},\\\"requirement_evidence\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"evidence\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"id\\\",\\\"evidence\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"summary\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"disposition\\\",\\\"summary\\\",\\\"requirement_evidence\\\"],\\\"type\\\":\\\"object\\\"},{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"disposition\\\":{\\\"const\\\":\\\"unable\\\"},\\\"reason\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"unsatisfied_requirements\\\":{\\\"items\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\",\\\"uniqueItems\\\":true}},\\\"required\\\":[\\\"disposition\\\",\\\"reason\\\",\\\"unsatisfied_requirements\\\"],\\\"type\\\":\\\"object\\\"}]},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Report fulfilled only with evidence for each mandatory requested outcome; otherwise report unable.\\\",\\\"evidence_required\\\":[\\\"coverage and supporting observations\\\"],\\\"id\\\":\\\"honest-disposition\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"An objective and explicit acceptance requirements are supplied.\\\",\\\"kind\\\":\\\"input_schema\\\"}],\\\"title\\\":\\\"Bounded attempt at a supplied objective\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"required_evidence_criterion_ids\\\":[\\\"honest-disposition\\\"],\\\"requirements\\\":[\\\"verified-file\\\"]}\",\"type\":\"input_text\"}],\"id\":\"msg_01a1eeb9-4e93-7b01-9d87-2255cda24412\",\"role\":\"user\",\"type\":\"message\"}],\"purpose\":\"execution\"}"
+      },
+      "event_id": "event-be48106ff8c44ca893458347865d85af",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 5101,
+        "input_digest": "sha256:aa9bfa69fb0e8a3f5461f54526c242f624236a906177333a4f0a3e20dc004e0d",
+        "operation_id": "model-cc3a3664b4da4f369e3e443a3e8ca23f",
+        "output_bytes": 0,
+        "output_digest": null,
+        "payload_truncated": false,
+        "phase": "started",
+        "purpose": "execution",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 50475,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 60000
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        }
+      },
+      "redacted": true,
+      "sequence": 8,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-49f0c81ac34f4883a579624a19c06d4f",
+      "timestamp": "2026-11-18T12:54:51.490Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"output\":{\"output\":[{\"content\":[{\"annotations\":[],\"logprobs\":[],\"text\":\"{\\\"artifact_ids\\\":[],\\\"evidence\\\":[{\\\"artifact_ids\\\":[],\\\"criterion_id\\\":\\\"honest-disposition\\\",\\\"disposition\\\":\\\"unknown\\\",\\\"summary\\\":\\\"Discovered only the LASA workspace_write tool so far; looking for an approved read/export path before claiming fulfillment.\\\"}],\\\"output\\\":{\\\"disposition\\\":\\\"unable\\\",\\\"reason\\\":\\\"Need an approved read/export tool to verify the file content after writing; only workspace_write has been exposed so far.\\\",\\\"unsatisfied_requirements\\\":[\\\"verified-file\\\"]}}\",\"type\":\"output_text\"}],\"id\":\"msg_0c5bfc57ab03357c016afda01fe62087d0b5ca1b68391e8bbe\",\"internal_chat_message_metadata_passthrough\":{\"content_token_count\":95,\"create_time\":1795006494.349921,\"turn_id\":\"01a1eeb9-4e1c-72d0-9ad7-f287f854f08a\"},\"metadata\":{\"turn_id\":\"01a1eeb9-4e1c-72d0-9ad7-f287f854f08a\"},\"phase\":\"commentary\",\"role\":\"assistant\",\"status\":\"completed\",\"type\":\"message\"}]}}"
+      },
+      "event_id": "event-10c745e4b52842cdbfcaeab346234ad3",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 57,
+        "input_digest": "sha256:ea1104ad09d9463b334a602de8bae270240d3532536c77d526df82e76e0746c1",
+        "operation_id": "model-cc3a3664b4da4f369e3e443a3e8ca23f",
+        "output_bytes": 937,
+        "output_digest": "sha256:829bbcb7093369ca596c42c27e9ed5915948f9767056678d590e7945cf2bfe02",
+        "payload_truncated": false,
+        "phase": "finished",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 8347,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 4547
+        }
+      },
+      "redacted": true,
+      "sequence": 9,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-49f0c81ac34f4883a579624a19c06d4f",
+      "timestamp": "2026-11-18T12:54:56.064Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"input\":[{\"content\":[{\"text\":\"<environment_context>\\n  <cwd>/workspace</cwd>\\n  <shell>bash</shell>\\n  <current_date>2026-11-18</current_date>\\n  <timezone>Etc/UTC</timezone>\\n  <filesystem><workspace_roots><root>/workspace</root></workspace_roots><permission_profile type=\\\"managed\\\"><file_system type=\\\"restricted\\\"><entry access=\\\"read\\\"><special>:root</special></entry><entry access=\\\"write\\\"><path>/workspace</path></entry><entry access=\\\"write\\\"><special>:slash_tmp</special></entry><entry access=\\\"write\\\"><special>:tmpdir</special></entry><entry access=\\\"read\\\"><path>/workspace/.git</path></entry><entry access=\\\"read\\\"><path>/workspace/.agents</path></entry><entry access=\\\"read\\\"><path>/workspace/.codex</path></entry><entry access=\\\"read\\\"><path>/workspace/.aws</path></entry></file_system></permission_profile></filesystem>\\n</environment_context>\",\"type\":\"input_text\"}],\"id\":\"msg_01a1eeb9-4e81-72a2-8e05-8fcb37635d45\",\"role\":\"user\",\"type\":\"message\"},{\"content\":[{\"text\":\"{\\\"contract\\\":{\\\"digest\\\":\\\"sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23\\\",\\\"id\\\":\\\"https://contracts.example.net/capabilities/task.attempt\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"dependency_results\\\":{},\\\"input\\\":{\\\"objective\\\":\\\"Use the approved workspace tools to create deployment-check.txt containing exactly LASA parent retains final responsibility. Then read it back and report its exact text with evidence.\\\",\\\"requirements\\\":[{\\\"acceptance\\\":[\\\"The file is created and its exact text is reported from a subsequent read.\\\"],\\\"description\\\":\\\"Create the specified workspace file and read it back through approved tools.\\\",\\\"id\\\":\\\"verified-file\\\"}]},\\\"outcome_contract\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"reconcile_before_retry\\\",\\\"unknown_commit_possible\\\":true},\\\"failures\\\":[{\\\"code\\\":\\\"attempt_interrupted\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"A known interruption prevented producing a disposition.\\\",\\\"retry\\\":\\\"readmission\\\"},{\\\"code\\\":\\\"effect_unknown\\\",\\\"effect_disposition\\\":\\\"unknown_possible\\\",\\\"meaning\\\":\\\"The disposition of an authorized operation is not known.\\\",\\\"retry\\\":\\\"reconcile\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/task.attempt\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"context\\\":{\\\"maxLength\\\":32000,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"objective\\\":{\\\"maxLength\\\":16000,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"requirements\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"acceptance\\\":{\\\"items\\\":{\\\"maxLength\\\":2048,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"description\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"id\\\",\\\"description\\\",\\\"acceptance\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"}},\\\"required\\\":[\\\"objective\\\",\\\"requirements\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"workspace.read\\\",\\\"workspace.write\\\",\\\"external.read\\\"],\\\"non_guarantees\\\":[\\\"Does not claim domain expertise or guarantee that the objective is achievable.\\\",\\\"A result of unable does not fulfill the requested objective.\\\"],\\\"outcome\\\":\\\"Attempt the authorized objective within its limits and report fulfilled or unable with requirement-level evidence.\\\",\\\"output_schema\\\":{\\\"oneOf\\\":[{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"disposition\\\":{\\\"const\\\":\\\"fulfilled\\\"},\\\"requirement_evidence\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"evidence\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"id\\\",\\\"evidence\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"summary\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"disposition\\\",\\\"summary\\\",\\\"requirement_evidence\\\"],\\\"type\\\":\\\"object\\\"},{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"disposition\\\":{\\\"const\\\":\\\"unable\\\"},\\\"reason\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"unsatisfied_requirements\\\":{\\\"items\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\",\\\"uniqueItems\\\":true}},\\\"required\\\":[\\\"disposition\\\",\\\"reason\\\",\\\"unsatisfied_requirements\\\"],\\\"type\\\":\\\"object\\\"}]},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Report fulfilled only with evidence for each mandatory requested outcome; otherwise report unable.\\\",\\\"evidence_required\\\":[\\\"coverage and supporting observations\\\"],\\\"id\\\":\\\"honest-disposition\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"An objective and explicit acceptance requirements are supplied.\\\",\\\"kind\\\":\\\"input_schema\\\"}],\\\"title\\\":\\\"Bounded attempt at a supplied objective\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"required_evidence_criterion_ids\\\":[\\\"honest-disposition\\\"],\\\"requirements\\\":[\\\"verified-file\\\"]}\",\"type\":\"input_text\"}],\"id\":\"msg_01a1eeb9-4e93-7b01-9d87-2255cda24412\",\"role\":\"user\",\"type\":\"message\"}],\"purpose\":\"execution\"}"
+      },
+      "event_id": "event-d81378e0c9e2448c80178b68438d4ecb",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 5101,
+        "input_digest": "sha256:aa9bfa69fb0e8a3f5461f54526c242f624236a906177333a4f0a3e20dc004e0d",
+        "operation_id": "model-7f137733eb3a4521958382b0e3a3c170",
+        "output_bytes": 0,
+        "output_digest": null,
+        "payload_truncated": false,
+        "phase": "started",
+        "purpose": "execution",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 56898,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 60000
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        }
+      },
+      "redacted": true,
+      "sequence": 10,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-49f0c81ac34f4883a579624a19c06d4f",
+      "timestamp": "2026-11-18T12:54:56.117Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"output\":{\"output\":[{\"content\":[{\"annotations\":[],\"logprobs\":[],\"text\":\"{\\\"artifact_ids\\\":[],\\\"evidence\\\":[{\\\"artifact_ids\\\":[],\\\"criterion_id\\\":\\\"honest-disposition\\\",\\\"disposition\\\":\\\"unknown\\\",\\\"summary\\\":\\\"Found the LASA workspace_read tool as well as workspace_write; proceeding to write the requested exact text and verify it by reading the file back.\\\"}],\\\"output\\\":{\\\"disposition\\\":\\\"unable\\\",\\\"reason\\\":\\\"In progress: write/read verification has not yet been performed.\\\",\\\"unsatisfied_requirements\\\":[\\\"verified-file\\\"]}}\",\"type\":\"output_text\"}],\"id\":\"msg_0c5bfc57ab03357c016afda024f8f887d089c6ade4a85f9e0a\",\"internal_chat_message_metadata_passthrough\":{\"content_token_count\":90,\"create_time\":1795006500.102899,\"turn_id\":\"01a1eeb9-4e1c-72d0-9ad7-f287f854f08a\"},\"metadata\":{\"turn_id\":\"01a1eeb9-4e1c-72d0-9ad7-f287f854f08a\"},\"phase\":\"commentary\",\"role\":\"assistant\",\"status\":\"completed\",\"type\":\"message\"}]}}"
+      },
+      "event_id": "event-61cb6aaff0724504bf1f291f63bd27ea",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 57,
+        "input_digest": "sha256:871dc24349b9c983d15166e6e6348a79507cd484ab2d1236e739086efe82c921",
+        "operation_id": "model-7f137733eb3a4521958382b0e3a3c170",
+        "output_bytes": 904,
+        "output_digest": "sha256:65e235a736fd7efb5e3f793e17101c1b73a52b390cd542683da8e4d26cd79fe6",
+        "payload_truncated": false,
+        "phase": "finished",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 8706,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 5717
+        }
+      },
+      "redacted": true,
+      "sequence": 11,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-49f0c81ac34f4883a579624a19c06d4f",
+      "timestamp": "2026-11-18T12:55:01.842Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"input\":[{\"content\":[{\"text\":\"<environment_context>\\n  <cwd>/workspace</cwd>\\n  <shell>bash</shell>\\n  <current_date>2026-11-18</current_date>\\n  <timezone>Etc/UTC</timezone>\\n  <filesystem><workspace_roots><root>/workspace</root></workspace_roots><permission_profile type=\\\"managed\\\"><file_system type=\\\"restricted\\\"><entry access=\\\"read\\\"><special>:root</special></entry><entry access=\\\"write\\\"><path>/workspace</path></entry><entry access=\\\"write\\\"><special>:slash_tmp</special></entry><entry access=\\\"write\\\"><special>:tmpdir</special></entry><entry access=\\\"read\\\"><path>/workspace/.git</path></entry><entry access=\\\"read\\\"><path>/workspace/.agents</path></entry><entry access=\\\"read\\\"><path>/workspace/.codex</path></entry><entry access=\\\"read\\\"><path>/workspace/.aws</path></entry></file_system></permission_profile></filesystem>\\n</environment_context>\",\"type\":\"input_text\"}],\"id\":\"msg_01a1eeb9-4e81-72a2-8e05-8fcb37635d45\",\"role\":\"user\",\"type\":\"message\"},{\"content\":[{\"text\":\"{\\\"contract\\\":{\\\"digest\\\":\\\"sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23\\\",\\\"id\\\":\\\"https://contracts.example.net/capabilities/task.attempt\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"dependency_results\\\":{},\\\"input\\\":{\\\"objective\\\":\\\"Use the approved workspace tools to create deployment-check.txt containing exactly LASA parent retains final responsibility. Then read it back and report its exact text with evidence.\\\",\\\"requirements\\\":[{\\\"acceptance\\\":[\\\"The file is created and its exact text is reported from a subsequent read.\\\"],\\\"description\\\":\\\"Create the specified workspace file and read it back through approved tools.\\\",\\\"id\\\":\\\"verified-file\\\"}]},\\\"outcome_contract\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"reconcile_before_retry\\\",\\\"unknown_commit_possible\\\":true},\\\"failures\\\":[{\\\"code\\\":\\\"attempt_interrupted\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"A known interruption prevented producing a disposition.\\\",\\\"retry\\\":\\\"readmission\\\"},{\\\"code\\\":\\\"effect_unknown\\\",\\\"effect_disposition\\\":\\\"unknown_possible\\\",\\\"meaning\\\":\\\"The disposition of an authorized operation is not known.\\\",\\\"retry\\\":\\\"reconcile\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/task.attempt\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"context\\\":{\\\"maxLength\\\":32000,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"objective\\\":{\\\"maxLength\\\":16000,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"requirements\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"acceptance\\\":{\\\"items\\\":{\\\"maxLength\\\":2048,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"description\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"id\\\",\\\"description\\\",\\\"acceptance\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"}},\\\"required\\\":[\\\"objective\\\",\\\"requirements\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"workspace.read\\\",\\\"workspace.write\\\",\\\"external.read\\\"],\\\"non_guarantees\\\":[\\\"Does not claim domain expertise or guarantee that the objective is achievable.\\\",\\\"A result of unable does not fulfill the requested objective.\\\"],\\\"outcome\\\":\\\"Attempt the authorized objective within its limits and report fulfilled or unable with requirement-level evidence.\\\",\\\"output_schema\\\":{\\\"oneOf\\\":[{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"disposition\\\":{\\\"const\\\":\\\"fulfilled\\\"},\\\"requirement_evidence\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"evidence\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"id\\\",\\\"evidence\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"summary\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"disposition\\\",\\\"summary\\\",\\\"requirement_evidence\\\"],\\\"type\\\":\\\"object\\\"},{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"disposition\\\":{\\\"const\\\":\\\"unable\\\"},\\\"reason\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"unsatisfied_requirements\\\":{\\\"items\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\",\\\"uniqueItems\\\":true}},\\\"required\\\":[\\\"disposition\\\",\\\"reason\\\",\\\"unsatisfied_requirements\\\"],\\\"type\\\":\\\"object\\\"}]},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Report fulfilled only with evidence for each mandatory requested outcome; otherwise report unable.\\\",\\\"evidence_required\\\":[\\\"coverage and supporting observations\\\"],\\\"id\\\":\\\"honest-disposition\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"An objective and explicit acceptance requirements are supplied.\\\",\\\"kind\\\":\\\"input_schema\\\"}],\\\"title\\\":\\\"Bounded attempt at a supplied objective\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"required_evidence_criterion_ids\\\":[\\\"honest-disposition\\\"],\\\"requirements\\\":[\\\"verified-file\\\"]}\",\"type\":\"input_text\"}],\"id\":\"msg_01a1eeb9-4e93-7b01-9d87-2255cda24412\",\"role\":\"user\",\"type\":\"message\"}],\"purpose\":\"execution\"}"
+      },
+      "event_id": "event-b99ab3fac0d54320bc849526b8a6463f",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 5101,
+        "input_digest": "sha256:aa9bfa69fb0e8a3f5461f54526c242f624236a906177333a4f0a3e20dc004e0d",
+        "operation_id": "model-35e3dcbc7cab408585fd1e9fd3335d49",
+        "output_bytes": 0,
+        "output_digest": null,
+        "payload_truncated": false,
+        "phase": "started",
+        "purpose": "execution",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 62573,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 60000
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        }
+      },
+      "redacted": true,
+      "sequence": 12,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-49f0c81ac34f4883a579624a19c06d4f",
+      "timestamp": "2026-11-18T12:55:01.938Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"output\":{\"output\":[{\"arguments\":\"{\\\"relative_path\\\":\\\"deployment-check.txt\\\",\\\"text\\\":\\\"LASA parent retains final responsibility.\\\"}\",\"call_id\":\"call_lHd3V5FjNaNUIgJAmdydY63O\",\"id\":\"fc_0c5bfc57ab03357c016afda02ad5d487d0bc1d5a398ac81717\",\"internal_chat_message_metadata_passthrough\":{\"create_time\":1795006505.630886,\"turn_id\":\"01a1eeb9-4e1c-72d0-9ad7-f287f854f08a\"},\"metadata\":{\"turn_id\":\"01a1eeb9-4e1c-72d0-9ad7-f287f854f08a\"},\"name\":\"workspace_write\",\"namespace\":\"mcp__lasa\",\"status\":\"completed\",\"type\":\"function_call\"}]}}"
+      },
+      "event_id": "event-e8a26035675a40f5901375d8eebe59a4",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 57,
+        "input_digest": "sha256:7ccbedd82e95547af712fe21ab653d451b05324c3f2e34870e639aa70fad0bbf",
+        "operation_id": "model-35e3dcbc7cab408585fd1e9fd3335d49",
+        "output_bytes": 514,
+        "output_digest": "sha256:db4676c900c503ec26ee2c3a0ec7855a122ab7aec11ce18e948e978d8fea3d89",
+        "payload_truncated": false,
+        "phase": "finished",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 8752,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 3791
+        }
+      },
+      "redacted": true,
+      "sequence": 13,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-49f0c81ac34f4883a579624a19c06d4f",
+      "timestamp": "2026-11-18T12:55:05.735Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"arguments\":{\"relative_path\":\"deployment-check.txt\",\"text\":\"LASA parent retains final responsibility.\"},\"name\":\"workspace.write\"}"
+      },
+      "event_id": "event-937d26c9ba344a8083b7024d6b4b4644",
+      "kind": "call",
+      "payload": {
+        "call_type": "tool",
+        "input_bytes": 130,
+        "input_digest": "sha256:c18dc07fd925767ed99efb544f81b21c3ecc882f63614e87bbc1050c39457800",
+        "operation_id": "tool-07d3397d39673548f37a9f6a07641754773ad9cbe6b44eddf6eed5556a4c8642",
+        "output_bytes": 0,
+        "output_digest": null,
+        "payload_truncated": false,
+        "phase": "started",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 1,
+          "wall_time_ms": 0
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        }
+      },
+      "redacted": true,
+      "sequence": 14,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-49f0c81ac34f4883a579624a19c06d4f",
+      "timestamp": "2026-11-18T12:55:06.004Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"value\":{\"bytes_written\":41}}"
+      },
+      "event_id": "event-3dd7aae53e0746ce9da36161d34bae6f",
+      "kind": "call",
+      "payload": {
+        "call_type": "tool",
+        "input_bytes": 130,
+        "input_digest": "sha256:c18dc07fd925767ed99efb544f81b21c3ecc882f63614e87bbc1050c39457800",
+        "operation_id": "tool-07d3397d39673548f37a9f6a07641754773ad9cbe6b44eddf6eed5556a4c8642",
+        "output_bytes": 30,
+        "output_digest": "sha256:b6c3f43010eced209a3a31d35b92ec4a7146fd1ffe69877c00b3d1d434c379c9",
+        "payload_truncated": false,
+        "phase": "finished",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 1,
+          "wall_time_ms": 0
+        }
+      },
+      "redacted": true,
+      "sequence": 15,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-49f0c81ac34f4883a579624a19c06d4f",
+      "timestamp": "2026-11-18T12:55:06.012Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"input\":[{\"content\":[{\"text\":\"<environment_context>\\n  <cwd>/workspace</cwd>\\n  <shell>bash</shell>\\n  <current_date>2026-11-18</current_date>\\n  <timezone>Etc/UTC</timezone>\\n  <filesystem><workspace_roots><root>/workspace</root></workspace_roots><permission_profile type=\\\"managed\\\"><file_system type=\\\"restricted\\\"><entry access=\\\"read\\\"><special>:root</special></entry><entry access=\\\"write\\\"><path>/workspace</path></entry><entry access=\\\"write\\\"><special>:slash_tmp</special></entry><entry access=\\\"write\\\"><special>:tmpdir</special></entry><entry access=\\\"read\\\"><path>/workspace/.git</path></entry><entry access=\\\"read\\\"><path>/workspace/.agents</path></entry><entry access=\\\"read\\\"><path>/workspace/.codex</path></entry><entry access=\\\"read\\\"><path>/workspace/.aws</path></entry></file_system></permission_profile></filesystem>\\n</environment_context>\",\"type\":\"input_text\"}],\"id\":\"msg_01a1eeb9-4e81-72a2-8e05-8fcb37635d45\",\"role\":\"user\",\"type\":\"message\"},{\"content\":[{\"text\":\"{\\\"contract\\\":{\\\"digest\\\":\\\"sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23\\\",\\\"id\\\":\\\"https://contracts.example.net/capabilities/task.attempt\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"dependency_results\\\":{},\\\"input\\\":{\\\"objective\\\":\\\"Use the approved workspace tools to create deployment-check.txt containing exactly LASA parent retains final responsibility. Then read it back and report its exact text with evidence.\\\",\\\"requirements\\\":[{\\\"acceptance\\\":[\\\"The file is created and its exact text is reported from a subsequent read.\\\"],\\\"description\\\":\\\"Create the specified workspace file and read it back through approved tools.\\\",\\\"id\\\":\\\"verified-file\\\"}]},\\\"outcome_contract\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"reconcile_before_retry\\\",\\\"unknown_commit_possible\\\":true},\\\"failures\\\":[{\\\"code\\\":\\\"attempt_interrupted\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"A known interruption prevented producing a disposition.\\\",\\\"retry\\\":\\\"readmission\\\"},{\\\"code\\\":\\\"effect_unknown\\\",\\\"effect_disposition\\\":\\\"unknown_possible\\\",\\\"meaning\\\":\\\"The disposition of an authorized operation is not known.\\\",\\\"retry\\\":\\\"reconcile\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/task.attempt\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"context\\\":{\\\"maxLength\\\":32000,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"objective\\\":{\\\"maxLength\\\":16000,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"requirements\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"acceptance\\\":{\\\"items\\\":{\\\"maxLength\\\":2048,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"description\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"id\\\",\\\"description\\\",\\\"acceptance\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"}},\\\"required\\\":[\\\"objective\\\",\\\"requirements\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"workspace.read\\\",\\\"workspace.write\\\",\\\"external.read\\\"],\\\"non_guarantees\\\":[\\\"Does not claim domain expertise or guarantee that the objective is achievable.\\\",\\\"A result of unable does not fulfill the requested objective.\\\"],\\\"outcome\\\":\\\"Attempt the authorized objective within its limits and report fulfilled or unable with requirement-level evidence.\\\",\\\"output_schema\\\":{\\\"oneOf\\\":[{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"disposition\\\":{\\\"const\\\":\\\"fulfilled\\\"},\\\"requirement_evidence\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"evidence\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"id\\\",\\\"evidence\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"summary\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"disposition\\\",\\\"summary\\\",\\\"requirement_evidence\\\"],\\\"type\\\":\\\"object\\\"},{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"disposition\\\":{\\\"const\\\":\\\"unable\\\"},\\\"reason\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"unsatisfied_requirements\\\":{\\\"items\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\",\\\"uniqueItems\\\":true}},\\\"required\\\":[\\\"disposition\\\",\\\"reason\\\",\\\"unsatisfied_requirements\\\"],\\\"type\\\":\\\"object\\\"}]},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Report fulfilled only with evidence for each mandatory requested outcome; otherwise report unable.\\\",\\\"evidence_required\\\":[\\\"coverage and supporting observations\\\"],\\\"id\\\":\\\"honest-disposition\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"An objective and explicit acceptance requirements are supplied.\\\",\\\"kind\\\":\\\"input_schema\\\"}],\\\"title\\\":\\\"Bounded attempt at a supplied objective\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"required_evidence_criterion_ids\\\":[\\\"honest-disposition\\\"],\\\"requirements\\\":[\\\"verified-file\\\"]}\",\"type\":\"input_text\"}],\"id\":\"msg_01a1eeb9-4e93-7b01-9d87-2255cda24412\",\"role\":\"user\",\"type\":\"message\"}],\"purpose\":\"execution\"}"
+      },
+      "event_id": "event-835df0e0ece24c1e93a20ceb4da438bf",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 5101,
+        "input_digest": "sha256:aa9bfa69fb0e8a3f5461f54526c242f624236a906177333a4f0a3e20dc004e0d",
+        "operation_id": "model-2763404c8b8f46b4ac61aa1a6ba12774",
+        "output_bytes": 0,
+        "output_digest": null,
+        "payload_truncated": false,
+        "phase": "started",
+        "purpose": "execution",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 63077,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 60000
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        }
+      },
+      "redacted": true,
+      "sequence": 16,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-49f0c81ac34f4883a579624a19c06d4f",
+      "timestamp": "2026-11-18T12:55:06.074Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"arguments\":{\"relative_path\":\"deployment-check.txt\"},\"name\":\"workspace.read\"}"
+      },
+      "event_id": "event-d3ae4a637cfa46809e827610f7b1a4f7",
+      "kind": "call",
+      "payload": {
+        "call_type": "tool",
+        "input_bytes": 78,
+        "input_digest": "sha256:e673ee615efe02e901c51fa5047415b164717abf3d964630a33b197ef6700b12",
+        "operation_id": "tool-3cf5e3c3c8c6fa553c08b58a9b4b2980448ce8511d702b9d94f3da4335802218",
+        "output_bytes": 0,
+        "output_digest": null,
+        "payload_truncated": false,
+        "phase": "started",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 1,
+          "wall_time_ms": 0
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        }
+      },
+      "redacted": true,
+      "sequence": 17,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-49f0c81ac34f4883a579624a19c06d4f",
+      "timestamp": "2026-11-18T12:55:09.216Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"value\":{\"text\":\"LASA parent retains final responsibility.\"}}"
+      },
+      "event_id": "event-5c9f12a4c7ff4b8da7733feb63d2c22d",
+      "kind": "call",
+      "payload": {
+        "call_type": "tool",
+        "input_bytes": 78,
+        "input_digest": "sha256:e673ee615efe02e901c51fa5047415b164717abf3d964630a33b197ef6700b12",
+        "operation_id": "tool-3cf5e3c3c8c6fa553c08b58a9b4b2980448ce8511d702b9d94f3da4335802218",
+        "output_bytes": 62,
+        "output_digest": "sha256:497274f161fbd32508c3f818cd45aa883369bdf772b088b82f05d459fe98f6b2",
+        "payload_truncated": false,
+        "phase": "finished",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 1,
+          "wall_time_ms": 0
+        }
+      },
+      "redacted": true,
+      "sequence": 18,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-49f0c81ac34f4883a579624a19c06d4f",
+      "timestamp": "2026-11-18T12:55:09.223Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"output\":{\"output\":[{\"content\":[{\"annotations\":[],\"logprobs\":[],\"text\":\"{\\\"artifact_ids\\\":[],\\\"evidence\\\":[{\\\"artifact_ids\\\":[],\\\"criterion_id\\\":\\\"honest-disposition\\\",\\\"disposition\\\":\\\"unknown\\\",\\\"summary\\\":\\\"The write completed with 41 bytes written; now reading the same workspace path back to verify the exact text.\\\"}],\\\"output\\\":{\\\"disposition\\\":\\\"unable\\\",\\\"reason\\\":\\\"In progress: file write succeeded, but the required subsequent read evidence has not yet been collected.\\\",\\\"unsatisfied_requirements\\\":[\\\"verified-file\\\"]}}\",\"type\":\"output_text\"}],\"id\":\"msg_0c5bfc57ab03357c016afda02dd5b487d0a1069c344291757d\",\"internal_chat_message_metadata_passthrough\":{\"content_token_count\":90,\"create_time\":1795006509.151852,\"turn_id\":\"01a1eeb9-4e1c-72d0-9ad7-f287f854f08a\"},\"metadata\":{\"turn_id\":\"01a1eeb9-4e1c-72d0-9ad7-f287f854f08a\"},\"phase\":\"commentary\",\"role\":\"assistant\",\"status\":\"completed\",\"type\":\"message\"},{\"arguments\":\"{\\\"relative_path\\\":\\\"deployment-check.txt\\\"}\",\"call_id\":\"call_zh1dYlET70ElSGYdJYnoLtVW\",\"id\":\"fc_0c5bfc57ab03357c016afda02ecea087d0afee7e231a9067f3\",\"internal_chat_message_metadata_passthrough\":{\"create_time\":1795006509.151852,\"turn_id\":\"01a1eeb9-4e1c-72d0-9ad7-f287f854f08a\"},\"metadata\":{\"turn_id\":\"01a1eeb9-4e1c-72d0-9ad7-f287f854f08a\"},\"name\":\"workspace_read\",\"namespace\":\"mcp__lasa\",\"status\":\"completed\",\"type\":\"function_call\"}]}}"
+      },
+      "event_id": "event-ca54ce26df004a66b2853108f5477215",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 57,
+        "input_digest": "sha256:9d7749c8427a47ae1045e49173b11c6ea0db2a164ee833a3507f7262850c1489",
+        "operation_id": "model-2763404c8b8f46b4ac61aa1a6ba12774",
+        "output_bytes": 1352,
+        "output_digest": "sha256:4022f1dfc8b683cc8ec33bf3339a1eacb3f4e05f9e29185bdd92facb12dac3d1",
+        "payload_truncated": false,
+        "phase": "finished",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 8911,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 3152
+        }
+      },
+      "redacted": true,
+      "sequence": 19,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-49f0c81ac34f4883a579624a19c06d4f",
+      "timestamp": "2026-11-18T12:55:09.231Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"input\":[{\"content\":[{\"text\":\"<environment_context>\\n  <cwd>/workspace</cwd>\\n  <shell>bash</shell>\\n  <current_date>2026-11-18</current_date>\\n  <timezone>Etc/UTC</timezone>\\n  <filesystem><workspace_roots><root>/workspace</root></workspace_roots><permission_profile type=\\\"managed\\\"><file_system type=\\\"restricted\\\"><entry access=\\\"read\\\"><special>:root</special></entry><entry access=\\\"write\\\"><path>/workspace</path></entry><entry access=\\\"write\\\"><special>:slash_tmp</special></entry><entry access=\\\"write\\\"><special>:tmpdir</special></entry><entry access=\\\"read\\\"><path>/workspace/.git</path></entry><entry access=\\\"read\\\"><path>/workspace/.agents</path></entry><entry access=\\\"read\\\"><path>/workspace/.codex</path></entry><entry access=\\\"read\\\"><path>/workspace/.aws</path></entry></file_system></permission_profile></filesystem>\\n</environment_context>\",\"type\":\"input_text\"}],\"id\":\"msg_01a1eeb9-4e81-72a2-8e05-8fcb37635d45\",\"role\":\"user\",\"type\":\"message\"},{\"content\":[{\"text\":\"{\\\"contract\\\":{\\\"digest\\\":\\\"sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23\\\",\\\"id\\\":\\\"https://contracts.example.net/capabilities/task.attempt\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"dependency_results\\\":{},\\\"input\\\":{\\\"objective\\\":\\\"Use the approved workspace tools to create deployment-check.txt containing exactly LASA parent retains final responsibility. Then read it back and report its exact text with evidence.\\\",\\\"requirements\\\":[{\\\"acceptance\\\":[\\\"The file is created and its exact text is reported from a subsequent read.\\\"],\\\"description\\\":\\\"Create the specified workspace file and read it back through approved tools.\\\",\\\"id\\\":\\\"verified-file\\\"}]},\\\"outcome_contract\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"reconcile_before_retry\\\",\\\"unknown_commit_possible\\\":true},\\\"failures\\\":[{\\\"code\\\":\\\"attempt_interrupted\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"A known interruption prevented producing a disposition.\\\",\\\"retry\\\":\\\"readmission\\\"},{\\\"code\\\":\\\"effect_unknown\\\",\\\"effect_disposition\\\":\\\"unknown_possible\\\",\\\"meaning\\\":\\\"The disposition of an authorized operation is not known.\\\",\\\"retry\\\":\\\"reconcile\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/task.attempt\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"context\\\":{\\\"maxLength\\\":32000,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"objective\\\":{\\\"maxLength\\\":16000,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"requirements\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"acceptance\\\":{\\\"items\\\":{\\\"maxLength\\\":2048,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"description\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"id\\\",\\\"description\\\",\\\"acceptance\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"}},\\\"required\\\":[\\\"objective\\\",\\\"requirements\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"workspace.read\\\",\\\"workspace.write\\\",\\\"external.read\\\"],\\\"non_guarantees\\\":[\\\"Does not claim domain expertise or guarantee that the objective is achievable.\\\",\\\"A result of unable does not fulfill the requested objective.\\\"],\\\"outcome\\\":\\\"Attempt the authorized objective within its limits and report fulfilled or unable with requirement-level evidence.\\\",\\\"output_schema\\\":{\\\"oneOf\\\":[{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"disposition\\\":{\\\"const\\\":\\\"fulfilled\\\"},\\\"requirement_evidence\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"evidence\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"id\\\",\\\"evidence\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"summary\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"disposition\\\",\\\"summary\\\",\\\"requirement_evidence\\\"],\\\"type\\\":\\\"object\\\"},{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"disposition\\\":{\\\"const\\\":\\\"unable\\\"},\\\"reason\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"unsatisfied_requirements\\\":{\\\"items\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\",\\\"uniqueItems\\\":true}},\\\"required\\\":[\\\"disposition\\\",\\\"reason\\\",\\\"unsatisfied_requirements\\\"],\\\"type\\\":\\\"object\\\"}]},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Report fulfilled only with evidence for each mandatory requested outcome; otherwise report unable.\\\",\\\"evidence_required\\\":[\\\"coverage and supporting observations\\\"],\\\"id\\\":\\\"honest-disposition\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"An objective and explicit acceptance requirements are supplied.\\\",\\\"kind\\\":\\\"input_schema\\\"}],\\\"title\\\":\\\"Bounded attempt at a supplied objective\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"required_evidence_criterion_ids\\\":[\\\"honest-disposition\\\"],\\\"requirements\\\":[\\\"verified-file\\\"]}\",\"type\":\"input_text\"}],\"id\":\"msg_01a1eeb9-4e93-7b01-9d87-2255cda24412\",\"role\":\"user\",\"type\":\"message\"}],\"purpose\":\"execution\"}"
+      },
+      "event_id": "event-ba4e03e555c34e719046fa604b0766d4",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 5101,
+        "input_digest": "sha256:aa9bfa69fb0e8a3f5461f54526c242f624236a906177333a4f0a3e20dc004e0d",
+        "operation_id": "model-82d7ea487b264447a69717c5ad106da3",
+        "output_bytes": 0,
+        "output_digest": null,
+        "payload_truncated": false,
+        "phase": "started",
+        "purpose": "execution",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 64238,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 60000
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        }
+      },
+      "redacted": true,
+      "sequence": 20,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-49f0c81ac34f4883a579624a19c06d4f",
+      "timestamp": "2026-11-18T12:55:09.295Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"output\":{\"output\":[{\"content\":[{\"annotations\":[],\"logprobs\":[],\"text\":\"{\\\"artifact_ids\\\":[],\\\"evidence\\\":[{\\\"artifact_ids\\\":[],\\\"criterion_id\\\":\\\"honest-disposition\\\",\\\"disposition\\\":\\\"passed\\\",\\\"summary\\\":\\\"The requested file was written through LASA workspace_write and then read back through LASA workspace_read; the read content exactly matched the required text.\\\"}],\\\"output\\\":{\\\"disposition\\\":\\\"fulfilled\\\",\\\"requirement_evidence\\\":[{\\\"evidence\\\":\\\"Created deployment-check.txt with LASA workspace_write (41 bytes written). Subsequent LASA workspace_read returned exact text: LASA parent retains final responsibility.\\\",\\\"id\\\":\\\"verified-file\\\"}],\\\"summary\\\":\\\"deployment-check.txt was created and verified. Exact text: LASA parent retains final responsibility.\\\"}}\",\"type\":\"output_text\"}],\"id\":\"msg_0c5bfc57ab03357c016afda032752487d09b0e240890fb32d2\",\"internal_chat_message_metadata_passthrough\":{\"content_token_count\":134,\"create_time\":1795006513.480827,\"turn_id\":\"01a1eeb9-4e1c-72d0-9ad7-f287f854f08a\"},\"metadata\":{\"turn_id\":\"01a1eeb9-4e1c-72d0-9ad7-f287f854f08a\"},\"phase\":\"final_answer\",\"role\":\"assistant\",\"status\":\"completed\",\"type\":\"message\"}]}}"
+      },
+      "event_id": "event-7b82970f64354348b764230ab9fe88d8",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 57,
+        "input_digest": "sha256:d1df3a779b49378bf3b00483b6ace6c6a617dca8b9ff5f8d8f5bd79ca1d35b37",
+        "operation_id": "model-82d7ea487b264447a69717c5ad106da3",
+        "output_bytes": 1149,
+        "output_digest": "sha256:901223e15856ada0fe42229c8d3751a56505ebbd89a99092c2fd83abc4d1fbf0",
+        "payload_truncated": false,
+        "phase": "finished",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 9114,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 4813
+        }
+      },
+      "redacted": true,
+      "sequence": 21,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-49f0c81ac34f4883a579624a19c06d4f",
+      "timestamp": "2026-11-18T12:55:14.115Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"input\":[{\"content\":[{\"text\":\"{\\\"candidate_output\\\":{\\\"disposition\\\":\\\"fulfilled\\\",\\\"requirement_evidence\\\":[{\\\"evidence\\\":\\\"Created deployment-check.txt with LASA workspace_write (41 bytes written). Subsequent LASA workspace_read returned exact text: LASA parent retains final responsibility.\\\",\\\"id\\\":\\\"verified-file\\\"}],\\\"summary\\\":\\\"deployment-check.txt was created and verified. Exact text: LASA parent retains final responsibility.\\\"},\\\"claimed_evidence\\\":[{\\\"artifact_ids\\\":[],\\\"criterion_id\\\":\\\"honest-disposition\\\",\\\"disposition\\\":\\\"passed\\\",\\\"summary\\\":\\\"The requested file was written through LASA workspace_write and then read back through LASA workspace_read; the read content exactly matched the required text.\\\"}],\\\"contract\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"reconcile_before_retry\\\",\\\"unknown_commit_possible\\\":true},\\\"failures\\\":[{\\\"code\\\":\\\"attempt_interrupted\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"A known interruption prevented producing a disposition.\\\",\\\"retry\\\":\\\"readmission\\\"},{\\\"code\\\":\\\"effect_unknown\\\",\\\"effect_disposition\\\":\\\"unknown_possible\\\",\\\"meaning\\\":\\\"The disposition of an authorized operation is not known.\\\",\\\"retry\\\":\\\"reconcile\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/task.attempt\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"context\\\":{\\\"maxLength\\\":32000,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"objective\\\":{\\\"maxLength\\\":16000,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"requirements\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"acceptance\\\":{\\\"items\\\":{\\\"maxLength\\\":2048,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"description\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"id\\\",\\\"description\\\",\\\"acceptance\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"}},\\\"required\\\":[\\\"objective\\\",\\\"requirements\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"workspace.read\\\",\\\"workspace.write\\\",\\\"external.read\\\"],\\\"non_guarantees\\\":[\\\"Does not claim domain expertise or guarantee that the objective is achievable.\\\",\\\"A result of unable does not fulfill the requested objective.\\\"],\\\"outcome\\\":\\\"Attempt the authorized objective within its limits and report fulfilled or unable with requirement-level evidence.\\\",\\\"output_schema\\\":{\\\"oneOf\\\":[{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"disposition\\\":{\\\"const\\\":\\\"fulfilled\\\"},\\\"requirement_evidence\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"evidence\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"id\\\",\\\"evidence\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"summary\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"disposition\\\",\\\"summary\\\",\\\"requirement_evidence\\\"],\\\"type\\\":\\\"object\\\"},{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"disposition\\\":{\\\"const\\\":\\\"unable\\\"},\\\"reason\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"unsatisfied_requirements\\\":{\\\"items\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\",\\\"uniqueItems\\\":true}},\\\"required\\\":[\\\"disposition\\\",\\\"reason\\\",\\\"unsatisfied_requirements\\\"],\\\"type\\\":\\\"object\\\"}]},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Report fulfilled only with evidence for each mandatory requested outcome; otherwise report unable.\\\",\\\"evidence_required\\\":[\\\"coverage and supporting observations\\\"],\\\"id\\\":\\\"honest-disposition\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"An objective and explicit acceptance requirements are supplied.\\\",\\\"kind\\\":\\\"input_schema\\\"}],\\\"title\\\":\\\"Bounded attempt at a supplied objective\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"input\\\":{\\\"objective\\\":\\\"Use the approved workspace tools to create deployment-check.txt containing exactly LASA parent retains final responsibility. Then read it back and report its exact text with evidence.\\\",\\\"requirements\\\":[{\\\"acceptance\\\":[\\\"The file is created and its exact text is reported from a subsequent read.\\\"],\\\"description\\\":\\\"Create the specified workspace file and read it back through approved tools.\\\",\\\"id\\\":\\\"verified-file\\\"}]},\\\"instruction\\\":\\\"Independently check whether the supplied evidence supports the output and required postconditions. A schema-valid answer or a peer saying complete is insufficient. A fulfilled attempt must satisfy every requirement; unable is an honest attempt outcome but cannot fulfill an actual requested subtask. Reject unsupported factual claims, missing criterion coverage, inadequate evidence, or unresolved effects. State uncertainty as passed=false.\\\",\\\"original_requirements\\\":[{\\\"acceptance\\\":[{\\\"criterion\\\":\\\"The file is created and its exact text is reported from a subsequent read.\\\",\\\"evidence_required\\\":[\\\"outcome evidence\\\"],\\\"id\\\":\\\"verified-file-acceptance\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"description\\\":\\\"Create the specified workspace file and read it back through approved tools.\\\",\\\"mandatory\\\":true,\\\"requirement_id\\\":\\\"verified-file\\\",\\\"source\\\":\\\"caller\\\"}],\\\"trusted_execution_evidence\\\":{\\\"artifacts\\\":[],\\\"operations\\\":[{\\\"content\\\":{\\\"request\\\":{\\\"arguments\\\":{\\\"relative_path\\\":\\\"deployment-check.txt\\\",\\\"text\\\":\\\"LASA parent retains final responsibility.\\\"},\\\"name\\\":\\\"workspace.write\\\"},\\\"result\\\":{\\\"value\\\":{\\\"bytes_written\\\":41}}},\\\"effect\\\":\\\"workspace.write\\\",\\\"input_digest\\\":\\\"sha256:c18dc07fd925767ed99efb544f81b21c3ecc882f63614e87bbc1050c39457800\\\",\\\"operation_id\\\":\\\"tool-07d3397d39673548f37a9f6a07641754773ad9cbe6b44eddf6eed5556a4c8642\\\",\\\"result_digest\\\":\\\"sha256:b6c3f43010eced209a3a31d35b92ec4a7146fd1ffe69877c00b3d1d434c379c9\\\",\\\"sequence\\\":3,\\\"state\\\":\\\"finished\\\",\\\"step_id\\\":\\\"attempt-verified-file\\\",\\\"succeeded\\\":true},{\\\"content\\\":{\\\"request\\\":{\\\"arguments\\\":{\\\"relative_path\\\":\\\"deployment-check.txt\\\"},\\\"name\\\":\\\"workspace.read\\\"},\\\"result\\\":{\\\"value\\\":{\\\"text\\\":\\\"LASA parent retains final responsibility.\\\"}}},\\\"effect\\\":\\\"none\\\",\\\"input_digest\\\":\\\"sha256:e673ee615efe02e901c51fa5047415b164717abf3d964630a33b197ef6700b12\\\",\\\"operation_id\\\":\\\"tool-3cf5e3c3c8c6fa553c08b58a9b4b2980448ce8511d702b9d94f3da4335802218\\\",\\\"result_digest\\\":\\\"sha256:497274f161fbd32508c3f818cd45aa883369bdf772b088b82f05d459fe98f6b2\\\",\\\"sequence\\\":4,\\\"state\\\":\\\"finished\\\",\\\"step_id\\\":\\\"attempt-verified-file\\\",\\\"succeeded\\\":true}],\\\"service_id\\\":\\\"https://localhost:8443/lasa\\\",\\\"source\\\":\\\"receiver_durable_store\\\",\\\"step_id\\\":null,\\\"task_id\\\":\\\"task-49f0c81ac34f4883a579624a19c06d4f\\\",\\\"truncated\\\":false}}\",\"type\":\"input_text\"}],\"role\":\"user\"}],\"purpose\":\"verification\"}"
+      },
+      "event_id": "event-d8103805560147379f1c53e5c6530e50",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 6806,
+        "input_digest": "sha256:439f188ae78c975ad9e4ac570cdfe15831f0271b29681cbeffb7862fdabb0d59",
+        "operation_id": "model-5a51630d6eca4c6d91326a348a98aa6e",
+        "output_bytes": 0,
+        "output_digest": null,
+        "payload_truncated": false,
+        "phase": "started",
+        "purpose": "verification",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 11336,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 60000
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        }
+      },
+      "redacted": true,
+      "sequence": 22,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-49f0c81ac34f4883a579624a19c06d4f",
+      "timestamp": "2026-11-18T12:55:14.549Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"output\":{\"passed\":true,\"reason\":\"Trusted execution evidence shows a successful workspace.write to deployment-check.txt with text exactly \\\"LASA parent retains final responsibility.\\\" followed by a successful subsequent workspace.read of the same path returning exactly that text. This supports the candidate output's fulfilled disposition and covers the mandatory verified-file requirement and honest-disposition postcondition.\"}}"
+      },
+      "event_id": "event-824dd0b6772a4373967286c1025de4d0",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 57,
+        "input_digest": "sha256:35257eb34efce5b8e918fa44bece7f3c6dd408bf516b6604deb66fcad05e359c",
+        "operation_id": "model-5a51630d6eca4c6d91326a348a98aa6e",
+        "output_bytes": 421,
+        "output_digest": "sha256:bb558797c3c3cf1e36c2e602ea7ef5a33b293d68e36367fdf9a050ed289582bd",
+        "payload_truncated": false,
+        "phase": "finished",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 1798,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 7572
+        }
+      },
+      "redacted": true,
+      "sequence": 23,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-49f0c81ac34f4883a579624a19c06d4f",
+      "timestamp": "2026-11-18T12:55:22.127Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-66b7ccf5a33440878c94bf3b3d530045",
+      "kind": "verification",
+      "payload": {
+        "checks": [
+          {
+            "artifact_ids": [],
+            "criterion_id": "honest-disposition",
+            "disposition": "passed",
+            "summary": "Trusted execution evidence shows a successful workspace.write to deployment-check.txt with text exactly \"LASA parent retains final responsibility.\" followed by a successful subsequent workspace.read of the same path returning exactly that text. This supports the candidate output's fulfilled disposition and covers the mandatory verified-file requirement and honest-disposition postcondition."
+          }
+        ],
+        "contract": {
+          "digest": "sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23",
+          "id": "https://contracts.example.net/capabilities/task.attempt",
+          "version": "1.0.0"
+        },
+        "release": "accepted",
+        "request_digest": "sha256:55a0b4172b745d56f79588726b05df164c3f09206a7c0b7852c2c445cf5260ee",
+        "step_id": "semantic-verification"
+      },
+      "redacted": true,
+      "sequence": 24,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-49f0c81ac34f4883a579624a19c06d4f",
+      "timestamp": "2026-11-18T12:55:22.142Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-91f42ce3f32b41ce9a76152efe49f5bd",
+      "kind": "verification",
+      "payload": {
+        "checks": [
+          {
+            "artifact_ids": [],
+            "criterion_id": "honest-disposition",
+            "disposition": "passed",
+            "summary": "The requested file was written through LASA workspace_write and then read back through LASA workspace_read; the read content exactly matched the required text."
+          }
+        ],
+        "contract": {
+          "digest": "sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23",
+          "id": "https://contracts.example.net/capabilities/task.attempt",
+          "version": "1.0.0"
+        },
+        "release": "accepted",
+        "request_digest": "sha256:55a0b4172b745d56f79588726b05df164c3f09206a7c0b7852c2c445cf5260ee",
+        "step_id": "final-release"
+      },
+      "redacted": true,
+      "sequence": 25,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-49f0c81ac34f4883a579624a19c06d4f",
+      "timestamp": "2026-11-18T12:55:22.160Z"
+    }
+  ],
+  "children_via_parent": []
+}

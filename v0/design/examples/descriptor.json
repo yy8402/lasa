@@ -1,0 +1,33 @@
+{
+  "descriptor_version": "1.0",
+  "service_id": "https://identity.example.net/services/layer2",
+  "deployment_revision": "deploy-20261118-a",
+  "revision": "descriptor-r4",
+  "valid_until": "2026-11-18T08:10:00Z",
+  "protocols": [
+    {
+      "version": "lasa/1.1",
+      "base_url": "https://layer2.example.net/lasa/v1",
+      "openapi_url": "https://layer2.example.net/lasa/v1/openapi.json",
+      "features": [
+        "metadata-diagnostics",
+        "content-diagnostics",
+        "clarification",
+        "artifacts",
+        "bounded-delegation"
+      ],
+      "required_features": [
+        "metadata-diagnostics",
+        "bounded-delegation"
+      ],
+      "wire_schema_digest": "sha256:7e7b4b8f638c579f5951f3efd4fdb29986c35c4edf899a653c11121286ce652b"
+    }
+  ],
+  "authentication": {
+    "issuer": "https://identity.example.net",
+    "audience": "https://identity.example.net/services/layer2"
+  },
+  "catalog_url": "https://layer2.example.net/lasa/v1/capabilities",
+  "contract_url_template": "https://layer2.example.net/lasa/v1/contracts/{digest}",
+  "idempotency_retention_seconds": 604800
+}

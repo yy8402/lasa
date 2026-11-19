@@ -1,0 +1,19 @@
+{
+  "linkset": [
+    {
+      "anchor": "https://layer2.example.net/lasa/v1",
+      "service-desc": [
+        {
+          "href": "https://layer2.example.net/lasa/v1/openapi.json",
+          "type": "application/json"
+        }
+      ],
+      "service-meta": [
+        {
+          "href": "https://layer2.example.net/lasa/v1/descriptor",
+          "type": "application/json"
+        }
+      ]
+    }
+  ]
+}

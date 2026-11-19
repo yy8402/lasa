@@ -1,0 +1,40 @@
+name: LASA v0 CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lasa-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: v0
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.12.3"
+          enable-cache: true
+          cache-dependency-glob: v0/uv.lock
+      - name: Install locked Python dependencies
+        run: uv sync --locked --all-groups --python 3.12
+      - name: Validate contracts and source quality
+        run: |
+          uv run --locked python design/validate.py
+          uv run --locked ruff check lasa_service tests deployment tools evaluations design/*.py run_task.py
+          uv run --locked ruff format --check lasa_service tests deployment tools evaluations design/*.py run_task.py
+      - name: Build pinned Codex carrier for isolated runtime tests
+        run: docker build --platform linux/amd64 --tag lasa-codex:target-v1 .
+      - name: Run tests without provider credentials
+        run: uv run --locked pytest -q
+      - name: Build distributions
+        run: uv build --wheel --sdist --out-dir dist

@@ -1,0 +1,39 @@
+Traceback (most recent call last):
+  File "/Users/yyang/Dev/CodeX/LASA/v0/lasa_service/contracts.py", line 79, in validate
+    ).validate(value)
+      ^^^^^^^^^^^^^^^
+  File "/Users/yyang/Dev/CodeX/LASA/v0/.venv/lib/python3.12/site-packages/jsonschema/validators.py", line 450, in validate
+    raise error
+jsonschema.exceptions.ValidationError: 600 is greater than the maximum of 300
+
+Failed validating 'maximum' in schema['properties']['discovery_cache']['properties']['catalog_max_age_seconds']:
+    {'type': 'integer', 'minimum': 0, 'maximum': 300}
+
+On instance['discovery_cache']['catalog_max_age_seconds']:
+    600
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/yyang/Dev/CodeX/LASA/v0/deployment/verify_deployed.py", line 269, in <module>
+    main()
+  File "/Users/yyang/Dev/CodeX/LASA/v0/deployment/verify_deployed.py", line 265, in main
+    raise SystemExit(asyncio.run(run(parser.parse_args())))
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/yyang/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "/Users/yyang/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/yyang/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/asyncio/base_events.py", line 691, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/Users/yyang/Dev/CodeX/LASA/v0/deployment/verify_deployed.py", line 43, in run
+    cfg = Configuration.from_document(
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/yyang/Dev/CodeX/LASA/v0/lasa_service/config.py", line 62, in from_document
+    Contracts().validate("Config", document)
+  File "/Users/yyang/Dev/CodeX/LASA/v0/lasa_service/contracts.py", line 81, in validate
+    raise LasaError(code, status) from exc
+lasa_service.errors.LasaError: invalid_input

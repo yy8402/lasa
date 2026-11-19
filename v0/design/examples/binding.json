@@ -1,0 +1,21 @@
+{
+  "binding_id": "binding-review-local",
+  "contract": {
+    "id": "https://contracts.example.net/capabilities/design.review",
+    "version": "1.0.0",
+    "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce"
+  },
+  "executor_id": "executor-codex-main",
+  "approved_resources": [
+    {
+      "resource": "workspace:self",
+      "actions": [
+        "read"
+      ]
+    }
+  ],
+  "allowed_effects": [
+    "workspace.read"
+  ],
+  "required_operations": []
+}

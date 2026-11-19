@@ -1,0 +1,1 @@
+{"case": "documents-read-verified", "passed": true, "status": "completed", "routing": ["peer"], "children": 1, "evidence": "verification/connectors-20261119/documents-read-verified.json"}

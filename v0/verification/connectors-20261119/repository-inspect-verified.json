@@ -1,0 +1,1607 @@
+{
+  "case": "repository-inspect-verified",
+  "passed": true,
+  "execution": "managed deployed services, real HTTPS, actual Codex App Server and gpt-5.5 inference",
+  "elapsed_seconds": 88.77,
+  "descriptor": {
+    "descriptor_version": "1.0",
+    "service_id": "https://localhost:8443/lasa",
+    "deployment_revision": "connectors-20261119-45e5f26c1b1a-steady",
+    "revision": "descriptor-44911b2800101d0307f79485981dbfdd",
+    "valid_until": "2026-11-19T02:18:48.167Z",
+    "protocols": [
+      {
+        "version": "lasa/1.1",
+        "base_url": "https://localhost:8443/lasa/v1",
+        "openapi_url": "https://localhost:8443/lasa/v1/openapi.json",
+        "wire_schema_digest": "sha256:7e7b4b8f638c579f5951f3efd4fdb29986c35c4edf899a653c11121286ce652b",
+        "features": [
+          "metadata-diagnostics",
+          "content-diagnostics",
+          "clarification",
+          "artifacts",
+          "bounded-delegation"
+        ],
+        "required_features": [
+          "metadata-diagnostics",
+          "bounded-delegation"
+        ]
+      }
+    ],
+    "authentication": {
+      "issuer": "https://localhost:8443/lasa/development-issuer",
+      "audience": "https://localhost:8443/lasa"
+    },
+    "catalog_url": "https://localhost:8443/lasa/v1/capabilities",
+    "contract_url_template": "https://localhost:8443/lasa/v1/contracts/{digest}",
+    "idempotency_retention_seconds": 604800
+  },
+  "catalog_revision": "catalog-e1328c89593ac9680839ef1e62798107",
+  "session": {
+    "session_id": "session-2721158e019a45a08deef19347fca6f1",
+    "service_id": "https://localhost:8443/lasa",
+    "created_at": "2026-11-19T02:18:18.514Z",
+    "retention_until": "2026-11-26T02:18:18.514Z",
+    "active_task_id": null
+  },
+  "task": {
+    "admission": {
+      "accepted_at": "2026-11-19T02:18:35.811Z",
+      "authorization_decision_id": "authority-6ea1c048153747d63aa1fdc71a3bc9c9",
+      "contract": {
+        "digest": "sha256:4c305684d20521d2f72628d5606a3537338691fc5f201177eca55b3aed1f5239",
+        "id": "https://contracts.example.net/capabilities/repository.inspect",
+        "version": "1.0.0"
+      },
+      "effective_limits": {
+        "budget": {
+          "artifact_bytes": 128000,
+          "delegations": 2,
+          "input_bytes": 128000,
+          "model_calls": 16,
+          "model_tokens": 500000,
+          "output_bytes": 32000,
+          "tool_calls": 12,
+          "wall_time_ms": 300000
+        },
+        "deadline": "2026-11-19T02:22:18.518Z",
+        "max_hops": 2
+      },
+      "plan_digest": "sha256:0aed9012546fe2282f288bae35f36a4a05ff8ffb927673455d28032789d758dd",
+      "request_digest": "sha256:d6e66b50f885e441de095f20e93c6e1def29df290eaa39858cc10934a51209d0"
+    },
+    "operation_id": "deployment-task-eca617786e4d4343917562c5a1ce82c5",
+    "received_at": "2026-11-19T02:18:18.523Z",
+    "request_digest": "sha256:d6e66b50f885e441de095f20e93c6e1def29df290eaa39858cc10934a51209d0",
+    "result": {
+      "artifacts": [
+        {
+          "artifact_id": "artifact-5716df0b97744aea8eb056d00cf6857a",
+          "bytes": 222,
+          "digest": "sha256:a5fa2798d539d3b33f7282587382225a39286e5e9a0f77ea7efec9f54aa000cf",
+          "media_type": "application/json",
+          "provenance": {
+            "contract": {
+              "digest": "sha256:4c305684d20521d2f72628d5606a3537338691fc5f201177eca55b3aed1f5239",
+              "id": "https://contracts.example.net/capabilities/repository.inspect",
+              "version": "1.0.0"
+            },
+            "input_digest": "sha256:336e56c0984b89f2229675367eff512550f38a0489617f63212218f15b00d971",
+            "kind": "operation-result",
+            "operation_id": "tool-9b5f0e3fa9fc78a7db0d59dc0dc47d2d6778e34c508f75d7235fcfeede4a2127",
+            "resource": "repository:python-sdk",
+            "result_digest": "sha256:a5fa2798d539d3b33f7282587382225a39286e5e9a0f77ea7efec9f54aa000cf",
+            "schema_digest": "sha256:839e1447c0ebd1698c8d8d02c05d0f30bfa583516a6ba10050c7731648415a60",
+            "sequence": 5,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-34a131fc132c4622a373527ecec6ac67"
+          },
+          "source_task_id": "task-797d0d0f47fc4d5bb8f2a3fff3acf723"
+        },
+        {
+          "artifact_id": "artifact-417dc442c74f422c89bcb6dae63e9aad",
+          "bytes": 1911,
+          "digest": "sha256:e3777341fdbd271fbde48eeef94f517aeed48ec496c428b6135b46ca5140703f",
+          "media_type": "application/json",
+          "provenance": {
+            "contract": {
+              "digest": "sha256:4c305684d20521d2f72628d5606a3537338691fc5f201177eca55b3aed1f5239",
+              "id": "https://contracts.example.net/capabilities/repository.inspect",
+              "version": "1.0.0"
+            },
+            "input_digest": "sha256:336e56c0984b89f2229675367eff512550f38a0489617f63212218f15b00d971",
+            "kind": "operation-result",
+            "operation_id": "tool-f98f8c068cb2c5e9616bc7b7c88722cf750e35086b855e42895474555125b627",
+            "resource": "documentation:python-sdk",
+            "result_digest": "sha256:e3777341fdbd271fbde48eeef94f517aeed48ec496c428b6135b46ca5140703f",
+            "schema_digest": "sha256:830605ce4c7109eee4a0cb9526b8b3ff1d7c442d5536ffca0de35484b040b2fd",
+            "sequence": 3,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-34a131fc132c4622a373527ecec6ac67"
+          },
+          "source_task_id": "task-797d0d0f47fc4d5bb8f2a3fff3acf723"
+        }
+      ],
+      "contract": {
+        "digest": "sha256:4c305684d20521d2f72628d5606a3537338691fc5f201177eca55b3aed1f5239",
+        "id": "https://contracts.example.net/capabilities/repository.inspect",
+        "version": "1.0.0"
+      },
+      "effect_disposition": "none",
+      "evidence": [
+        {
+          "artifact_ids": [
+            "artifact-5716df0b97744aea8eb056d00cf6857a",
+            "artifact-417dc442c74f422c89bcb6dae63e9aad"
+          ],
+          "criterion_id": "verified-source-content",
+          "disposition": "passed",
+          "summary": "Retrieved repository metadata and documentation index from the approved LASA source operations; both returned durable evidence artifacts with source-operation receipts and digests."
+        }
+      ],
+      "output": {
+        "default_branch": "main",
+        "description": "The official Python SDK for Model Context Protocol servers and clients",
+        "documentation_index": "Available pages for modelcontextprotocol/python-sdk:\n\n- 1 Overview\n  - 1.1 Installation & Dependencies\n  - 1.2 Key Concepts & Architecture\n- 2 FastMCP / MCPServer Framework\n  - 2.1 Creating a FastMCP Server\n  - 2.2 Tool System\n  - 2.3 Resources & Prompts\n  - 2.4 Function Metadata & Schema Generation\n  - 2.5 Context Injection & Lifespan Management\n  - 2.6 Extensions, Apps & Middleware\n  - 2.7 Subscriptions & Caching\n- 3 Client Framework\n  - 3.1 Client & ClientSession API\n  - 3.2 Making Requests\n  - 3.3 Handling Server Notifications & Subscriptions\n  - 3.4 Authentication & Authorization\n  - 3.5 ClientSessionGroup\n- 4 Transport Layer\n  - 4.1 STDIO Transport\n  - 4.2 SSE Transport\n  - 4.3 StreamableHTTP Transport\n  - 4.4 Transport Security & Configuration\n- 5 Protocol & Types System\n  - 5.1 JSON-RPC Messages & Types\n  - 5.2 Request/Response Patterns\n  - 5.3 Capabilities & Protocol Negotiation\n  - 5.4 Progress & Notifications\n  - 5.5 Multi-Round-Trip & Input Required\n  - 5.6 Content Types & Structured Output\n- 6 Low-Level Server API\n  - 6.1 Server Architecture & Handler Registration\n  - 6.2 ServerSession Management\n  - 6.3 Implementing Request Handlers\n  - 6.4 Session & Stream Management\n- 7 Server-Side Authentication\n  - 7.1 Token Verification & Authorization\n  - 7.2 Authorization Server Configuration\n- 8 Examples & Tutorials\n  - 8.1 Simple Server Examples\n  - 8.2 StreamableHTTP Server Examples\n  - 8.3 Client Integration Examples\n  - 8.4 OAuth Authentication Flow Example\n- 9 Deployment & Integration\n  - 9.1 Running Servers\n  - 9.2 Claude Desktop Integration\n  - 9.3 Production Deployment\n- 10 Development Guide\n  - 10.1 Development Environment Setup\n  - 10.2 Testing Guidelines\n  - 10.3 CI/CD Pipeline\n- 11 Migration & API Changes\n  - 11.1 v1 to v2 Migration Guide\n  - 11.2 Deprecated Patterns & Replacements\n- 12 Glossary",
+        "repository": "modelcontextprotocol/python-sdk",
+        "sources": [
+          "https://github.com/modelcontextprotocol/python-sdk",
+          "https://deepwiki.com/modelcontextprotocol/python-sdk"
+        ]
+      },
+      "request_digest": "sha256:d6e66b50f885e441de095f20e93c6e1def29df290eaa39858cc10934a51209d0",
+      "usage": {
+        "artifact_bytes": 2133,
+        "delegations": 1,
+        "input_bytes": 96,
+        "model_calls": 10,
+        "model_tokens": 68039,
+        "output_bytes": 4404,
+        "tool_calls": 2,
+        "wall_time_ms": 75482
+      }
+    },
+    "revision": 5,
+    "selection": {
+      "catalog_view": "view-b90175aef3b2113b543a1a84dd689a92",
+      "contract": {
+        "digest": "sha256:4c305684d20521d2f72628d5606a3537338691fc5f201177eca55b3aed1f5239",
+        "id": "https://contracts.example.net/capabilities/repository.inspect",
+        "version": "1.0.0"
+      },
+      "offer_id": "offer-db246981e143ba07989d28501913acca",
+      "offer_revision": "offer-36a725f7e9fb449c07022780eea24e4d"
+    },
+    "service_id": "https://localhost:8443/lasa",
+    "session_id": "session-2721158e019a45a08deef19347fca6f1",
+    "status": "completed",
+    "task_id": "task-797d0d0f47fc4d5bb8f2a3fff3acf723",
+    "updated_at": "2026-11-19T02:19:46.446Z"
+  },
+  "events": [
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"input\":[{\"content\":[{\"text\":\"{\\\"contracts\\\":{\\\"sha256:2a6bd42b305d7b416da9131965228c3c9d8de2a6fa524e8d6561bc2a5b215f12\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"readmit_if_no_uncertain_effect\\\",\\\"unknown_commit_possible\\\":false},\\\"failures\\\":[{\\\"code\\\":\\\"source_unavailable\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"A required approved source is unavailable, denied, or outside the allocation.\\\",\\\"retry\\\":\\\"readmission\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/documents.search\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"collection\\\":{\\\"const\\\":\\\"python-sdk-root\\\"},\\\"limit\\\":{\\\"maximum\\\":10,\\\"minimum\\\":1,\\\"type\\\":\\\"integer\\\"},\\\"query\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"collection\\\",\\\"query\\\",\\\"limit\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"external.read\\\"],\\\"non_guarantees\\\":[\\\"Does not cover unapproved collections or assert that source-provided content is universally correct.\\\"],\\\"outcome\\\":\\\"Return the first limit matching Markdown filenames from the approved top-level repository index, sorted by filename; query matching is case-insensitive substring matching. Set truncated according to the observed matching count.\\\",\\\"output_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"matches\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"document_id\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"source_uri\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"document_id\\\",\\\"source_uri\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":10,\\\"type\\\":\\\"array\\\"},\\\"truncated\\\":{\\\"type\\\":\\\"boolean\\\"}},\\\"required\\\":[\\\"matches\\\",\\\"truncated\\\"],\\\"type\\\":\\\"object\\\"},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Return the first limit matching Markdown filenames from the approved top-level repository index, sorted by filename; query matching is case-insensitive substring matching. Set truncated according to the observed matching count.\\\",\\\"evidence_required\\\":[\\\"Receiver-generated successful source-operation receipts and digest-verified source artifacts.\\\"],\\\"id\\\":\\\"verified-source-content\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"Inputs select an approved read-only collection.\\\",\\\"kind\\\":\\\"input_schema\\\"},{\\\"actions\\\":[\\\"read\\\"],\\\"description\\\":\\\"Read authority for the approved source is required.\\\",\\\"kind\\\":\\\"resource_authorized\\\",\\\"resource\\\":\\\"repository:python-sdk\\\"}],\\\"title\\\":\\\"Search approved repository document names\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"sha256:4c305684d20521d2f72628d5606a3537338691fc5f201177eca55b3aed1f5239\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"readmit_if_no_uncertain_effect\\\",\\\"unknown_commit_possible\\\":false},\\\"failures\\\":[{\\\"code\\\":\\\"source_unavailable\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"A required approved source is unavailable, denied, or outside the allocation.\\\",\\\"retry\\\":\\\"readmission\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/repository.inspect\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"repository\\\":{\\\"const\\\":\\\"modelcontextprotocol/python-sdk\\\"}},\\\"required\\\":[\\\"repository\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"external.read\\\"],\\\"non_guarantees\\\":[\\\"Does not cover unapproved collections or assert that source-provided content is universally correct.\\\"],\\\"outcome\\\":\\\"Return repository identity, description and default branch from the approved metadata source and the exact documentation index from the approved documentation source. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"output_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"default_branch\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"description\\\":{\\\"maxLength\\\":4096,\\\"type\\\":[\\\"string\\\",\\\"null\\\"]},\\\"documentation_index\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"repository\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"sources\\\":{\\\"items\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"maxItems\\\":2,\\\"minItems\\\":2,\\\"type\\\":\\\"array\\\"}},\\\"required\\\":[\\\"repository\\\",\\\"description\\\",\\\"default_branch\\\",\\\"documentation_index\\\",\\\"sources\\\"],\\\"type\\\":\\\"object\\\"},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Return repository identity, description and default branch from the approved metadata source and the exact documentation index from the approved documentation source. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"evidence_required\\\":[\\\"Receiver-generated successful source-operation receipts and digest-verified source artifacts.\\\"],\\\"id\\\":\\\"verified-source-content\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"Inputs select an approved read-only collection.\\\",\\\"kind\\\":\\\"input_schema\\\"},{\\\"actions\\\":[\\\"read\\\"],\\\"description\\\":\\\"Read authority for the approved source is required.\\\",\\\"kind\\\":\\\"resource_authorized\\\",\\\"resource\\\":\\\"repository:python-sdk\\\"},{\\\"actions\\\":[\\\"read\\\"],\\\"description\\\":\\\"Read authority for the documentation source is required.\\\",\\\"kind\\\":\\\"resource_authorized\\\",\\\"resource\\\":\\\"documentation:python-sdk\\\"}],\\\"title\\\":\\\"Inspect repository metadata and documentation index\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"readmit_if_no_uncertain_effect\\\",\\\"unknown_commit_possible\\\":false},\\\"failures\\\":[{\\\"code\\\":\\\"insufficient_input\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"The supplied design does not contain enough information to review the requested criteria.\\\",\\\"retry\\\":\\\"readmission\\\"},{\\\"code\\\":\\\"evaluation_failed\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"The bounded review could not be completed.\\\",\\\"retry\\\":\\\"readmission\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/design.review\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"criteria\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"description\\\":{\\\"maxLength\\\":2048,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"id\\\",\\\"description\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"design\\\":{\\\"maxLength\\\":32000,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"design\\\",\\\"criteria\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"workspace.read\\\"],\\\"non_guarantees\\\":[\\\"Does not prove correctness or inspect resources not supplied in the request.\\\"],\\\"outcome\\\":\\\"Return criterion coverage and actionable findings grounded in the supplied design.\\\",\\\"output_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"coverage\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"criterion_id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"disposition\\\":{\\\"enum\\\":[\\\"reviewed\\\",\\\"insufficient_input\\\"]},\\\"evidence\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"criterion_id\\\",\\\"disposition\\\",\\\"evidence\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":32,\\\"minItems\\\":1,\\\"type\\\":\\\"array\\\"},\\\"findings\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"criterion_id\\\":{\\\"maxLength\\\":128,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"observation\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"recommendation\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"severity\\\":{\\\"enum\\\":[\\\"info\\\",\\\"warning\\\",\\\"error\\\"]}},\\\"required\\\":[\\\"criterion_id\\\",\\\"severity\\\",\\\"observation\\\",\\\"recommendation\\\"],\\\"type\\\":\\\"object\\\"},\\\"maxItems\\\":128,\\\"type\\\":\\\"array\\\"}},\\\"required\\\":[\\\"findings\\\",\\\"coverage\\\"],\\\"type\\\":\\\"object\\\"},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Every supplied criterion has a coverage entry; findings cite supplied design evidence.\\\",\\\"evidence_required\\\":[\\\"coverage and supporting observations\\\"],\\\"id\\\":\\\"criterion-cov"
+      },
+      "event_id": "event-e92388c86cec43a7bb787e52d9dbfb3a",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 37339,
+        "input_digest": "sha256:ba4caa97190290058e558b4ea1e474585e0d79f8b3ad79f04ac06ea1b0d5b177",
+        "operation_id": "model-51dc58949202429494d9836022c16bbb",
+        "output_bytes": 0,
+        "output_digest": null,
+        "payload_truncated": true,
+        "phase": "started",
+        "purpose": "planning",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 42355,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 58715
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        }
+      },
+      "redacted": true,
+      "sequence": 1,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-797d0d0f47fc4d5bb8f2a3fff3acf723",
+      "timestamp": "2026-11-19T02:18:19.820Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"output\":{\"steps\":[{\"assessment_summary\":\"The request contract directly expresses the required outcome and the input conforms to the repository.inspect schema. However, approved LOCAL bindings only include design.review and task.attempt with workspace resources; there is no approved LOCAL binding for repository.inspect or LOCAL read authorization for repository:python-sdk and documentation:python-sdk. Peer offers mention this capability, but peer claims are not local permission.\",\"contract_digest\":\"sha256:4c305684d20521d2f72628d5606a3537338691fc5f201177eca55b3aed1f5239\",\"depends_on\":[],\"input_json\":\"{\\\"repository\\\":\\\"modelcontextprotocol/python-sdk\\\"}\",\"local_assessment\":\"insufficient\",\"requirement_ids\":[\"verified-source-content\"],\"step_id\":\"inspect_repository\"}]}}"
+      },
+      "event_id": "event-acbee1a1920249b1ad6880acf8f87a44",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 57,
+        "input_digest": "sha256:76c81dcabde44f786f2ace60591543f0c87c81bf08612e6c8047ee75c3c45598",
+        "operation_id": "model-51dc58949202429494d9836022c16bbb",
+        "output_bytes": 765,
+        "output_digest": "sha256:122aa10a51d667a8f77c4a8b3996a6ad7a620daa69d4be45883f821c35370b0c",
+        "payload_truncated": false,
+        "phase": "finished",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 8558,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 8655
+        }
+      },
+      "redacted": true,
+      "sequence": 2,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-797d0d0f47fc4d5bb8f2a3fff3acf723",
+      "timestamp": "2026-11-19T02:18:28.483Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-e8ca8725f4b44611b76527c0f079ea8e",
+      "kind": "routing",
+      "payload": {
+        "assessment_summary": "The request contract directly expresses the required outcome and the input conforms to the repository.inspect schema. However, approved LOCAL bindings only include design.review and task.attempt with workspace resources; there is no approved LOCAL binding for repository.inspect or LOCAL read authorization for repository:python-sdk and documentation:python-sdk. Peer offers mention this capability, but peer claims are not local permission.",
+        "authorization_decision_id": "authority-6ea1c048153747d63aa1fdc71a3bc9c9",
+        "catalog_revision": "catalog-7c14832ef724690f3cf869a275332653",
+        "contract": {
+          "digest": "sha256:4c305684d20521d2f72628d5606a3537338691fc5f201177eca55b3aed1f5239",
+          "id": "https://contracts.example.net/capabilities/repository.inspect",
+          "version": "1.0.0"
+        },
+        "decision_reason": "Verified local=insufficient, peer=matched; selected peer.",
+        "local_assessment": "insufficient",
+        "offer_revision": "offer-026483c6a5d27bd9bb3f788af1dadb5c",
+        "peer_assessment": "matched",
+        "policy": {
+          "preferred_executor": "peer",
+          "unclaimed_peer_fallback": "attempt"
+        },
+        "requirement_ids": [
+          "verified-source-content"
+        ],
+        "selected_executor": "peer",
+        "step_id": "inspect_repository"
+      },
+      "redacted": true,
+      "sequence": 3,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-797d0d0f47fc4d5bb8f2a3fff3acf723",
+      "timestamp": "2026-11-19T02:18:29.767Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"input\":[{\"content\":[{\"text\":\"{\\\"instruction\\\":\\\"Independently assess semantic requirement coverage. Reject a step that merely repeats/reviews the request text when the requirement is to retrieve missing external facts. Matching IDs and JSON schemas do not prove outcome coverage. Each declared step must actually target its assigned outcome. An explicitly allowed bounded fallback is an attempt, not a guarantee, and is permitted if it targets the correct outcome and later verification can report inability honestly. Authority, capacity, and actual routing are checked separately by controllers. Return passed=false for unsupported or mismatched decomposition.\\\",\\\"original_contract\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"readmit_if_no_uncertain_effect\\\",\\\"unknown_commit_possible\\\":false},\\\"failures\\\":[{\\\"code\\\":\\\"source_unavailable\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"A required approved source is unavailable, denied, or outside the allocation.\\\",\\\"retry\\\":\\\"readmission\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/repository.inspect\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"repository\\\":{\\\"const\\\":\\\"modelcontextprotocol/python-sdk\\\"}},\\\"required\\\":[\\\"repository\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"external.read\\\"],\\\"non_guarantees\\\":[\\\"Does not cover unapproved collections or assert that source-provided content is universally correct.\\\"],\\\"outcome\\\":\\\"Return repository identity, description and default branch from the approved metadata source and the exact documentation index from the approved documentation source. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"output_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"default_branch\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"description\\\":{\\\"maxLength\\\":4096,\\\"type\\\":[\\\"string\\\",\\\"null\\\"]},\\\"documentation_index\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"repository\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"sources\\\":{\\\"items\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"maxItems\\\":2,\\\"minItems\\\":2,\\\"type\\\":\\\"array\\\"}},\\\"required\\\":[\\\"repository\\\",\\\"description\\\",\\\"default_branch\\\",\\\"documentation_index\\\",\\\"sources\\\"],\\\"type\\\":\\\"object\\\"},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Return repository identity, description and default branch from the approved metadata source and the exact documentation index from the approved documentation source. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"evidence_required\\\":[\\\"Receiver-generated successful source-operation receipts and digest-verified source artifacts.\\\"],\\\"id\\\":\\\"verified-source-content\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"Inputs select an approved read-only collection.\\\",\\\"kind\\\":\\\"input_schema\\\"},{\\\"actions\\\":[\\\"read\\\"],\\\"description\\\":\\\"Read authority for the approved source is required.\\\",\\\"kind\\\":\\\"resource_authorized\\\",\\\"resource\\\":\\\"repository:python-sdk\\\"},{\\\"actions\\\":[\\\"read\\\"],\\\"description\\\":\\\"Read authority for the documentation source is required.\\\",\\\"kind\\\":\\\"resource_authorized\\\",\\\"resource\\\":\\\"documentation:python-sdk\\\"}],\\\"title\\\":\\\"Inspect repository metadata and documentation index\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"original_request\\\":{\\\"repository\\\":\\\"modelcontextprotocol/python-sdk\\\"},\\\"requirements\\\":[{\\\"acceptance\\\":[{\\\"criterion\\\":\\\"Return repository identity, description and default branch from the approved metadata source and the exact documentation index from the approved documentation source. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"evidence_required\\\":[\\\"Receiver-generated successful source-operation receipts and digest-verified source artifacts.\\\"],\\\"id\\\":\\\"verified-source-content\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"description\\\":\\\"Return repository identity, description and default branch from the approved metadata source and the exact documentation index from the approved documentation source. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"mandatory\\\":true,\\\"requirement_id\\\":\\\"verified-source-content\\\",\\\"source\\\":\\\"derived\\\"}],\\\"steps\\\":[{\\\"bounded_fallback\\\":false,\\\"contract\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"readmit_if_no_uncertain_effect\\\",\\\"unknown_commit_possible\\\":false},\\\"failures\\\":[{\\\"code\\\":\\\"source_unavailable\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"A required approved source is unavailable, denied, or outside the allocation.\\\",\\\"retry\\\":\\\"readmission\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/repository.inspect\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"repository\\\":{\\\"const\\\":\\\"modelcontextprotocol/python-sdk\\\"}},\\\"required\\\":[\\\"repository\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"external.read\\\"],\\\"non_guarantees\\\":[\\\"Does not cover unapproved collections or assert that source-provided content is universally correct.\\\"],\\\"outcome\\\":\\\"Return repository identity, description and default branch from the approved metadata source and the exact documentation index from the approved documentation source. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"output_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"default_branch\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"description\\\":{\\\"maxLength\\\":4096,\\\"type\\\":[\\\"string\\\",\\\"null\\\"]},\\\"documentation_index\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"repository\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"sources\\\":{\\\"items\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"maxItems\\\":2,\\\"minItems\\\":2,\\\"type\\\":\\\"array\\\"}},\\\"required\\\":[\\\"repository\\\",\\\"description\\\",\\\"default_branch\\\",\\\"documentation_index\\\",\\\"sources\\\"],\\\"type\\\":\\\"object\\\"},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Return repository identity, description and default branch from the approved metadata source and the exact documentation index from the approved documentation source. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"evidence_required\\\":[\\\"Receiver-generated successful source-operation receipts and digest-verified source artifacts.\\\"],\\\"id\\\":\\\"verified-source-content\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"Inputs select an approved read-only collection.\\\",\\\"kind\\\":\\\"input_schema\\\"},{\\\"actions\\\":[\\\"read\\\"],\\\"description\\\":\\\"Read authority for the approved source is required.\\\",\\\"kind\\\":\\\"resource_authorized\\\",\\\"resource\\\":\\\"repository:python-sdk\\\"},{\\\"actions\\\":[\\\"read\\\"],\\\"description\\\":\\\"Read authority for the documentation source is required.\\\",\\\"kind\\\":\\\"resource_authorized\\\",\\\"resource\\\":\\\"documentation:python-sdk\\\"}],\\\"title\\\":\\\"Inspect repository metadata and documentation index\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"input\\\":{\\\"repository\\\":\\\"modelcontextprotocol/python-sdk\\\"},\\\"step\\\":{\\\"allocation\\\":{\\\"budget\\\":{\\\"artifact_bytes\\\":128000,\\\"delegations\\\":1,\\\"input_bytes\\\":127952,\\\"model_calls\\\":9,\\\"model_tokens\\\":291442,\\\"output_bytes\\\":28000,\\\"tool_calls\\\":12,\\\"wall_time_ms\\\":201345},\\\"deadline\\\":\\\"2026-11-19T02:20:48.518Z\\\",\\\"max_hops\\\":1},\\\"contract\\\":{\\\"digest\\\":\\\"sha256:4c305684d20521d2f72628d5606a3537338691fc5f201177eca55b3aed1f5239\\\",\\\"id\\\":\\\"https://contracts.example.net/capabilities/repository.inspect\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"depends_on\\\":[],\\\"executor\\\":\\\"peer\\\",\\\"input_digest\\\":\\\"sha256:336e56c0984b89f2229675367eff512550f38a0489617f63212218f15b00d971\\\",\\\"requirement_ids\\\":[\\\"verified-source-content\\\"],\\\"step_id\\\":\\\"inspect_repository\\\"}}]}\",\"type\":\"input_text\"}],\"role\":\"user\"}],\"purpose\":\"planning\"}"
+      },
+      "event_id": "event-7accc5cb56054943ba85bfdcafcf5de3",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 8110,
+        "input_digest": "sha256:877ffebd4af2175a9a66c70462df1b63cb208acb4686f07fa9a4a7c1bc8815fe",
+        "operation_id": "model-03a5596709044622bf8a526193be6ee7",
+        "output_bytes": 0,
+        "output_digest": null,
+        "payload_truncated": false,
+        "phase": "started",
+        "purpose": "planning",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 12636,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 48717
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        }
+      },
+      "redacted": true,
+      "sequence": 4,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-797d0d0f47fc4d5bb8f2a3fff3acf723",
+      "timestamp": "2026-11-19T02:18:29.823Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"output\":{\"passed\":true,\"reason\":\"The single declared step targets the mandatory outcome: it invokes a repository.inspect capability for the approved repository input and its stated outcome/postcondition requires retrieving repository identity, description, default branch from the approved metadata source and the exact documentation index from the approved documentation source with the 8192-byte bound. This is not merely a review of the request text; it is an attempted external-read capability execution aimed at obtaining the missing source facts. Authority, capacity, routing, and actual execution/evidence verification are outside this semantic decomposition check.\"}}"
+      },
+      "event_id": "event-7fbae8e5d2ce448fb78c366545a445c0",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 57,
+        "input_digest": "sha256:9245d38f3f10051b2ea1d63629ad65805311139ce6c8cea8e54b5ae8cb41f075",
+        "operation_id": "model-03a5596709044622bf8a526193be6ee7",
+        "output_bytes": 666,
+        "output_digest": "sha256:783bfde2310c11f4237509508f9053a5134663ae0a4b3ed255464b544f5958b3",
+        "payload_truncated": false,
+        "phase": "finished",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 1975,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 5922
+        }
+      },
+      "redacted": true,
+      "sequence": 5,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-797d0d0f47fc4d5bb8f2a3fff3acf723",
+      "timestamp": "2026-11-19T02:18:35.754Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"request\":{\"authorization_ref\":\"default\",\"delegation\":{\"allocation\":{\"budget\":{\"artifact_bytes\":128000,\"delegations\":1,\"input_bytes\":127952,\"model_calls\":8,\"model_tokens\":289467,\"output_bytes\":28000,\"tool_calls\":12,\"wall_time_ms\":195423},\"deadline\":\"2026-11-19T02:20:48.518Z\",\"max_hops\":1},\"ancestry\":[\"https://localhost:8443/lasa\"],\"authority_ceiling\":{\"allowed_delegated_contracts\":[{\"digest\":\"sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce\",\"id\":\"https://contracts.example.net/capabilities/design.review\",\"version\":\"1.0.0\"},{\"digest\":\"sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23\",\"id\":\"https://contracts.example.net/capabilities/task.attempt\",\"version\":\"1.0.0\"},{\"digest\":\"sha256:e45b5a4209e4deb4d503ee162b4416fa48881e7c74058d231247d83b581a431d\",\"id\":\"https://contracts.example.net/capabilities/documents.read\",\"version\":\"1.0.0\"},{\"digest\":\"sha256:2a6bd42b305d7b416da9131965228c3c9d8de2a6fa524e8d6561bc2a5b215f12\",\"id\":\"https://contracts.example.net/capabilities/documents.search\",\"version\":\"1.0.0\"},{\"digest\":\"sha256:4c305684d20521d2f72628d5606a3537338691fc5f201177eca55b3aed1f5239\",\"id\":\"https://contracts.example.net/capabilities/repository.inspect\",\"version\":\"1.0.0\"}],\"allowed_disclosure_services\":[\"https://192.168.0.188/lasa\"],\"allowed_effects\":[\"external.read\"],\"content_diagnostics_allowed\":true,\"resources\":[{\"actions\":[\"create\",\"read\",\"update\"],\"resource\":\"workspace:self\"},{\"actions\":[\"read\"],\"resource\":\"documents:lasa\"},{\"actions\":[\"read\"],\"resource\":\"repository:python-sdk\"},{\"actions\":[\"read\"],\"resource\":\"documentation:python-sdk\"}]},\"delegation_id\":\"delegation-ab269138f24e49a4822979c4599d9389\",\"disclosed_artifacts\":[],\"parent_service_id\":\"https://localhost:8443/lasa\",\"parent_task_id\":\"task-797d0d0f47fc4d5bb8f2a3fff3acf723\",\"remaining_hops\":1,\"request_digest\":\"sha256:2d3cf55d274d7d9b99ecaacebc087eb41d28cb691b123a6df49ca99690bc2c7b\",\"requirement_ids\":[\"verified-source-content\"],\"root_task_id\":\"task-797d0d0f47fc4d5bb8f2a3fff3acf723\",\"step_id\":\"inspect_repository\"},\"diagnostics\":\"content\",\"input\":{\"repository\":\"modelcontextprotocol/python-sdk\"},\"operation_id\":\"delegation-ab269138f24e49a4822979c4599d9389-task\",\"requested_limits\":{\"budget\":{\"artifact_bytes\":128000,\"delegations\":1,\"input_bytes\":127952,\"model_calls\":8,\"model_tokens\":289467,\"output_bytes\":28000,\"tool_calls\":12,\"wall_time_ms\":195423},\"deadline\":\"2026-11-19T02:20:48.518Z\",\"max_hops\":1},\"selection\":{\"catalog_view\":\"view-ba2870f81e98ddcc13b5f3ba69225d3b\",\"contract\":{\"digest\":\"sha256:4c305684d20521d2f72628d5606a3537338691fc5f201177eca55b3aed1f5239\",\"id\":\"https://contracts.example.net/capabilities/repository.inspect\",\"version\":\"1.0.0\"},\"offer_id\":\"offer-2c71a29124471de8469c7fa5f7453749\",\"offer_revision\":\"offer-026483c6a5d27bd9bb3f788af1dadb5c\"}},\"service_id\":\"https://192.168.0.188/lasa\"}"
+      },
+      "event_id": "event-e4a6c85f32634b198fb1ea7a0a568e30",
+      "kind": "call",
+      "payload": {
+        "call_type": "child",
+        "contract": {
+          "digest": "sha256:4c305684d20521d2f72628d5606a3537338691fc5f201177eca55b3aed1f5239",
+          "id": "https://contracts.example.net/capabilities/repository.inspect",
+          "version": "1.0.0"
+        },
+        "input_bytes": 2784,
+        "input_digest": "sha256:832f6fea89c9807e80020efdf2bbcd707f127a26bcb80696a9529fba7a9bd95e",
+        "operation_id": "delegation-ab269138f24e49a4822979c4599d9389",
+        "output_bytes": 0,
+        "output_digest": null,
+        "payload_truncated": false,
+        "peer_service_id": "https://192.168.0.188/lasa",
+        "phase": "started",
+        "reserved": {
+          "artifact_bytes": 128000,
+          "delegations": 2,
+          "input_bytes": 127952,
+          "model_calls": 8,
+          "model_tokens": 289467,
+          "output_bytes": 28000,
+          "tool_calls": 12,
+          "wall_time_ms": 195423
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        }
+      },
+      "redacted": true,
+      "sequence": 6,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-797d0d0f47fc4d5bb8f2a3fff3acf723",
+      "timestamp": "2026-11-19T02:18:37.412Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"result\":{\"artifacts\":[{\"artifact_id\":\"artifact-de85399fc90f449699e2036a63482f22\",\"bytes\":222,\"digest\":\"sha256:a5fa2798d539d3b33f7282587382225a39286e5e9a0f77ea7efec9f54aa000cf\",\"media_type\":\"application/json\",\"provenance\":{\"contract\":{\"digest\":\"sha256:4c305684d20521d2f72628d5606a3537338691fc5f201177eca55b3aed1f5239\",\"id\":\"https://contracts.example.net/capabilities/repository.inspect\",\"version\":\"1.0.0\"},\"input_digest\":\"sha256:336e56c0984b89f2229675367eff512550f38a0489617f63212218f15b00d971\",\"kind\":\"operation-result\",\"operation_id\":\"tool-9b5f0e3fa9fc78a7db0d59dc0dc47d2d6778e34c508f75d7235fcfeede4a2127\",\"resource\":\"repository:python-sdk\",\"result_digest\":\"sha256:a5fa2798d539d3b33f7282587382225a39286e5e9a0f77ea7efec9f54aa000cf\",\"schema_digest\":\"sha256:839e1447c0ebd1698c8d8d02c05d0f30bfa583516a6ba10050c7731648415a60\",\"sequence\":5,\"service_id\":\"https://192.168.0.188/lasa\",\"task_id\":\"task-34a131fc132c4622a373527ecec6ac67\"},\"source_task_id\":\"task-34a131fc132c4622a373527ecec6ac67\"},{\"artifact_id\":\"artifact-a16fcc4abea64fbfbf1b3a5f1774ecb2\",\"bytes\":1911,\"digest\":\"sha256:e3777341fdbd271fbde48eeef94f517aeed48ec496c428b6135b46ca5140703f\",\"media_type\":\"application/json\",\"provenance\":{\"contract\":{\"digest\":\"sha256:4c305684d20521d2f72628d5606a3537338691fc5f201177eca55b3aed1f5239\",\"id\":\"https://contracts.example.net/capabilities/repository.inspect\",\"version\":\"1.0.0\"},\"input_digest\":\"sha256:336e56c0984b89f2229675367eff512550f38a0489617f63212218f15b00d971\",\"kind\":\"operation-result\",\"operation_id\":\"tool-f98f8c068cb2c5e9616bc7b7c88722cf750e35086b855e42895474555125b627\",\"resource\":\"documentation:python-sdk\",\"result_digest\":\"sha256:e3777341fdbd271fbde48eeef94f517aeed48ec496c428b6135b46ca5140703f\",\"schema_digest\":\"sha256:830605ce4c7109eee4a0cb9526b8b3ff1d7c442d5536ffca0de35484b040b2fd\",\"sequence\":3,\"service_id\":\"https://192.168.0.188/lasa\",\"task_id\":\"task-34a131fc132c4622a373527ecec6ac67\"},\"source_task_id\":\"task-34a131fc132c4622a373527ecec6ac67\"}],\"contract\":{\"digest\":\"sha256:4c305684d20521d2f72628d5606a3537338691fc5f201177eca55b3aed1f5239\",\"id\":\"https://contracts.example.net/capabilities/repository.inspect\",\"version\":\"1.0.0\"},\"effect_disposition\":\"none\",\"evidence\":[{\"artifact_ids\":[\"artifact-de85399fc90f449699e2036a63482f22\",\"artifact-a16fcc4abea64fbfbf1b3a5f1774ecb2\"],\"criterion_id\":\"verified-source-content\",\"disposition\":\"passed\",\"summary\":\"Retrieved repository metadata and documentation index from the approved LASA source operations; both returned durable evidence artifacts with source-operation receipts and digests.\"}],\"output\":{\"default_branch\":\"main\",\"description\":\"The official Python SDK for Model Context Protocol servers and clients\",\"documentation_index\":\"Available pages for modelcontextprotocol/python-sdk:\\n\\n- 1 Overview\\n  - 1.1 Installation & Dependencies\\n  - 1.2 Key Concepts & Architecture\\n- 2 FastMCP / MCPServer Framework\\n  - 2.1 Creating a FastMCP Server\\n  - 2.2 Tool System\\n  - 2.3 Resources & Prompts\\n  - 2.4 Function Metadata & Schema Generation\\n  - 2.5 Context Injection & Lifespan Management\\n  - 2.6 Extensions, Apps & Middleware\\n  - 2.7 Subscriptions & Caching\\n- 3 Client Framework\\n  - 3.1 Client & ClientSession API\\n  - 3.2 Making Requests\\n  - 3.3 Handling Server Notifications & Subscriptions\\n  - 3.4 Authentication & Authorization\\n  - 3.5 ClientSessionGroup\\n- 4 Transport Layer\\n  - 4.1 STDIO Transport\\n  - 4.2 SSE Transport\\n  - 4.3 StreamableHTTP Transport\\n  - 4.4 Transport Security & Configuration\\n- 5 Protocol & Types System\\n  - 5.1 JSON-RPC Messages & Types\\n  - 5.2 Request/Response Patterns\\n  - 5.3 Capabilities & Protocol Negotiation\\n  - 5.4 Progress & Notifications\\n  - 5.5 Multi-Round-Trip & Input Required\\n  - 5.6 Content Types & Structured Output\\n- 6 Low-Level Server API\\n  - 6.1 Server Architecture & Handler Registration\\n  - 6.2 ServerSession Management\\n  - 6.3 Implementing Request Handlers\\n  - 6.4 Session & Stream Management\\n- 7 Server-Side Authentication\\n  - 7.1 Token Verification & Authorization\\n  - 7.2 Authorization Server Configuration\\n- 8 Examples & Tutorials\\n  - 8.1 Simple Server Examples\\n  - 8.2 StreamableHTTP Server Examples\\n  - 8.3 Client Integration Examples\\n  - 8.4 OAuth Authentication Flow Example\\n- 9 Deployment & Integration\\n  - 9.1 Running Servers\\n  - 9.2 Claude Desktop Integration\\n  - 9.3 Production Deployment\\n- 10 Development Guide\\n  - 10.1 Development Environment Setup\\n  - 10.2 Testing Guidelines\\n  - 10.3 CI/CD Pipeline\\n- 11 Migration & API Changes\\n  - 11.1 v1 to v2 Migration Guide\\n  - 11.2 Deprecated Patterns & Replacements\\n- 12 Glossary\",\"repository\":\"modelcontextprotocol/python-sdk\",\"sources\":[\"https://github.com/modelcontextprotocol/python-sdk\",\"https://deepwiki.com/modelcontextprotocol/python-sdk\"]},\"request_digest\":\"sha256:2d3cf55d274d7d9b99ecaacebc087eb41d28cb691b123a6df49ca99690bc2c7b\",\"usage\":{\"artifact_bytes\":2133,\"delegations\":0,\"input_bytes\":48,\"model_calls\":6,\"model_tokens\":50111,\"output_bytes\":2202,\"tool_calls\":2,\"wall_time_ms\":31853}},\"service_id\":\"https://192.168.0.188/lasa\"}"
+      },
+      "event_id": "event-2099ec90f21d4ed5a9d9459ae392a8df",
+      "kind": "call",
+      "payload": {
+        "call_type": "child",
+        "child_task_id": "task-34a131fc132c4622a373527ecec6ac67",
+        "contract": {
+          "digest": "sha256:4c305684d20521d2f72628d5606a3537338691fc5f201177eca55b3aed1f5239",
+          "id": "https://contracts.example.net/capabilities/repository.inspect",
+          "version": "1.0.0"
+        },
+        "input_bytes": 2784,
+        "input_digest": "sha256:832f6fea89c9807e80020efdf2bbcd707f127a26bcb80696a9529fba7a9bd95e",
+        "operation_id": "delegation-ab269138f24e49a4822979c4599d9389",
+        "output_bytes": 4996,
+        "output_digest": "sha256:ce37eb2ed96d46ea76381fb475cd8cc0c4283420e68ce33956c4d86d741c3241",
+        "payload_truncated": false,
+        "peer_service_id": "https://192.168.0.188/lasa",
+        "phase": "finished",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        },
+        "usage": {
+          "artifact_bytes": 2133,
+          "delegations": 1,
+          "input_bytes": 48,
+          "model_calls": 6,
+          "model_tokens": 50111,
+          "output_bytes": 2202,
+          "tool_calls": 2,
+          "wall_time_ms": 31853
+        }
+      },
+      "redacted": true,
+      "sequence": 7,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-797d0d0f47fc4d5bb8f2a3fff3acf723",
+      "timestamp": "2026-11-19T02:19:17.166Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"input\":[{\"content\":[{\"text\":\"{\\\"candidate_output\\\":{\\\"default_branch\\\":\\\"main\\\",\\\"description\\\":\\\"The official Python SDK for Model Context Protocol servers and clients\\\",\\\"documentation_index\\\":\\\"Available pages for modelcontextprotocol/python-sdk:\\\\n\\\\n- 1 Overview\\\\n  - 1.1 Installation & Dependencies\\\\n  - 1.2 Key Concepts & Architecture\\\\n- 2 FastMCP / MCPServer Framework\\\\n  - 2.1 Creating a FastMCP Server\\\\n  - 2.2 Tool System\\\\n  - 2.3 Resources & Prompts\\\\n  - 2.4 Function Metadata & Schema Generation\\\\n  - 2.5 Context Injection & Lifespan Management\\\\n  - 2.6 Extensions, Apps & Middleware\\\\n  - 2.7 Subscriptions & Caching\\\\n- 3 Client Framework\\\\n  - 3.1 Client & ClientSession API\\\\n  - 3.2 Making Requests\\\\n  - 3.3 Handling Server Notifications & Subscriptions\\\\n  - 3.4 Authentication & Authorization\\\\n  - 3.5 ClientSessionGroup\\\\n- 4 Transport Layer\\\\n  - 4.1 STDIO Transport\\\\n  - 4.2 SSE Transport\\\\n  - 4.3 StreamableHTTP Transport\\\\n  - 4.4 Transport Security & Configuration\\\\n- 5 Protocol & Types System\\\\n  - 5.1 JSON-RPC Messages & Types\\\\n  - 5.2 Request/Response Patterns\\\\n  - 5.3 Capabilities & Protocol Negotiation\\\\n  - 5.4 Progress & Notifications\\\\n  - 5.5 Multi-Round-Trip & Input Required\\\\n  - 5.6 Content Types & Structured Output\\\\n- 6 Low-Level Server API\\\\n  - 6.1 Server Architecture & Handler Registration\\\\n  - 6.2 ServerSession Management\\\\n  - 6.3 Implementing Request Handlers\\\\n  - 6.4 Session & Stream Management\\\\n- 7 Server-Side Authentication\\\\n  - 7.1 Token Verification & Authorization\\\\n  - 7.2 Authorization Server Configuration\\\\n- 8 Examples & Tutorials\\\\n  - 8.1 Simple Server Examples\\\\n  - 8.2 StreamableHTTP Server Examples\\\\n  - 8.3 Client Integration Examples\\\\n  - 8.4 OAuth Authentication Flow Example\\\\n- 9 Deployment & Integration\\\\n  - 9.1 Running Servers\\\\n  - 9.2 Claude Desktop Integration\\\\n  - 9.3 Production Deployment\\\\n- 10 Development Guide\\\\n  - 10.1 Development Environment Setup\\\\n  - 10.2 Testing Guidelines\\\\n  - 10.3 CI/CD Pipeline\\\\n- 11 Migration & API Changes\\\\n  - 11.1 v1 to v2 Migration Guide\\\\n  - 11.2 Deprecated Patterns & Replacements\\\\n- 12 Glossary\\\",\\\"repository\\\":\\\"modelcontextprotocol/python-sdk\\\",\\\"sources\\\":[\\\"https://github.com/modelcontextprotocol/python-sdk\\\",\\\"https://deepwiki.com/modelcontextprotocol/python-sdk\\\"]},\\\"claimed_evidence\\\":[{\\\"artifact_ids\\\":[\\\"artifact-5716df0b97744aea8eb056d00cf6857a\\\",\\\"artifact-417dc442c74f422c89bcb6dae63e9aad\\\"],\\\"criterion_id\\\":\\\"verified-source-content\\\",\\\"disposition\\\":\\\"passed\\\",\\\"summary\\\":\\\"Retrieved repository metadata and documentation index from the approved LASA source operations; both returned durable evidence artifacts with source-operation receipts and digests.\\\"}],\\\"contract\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"readmit_if_no_uncertain_effect\\\",\\\"unknown_commit_possible\\\":false},\\\"failures\\\":[{\\\"code\\\":\\\"source_unavailable\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"A required approved source is unavailable, denied, or outside the allocation.\\\",\\\"retry\\\":\\\"readmission\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/repository.inspect\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"repository\\\":{\\\"const\\\":\\\"modelcontextprotocol/python-sdk\\\"}},\\\"required\\\":[\\\"repository\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"external.read\\\"],\\\"non_guarantees\\\":[\\\"Does not cover unapproved collections or assert that source-provided content is universally correct.\\\"],\\\"outcome\\\":\\\"Return repository identity, description and default branch from the approved metadata source and the exact documentation index from the approved documentation source. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"output_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"default_branch\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"description\\\":{\\\"maxLength\\\":4096,\\\"type\\\":[\\\"string\\\",\\\"null\\\"]},\\\"documentation_index\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"repository\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"sources\\\":{\\\"items\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"maxItems\\\":2,\\\"minItems\\\":2,\\\"type\\\":\\\"array\\\"}},\\\"required\\\":[\\\"repository\\\",\\\"description\\\",\\\"default_branch\\\",\\\"documentation_index\\\",\\\"sources\\\"],\\\"type\\\":\\\"object\\\"},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Return repository identity, description and default branch from the approved metadata source and the exact documentation index from the approved documentation source. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"evidence_required\\\":[\\\"Receiver-generated successful source-operation receipts and digest-verified source artifacts.\\\"],\\\"id\\\":\\\"verified-source-content\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"Inputs select an approved read-only collection.\\\",\\\"kind\\\":\\\"input_schema\\\"},{\\\"actions\\\":[\\\"read\\\"],\\\"description\\\":\\\"Read authority for the approved source is required.\\\",\\\"kind\\\":\\\"resource_authorized\\\",\\\"resource\\\":\\\"repository:python-sdk\\\"},{\\\"actions\\\":[\\\"read\\\"],\\\"description\\\":\\\"Read authority for the documentation source is required.\\\",\\\"kind\\\":\\\"resource_authorized\\\",\\\"resource\\\":\\\"documentation:python-sdk\\\"}],\\\"title\\\":\\\"Inspect repository metadata and documentation index\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"input\\\":{\\\"repository\\\":\\\"modelcontextprotocol/python-sdk\\\"},\\\"instruction\\\":\\\"Independently check whether the supplied evidence supports the output and required postconditions. A schema-valid answer or a peer saying complete is insufficient. A fulfilled attempt must satisfy every requirement; unable is an honest attempt outcome but cannot fulfill an actual requested subtask. Reject unsupported factual claims, missing criterion coverage, inadequate evidence, or unresolved effects. State uncertainty as passed=false.\\\",\\\"original_requirements\\\":[],\\\"trusted_execution_evidence\\\":{\\\"artifacts\\\":[{\\\"bytes_verified\\\":true,\\\"content\\\":{\\\"text\\\":\\\"{\\\\\\\"default_branch\\\\\\\":\\\\\\\"main\\\\\\\",\\\\\\\"description\\\\\\\":\\\\\\\"The official Python SDK for Model Context Protocol servers and clients\\\\\\\",\\\\\\\"full_name\\\\\\\":\\\\\\\"modelcontextprotocol/python-sdk\\\\\\\",\\\\\\\"html_url\\\\\\\":\\\\\\\"https://github.com/modelcontextprotocol/python-sdk\\\\\\\"}\\\"},\\\"manifest\\\":{\\\"artifact_id\\\":\\\"artifact-5716df0b97744aea8eb056d00cf6857a\\\",\\\"bytes\\\":222,\\\"digest\\\":\\\"sha256:a5fa2798d539d3b33f7282587382225a39286e5e9a0f77ea7efec9f54aa000cf\\\",\\\"media_type\\\":\\\"application/json\\\",\\\"provenance\\\":{\\\"contract\\\":{\\\"digest\\\":\\\"sha256:4c305684d20521d2f72628d5606a3537338691fc5f201177eca55b3aed1f5239\\\",\\\"id\\\":\\\"https://contracts.example.net/capabilities/repository.inspect\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"input_digest\\\":\\\"sha256:336e56c0984b89f2229675367eff512550f38a0489617f63212218f15b00d971\\\",\\\"kind\\\":\\\"operation-result\\\",\\\"operation_id\\\":\\\"tool-9b5f0e3fa9fc78a7db0d59dc0dc47d2d6778e34c508f75d7235fcfeede4a2127\\\",\\\"resource\\\":\\\"repository:python-sdk\\\",\\\"result_digest\\\":\\\"sha256:a5fa2798d539d3b33f7282587382225a39286e5e9a0f77ea7efec9f54aa000cf\\\",\\\"schema_digest\\\":\\\"sha256:839e1447c0ebd1698c8d8d02c05d0f30bfa583516a6ba10050c7731648415a60\\\",\\\"sequence\\\":5,\\\"service_id\\\":\\\"https://192.168.0.188/lasa\\\",\\\"task_id\\\":\\\"task-34a131fc132c4622a373527ecec6ac67\\\"},\\\"source_task_id\\\":\\\"task-797d0d0f47fc4d5bb8f2a3fff3acf723\\\"}},{\\\"bytes_verified\\\":true,\\\"content\\\":{\\\"text\\\":\\\"{\\\\\\\"result\\\\\\\":\\\\\\\"Available pages for modelcontextprotocol/python-sdk:\\\\\\\\n\\\\\\\\n- 1 Overview\\\\\\\\n  - 1.1 Installation & Dependencies\\\\\\\\n  - 1.2 Key Concepts & Architecture\\\\\\\\n- 2 FastMCP / MCPServer Framework\\\\\\\\n  - 2.1 Creating a FastMCP Server\\\\\\\\n  - 2.2 Tool System\\\\\\\\n  - 2.3 Resources & Prompts\\\\\\\\n  - 2.4 Function Metadata & Schema Generation\\\\\\\\n  - 2.5 Context Injection & Lifespan Management\\\\\\\\n  - 2.6 Extensions, Apps & Middleware\\\\\\\\n  - 2.7 Subscriptions & Caching\\\\\\\\n- 3 Client Framework\\\\\\\\n  - 3.1 Client & ClientSession API\\\\\\\\n  - 3.2 Making Requests\\\\\\\\n  - 3.3 Handling Server Notifications & Subscriptions"
+      },
+      "event_id": "event-03fb7ff659bb44bfb490c8645ea88bc7",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 11428,
+        "input_digest": "sha256:4df4eb9020e185c866bee8b5d8b56055292e2e2d475462a0eee47f08512ae2ca",
+        "operation_id": "model-2b53ace8d1d6418d89a3a0cb58092e08",
+        "output_bytes": 0,
+        "output_digest": null,
+        "payload_truncated": true,
+        "phase": "started",
+        "purpose": "verification",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 15958,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 60000
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        }
+      },
+      "redacted": true,
+      "sequence": 8,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-797d0d0f47fc4d5bb8f2a3fff3acf723",
+      "timestamp": "2026-11-19T02:19:17.237Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"output\":{\"passed\":true,\"reason\":\"The candidate output is supported by the supplied trusted execution evidence. The repository, default_branch, and description match the verified repository metadata artifact, and the documentation_index matches the verified documentation artifact result text. The artifacts include receiver-generated operation-result provenance, digests, byte verification, and source validation for the specified contract/input. Output fields conform to the contract schema and required postcondition coverage is present.\"}}"
+      },
+      "event_id": "event-9b50bd2b757941b0acc126e95f009bf7",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 57,
+        "input_digest": "sha256:67007e6381775f3a6a80be37708d66bd9603afe5dc23d1399088060b0eb60224",
+        "operation_id": "model-2b53ace8d1d6418d89a3a0cb58092e08",
+        "output_bytes": 533,
+        "output_digest": "sha256:a6e02e74547e17784f7cfb3b98a11cd50583f377866da356252cfc5bd5007867",
+        "payload_truncated": false,
+        "phase": "finished",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 3635,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 20895
+        }
+      },
+      "redacted": true,
+      "sequence": 9,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-797d0d0f47fc4d5bb8f2a3fff3acf723",
+      "timestamp": "2026-11-19T02:19:38.138Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-e1c3adf5c7cb41c0ae47e4d1e2314c67",
+      "kind": "verification",
+      "payload": {
+        "checks": [
+          {
+            "artifact_ids": [],
+            "criterion_id": "verified-source-content",
+            "disposition": "passed",
+            "summary": "The candidate output is supported by the supplied trusted execution evidence. The repository, default_branch, and description match the verified repository metadata artifact, and the documentation_index matches the verified documentation artifact result text. The artifacts include receiver-generated operation-result provenance, digests, byte verification, and source validation for the specified contract/input. Output fields conform to the contract schema and required postcondition coverage is present."
+          }
+        ],
+        "contract": {
+          "digest": "sha256:4c305684d20521d2f72628d5606a3537338691fc5f201177eca55b3aed1f5239",
+          "id": "https://contracts.example.net/capabilities/repository.inspect",
+          "version": "1.0.0"
+        },
+        "release": "accepted",
+        "request_digest": "sha256:d6e66b50f885e441de095f20e93c6e1def29df290eaa39858cc10934a51209d0",
+        "step_id": "semantic-verification"
+      },
+      "redacted": true,
+      "sequence": 10,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-797d0d0f47fc4d5bb8f2a3fff3acf723",
+      "timestamp": "2026-11-19T02:19:38.157Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-6eddd041236a418ab4430b8c1f454fb2",
+      "kind": "verification",
+      "payload": {
+        "checks": [
+          {
+            "artifact_ids": [
+              "artifact-5716df0b97744aea8eb056d00cf6857a",
+              "artifact-417dc442c74f422c89bcb6dae63e9aad"
+            ],
+            "criterion_id": "verified-source-content",
+            "disposition": "passed",
+            "summary": "Retrieved repository metadata and documentation index from the approved LASA source operations; both returned durable evidence artifacts with source-operation receipts and digests."
+          }
+        ],
+        "contract": {
+          "digest": "sha256:4c305684d20521d2f72628d5606a3537338691fc5f201177eca55b3aed1f5239",
+          "id": "https://contracts.example.net/capabilities/repository.inspect",
+          "version": "1.0.0"
+        },
+        "release": "accepted",
+        "request_digest": "sha256:2d3cf55d274d7d9b99ecaacebc087eb41d28cb691b123a6df49ca99690bc2c7b",
+        "step_id": "inspect_repository"
+      },
+      "redacted": true,
+      "sequence": 11,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-797d0d0f47fc4d5bb8f2a3fff3acf723",
+      "timestamp": "2026-11-19T02:19:38.166Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"input\":[{\"content\":[{\"text\":\"{\\\"candidate_output\\\":{\\\"default_branch\\\":\\\"main\\\",\\\"description\\\":\\\"The official Python SDK for Model Context Protocol servers and clients\\\",\\\"documentation_index\\\":\\\"Available pages for modelcontextprotocol/python-sdk:\\\\n\\\\n- 1 Overview\\\\n  - 1.1 Installation & Dependencies\\\\n  - 1.2 Key Concepts & Architecture\\\\n- 2 FastMCP / MCPServer Framework\\\\n  - 2.1 Creating a FastMCP Server\\\\n  - 2.2 Tool System\\\\n  - 2.3 Resources & Prompts\\\\n  - 2.4 Function Metadata & Schema Generation\\\\n  - 2.5 Context Injection & Lifespan Management\\\\n  - 2.6 Extensions, Apps & Middleware\\\\n  - 2.7 Subscriptions & Caching\\\\n- 3 Client Framework\\\\n  - 3.1 Client & ClientSession API\\\\n  - 3.2 Making Requests\\\\n  - 3.3 Handling Server Notifications & Subscriptions\\\\n  - 3.4 Authentication & Authorization\\\\n  - 3.5 ClientSessionGroup\\\\n- 4 Transport Layer\\\\n  - 4.1 STDIO Transport\\\\n  - 4.2 SSE Transport\\\\n  - 4.3 StreamableHTTP Transport\\\\n  - 4.4 Transport Security & Configuration\\\\n- 5 Protocol & Types System\\\\n  - 5.1 JSON-RPC Messages & Types\\\\n  - 5.2 Request/Response Patterns\\\\n  - 5.3 Capabilities & Protocol Negotiation\\\\n  - 5.4 Progress & Notifications\\\\n  - 5.5 Multi-Round-Trip & Input Required\\\\n  - 5.6 Content Types & Structured Output\\\\n- 6 Low-Level Server API\\\\n  - 6.1 Server Architecture & Handler Registration\\\\n  - 6.2 ServerSession Management\\\\n  - 6.3 Implementing Request Handlers\\\\n  - 6.4 Session & Stream Management\\\\n- 7 Server-Side Authentication\\\\n  - 7.1 Token Verification & Authorization\\\\n  - 7.2 Authorization Server Configuration\\\\n- 8 Examples & Tutorials\\\\n  - 8.1 Simple Server Examples\\\\n  - 8.2 StreamableHTTP Server Examples\\\\n  - 8.3 Client Integration Examples\\\\n  - 8.4 OAuth Authentication Flow Example\\\\n- 9 Deployment & Integration\\\\n  - 9.1 Running Servers\\\\n  - 9.2 Claude Desktop Integration\\\\n  - 9.3 Production Deployment\\\\n- 10 Development Guide\\\\n  - 10.1 Development Environment Setup\\\\n  - 10.2 Testing Guidelines\\\\n  - 10.3 CI/CD Pipeline\\\\n- 11 Migration & API Changes\\\\n  - 11.1 v1 to v2 Migration Guide\\\\n  - 11.2 Deprecated Patterns & Replacements\\\\n- 12 Glossary\\\",\\\"repository\\\":\\\"modelcontextprotocol/python-sdk\\\",\\\"sources\\\":[\\\"https://github.com/modelcontextprotocol/python-sdk\\\",\\\"https://deepwiki.com/modelcontextprotocol/python-sdk\\\"]},\\\"claimed_evidence\\\":[{\\\"artifact_ids\\\":[\\\"artifact-5716df0b97744aea8eb056d00cf6857a\\\",\\\"artifact-417dc442c74f422c89bcb6dae63e9aad\\\"],\\\"criterion_id\\\":\\\"verified-source-content\\\",\\\"disposition\\\":\\\"passed\\\",\\\"summary\\\":\\\"Retrieved repository metadata and documentation index from the approved LASA source operations; both returned durable evidence artifacts with source-operation receipts and digests.\\\"}],\\\"contract\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"readmit_if_no_uncertain_effect\\\",\\\"unknown_commit_possible\\\":false},\\\"failures\\\":[{\\\"code\\\":\\\"source_unavailable\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"A required approved source is unavailable, denied, or outside the allocation.\\\",\\\"retry\\\":\\\"readmission\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/repository.inspect\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"repository\\\":{\\\"const\\\":\\\"modelcontextprotocol/python-sdk\\\"}},\\\"required\\\":[\\\"repository\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"external.read\\\"],\\\"non_guarantees\\\":[\\\"Does not cover unapproved collections or assert that source-provided content is universally correct.\\\"],\\\"outcome\\\":\\\"Return repository identity, description and default branch from the approved metadata source and the exact documentation index from the approved documentation source. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"output_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"default_branch\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"description\\\":{\\\"maxLength\\\":4096,\\\"type\\\":[\\\"string\\\",\\\"null\\\"]},\\\"documentation_index\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"repository\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"sources\\\":{\\\"items\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"maxItems\\\":2,\\\"minItems\\\":2,\\\"type\\\":\\\"array\\\"}},\\\"required\\\":[\\\"repository\\\",\\\"description\\\",\\\"default_branch\\\",\\\"documentation_index\\\",\\\"sources\\\"],\\\"type\\\":\\\"object\\\"},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Return repository identity, description and default branch from the approved metadata source and the exact documentation index from the approved documentation source. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"evidence_required\\\":[\\\"Receiver-generated successful source-operation receipts and digest-verified source artifacts.\\\"],\\\"id\\\":\\\"verified-source-content\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"Inputs select an approved read-only collection.\\\",\\\"kind\\\":\\\"input_schema\\\"},{\\\"actions\\\":[\\\"read\\\"],\\\"description\\\":\\\"Read authority for the approved source is required.\\\",\\\"kind\\\":\\\"resource_authorized\\\",\\\"resource\\\":\\\"repository:python-sdk\\\"},{\\\"actions\\\":[\\\"read\\\"],\\\"description\\\":\\\"Read authority for the documentation source is required.\\\",\\\"kind\\\":\\\"resource_authorized\\\",\\\"resource\\\":\\\"documentation:python-sdk\\\"}],\\\"title\\\":\\\"Inspect repository metadata and documentation index\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"input\\\":{\\\"repository\\\":\\\"modelcontextprotocol/python-sdk\\\"},\\\"instruction\\\":\\\"Independently check whether the supplied evidence supports the output and required postconditions. A schema-valid answer or a peer saying complete is insufficient. A fulfilled attempt must satisfy every requirement; unable is an honest attempt outcome but cannot fulfill an actual requested subtask. Reject unsupported factual claims, missing criterion coverage, inadequate evidence, or unresolved effects. State uncertainty as passed=false.\\\",\\\"original_requirements\\\":[{\\\"acceptance\\\":[{\\\"criterion\\\":\\\"Return repository identity, description and default branch from the approved metadata source and the exact documentation index from the approved documentation source. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"evidence_required\\\":[\\\"Receiver-generated successful source-operation receipts and digest-verified source artifacts.\\\"],\\\"id\\\":\\\"verified-source-content\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"description\\\":\\\"Return repository identity, description and default branch from the approved metadata source and the exact documentation index from the approved documentation source. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"mandatory\\\":true,\\\"requirement_id\\\":\\\"verified-source-content\\\",\\\"source\\\":\\\"derived\\\"}],\\\"trusted_execution_evidence\\\":{\\\"artifacts\\\":[{\\\"bytes_verified\\\":true,\\\"content\\\":{\\\"text\\\":\\\"{\\\\\\\"default_branch\\\\\\\":\\\\\\\"main\\\\\\\",\\\\\\\"description\\\\\\\":\\\\\\\"The official Python SDK for Model Context Protocol servers and clients\\\\\\\",\\\\\\\"full_name\\\\\\\":\\\\\\\"modelcontextprotocol/python-sdk\\\\\\\",\\\\\\\"html_url\\\\\\\":\\\\\\\"https://github.com/modelcontextprotocol/python-sdk\\\\\\\"}\\\"},\\\"manifest\\\":{\\\"artifact_id\\\":\\\"artifact-5716df0b97744aea8eb056d00cf6857a\\\",\\\"bytes\\\":222,\\\"digest\\\":\\\"sha256:a5fa2798d539d3b33f7282587382225a39286e5e9a0f77ea7efec9f54aa000cf\\\",\\\"media_type\\\":\\\"application/json\\\",\\\"provenance\\\":{\\\"contract\\\":{\\\"digest\\\":\\\"sha256:4c305684d20521d2f72628d5606a3537338691fc5f201177eca55b3aed1f5239\\\",\\\"id\\\":\\\"https://contracts.example.net/capabilities/repository.inspect\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"input_digest\\\":\\\"sha256:336e56c0984b89f2229675367eff512550f38a0489617f63212218f15b00d971\\\",\\\"kind\\\":\\\"operation-result\\\",\\\"operation_id\\\":\\\"tool-9b5f0e3fa9fc78a7db0d59dc0dc47d2d6778e34c508f75d7235fcfeede4a2127\\\",\\\"resource\\\":\\\"repository:python-sdk\\\",\\\"result_digest\\\":\\\"sha256:a5fa2798d539d3b33f7282587382225a39286e5e9a0f77ea7efec9f54aa000cf\\\",\\\"schema_digest\\\":\\\"sha256:839e1447c0ebd1698c8d8d02c05d0f30bfa58351"
+      },
+      "event_id": "event-98fb5f58033146c68242f94770b8b78e",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 12301,
+        "input_digest": "sha256:d2b8f766e20ec309b8a34e9b260356890570e456e040c4f836f611699b79f546",
+        "operation_id": "model-0a4c1400f3254db486952db72a3352f2",
+        "output_bytes": 0,
+        "output_digest": null,
+        "payload_truncated": true,
+        "phase": "started",
+        "purpose": "verification",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 16831,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 60000
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        }
+      },
+      "redacted": true,
+      "sequence": 12,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-797d0d0f47fc4d5bb8f2a3fff3acf723",
+      "timestamp": "2026-11-19T02:19:38.222Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "content": {
+        "media_type": "application/json",
+        "text": "{\"output\":{\"passed\":true,\"reason\":\"The candidate output matches the provided digest-verified operation-result artifacts: repository/full_name maps to modelcontextprotocol/python-sdk, default_branch is main, description matches, and the documentation_index text matches the documentation artifact's result. The artifacts are marked bytes_verified with receiver-generated provenance for the required repository and documentation resources, and the documentation artifact is 1911 bytes, within the 8192-byte bound. No write effects or unresolved effects are indicated.\"}}"
+      },
+      "event_id": "event-7b18ed65f9ba48e2932b94478e79b19c",
+      "kind": "call",
+      "payload": {
+        "call_type": "model",
+        "input_bytes": 57,
+        "input_digest": "sha256:31b8648405544df288aa92ccfe0851483b1e188efa2f91f97e68c180e12dd9ef",
+        "operation_id": "model-0a4c1400f3254db486952db72a3352f2",
+        "output_bytes": 557,
+        "output_digest": "sha256:1285646a15e7fd10bce4c48f6b766b5076c9ae26cd2df8db99f56975d146796e",
+        "payload_truncated": false,
+        "phase": "finished",
+        "reserved": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 0,
+          "model_tokens": 0,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 0
+        },
+        "usage": {
+          "artifact_bytes": 0,
+          "delegations": 0,
+          "input_bytes": 0,
+          "model_calls": 1,
+          "model_tokens": 3760,
+          "output_bytes": 0,
+          "tool_calls": 0,
+          "wall_time_ms": 8157
+        }
+      },
+      "redacted": true,
+      "sequence": 13,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-797d0d0f47fc4d5bb8f2a3fff3acf723",
+      "timestamp": "2026-11-19T02:19:46.386Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-b1ff95fcf95f4a8b809d9d72ef9affa7",
+      "kind": "verification",
+      "payload": {
+        "checks": [
+          {
+            "artifact_ids": [],
+            "criterion_id": "verified-source-content",
+            "disposition": "passed",
+            "summary": "The candidate output matches the provided digest-verified operation-result artifacts: repository/full_name maps to modelcontextprotocol/python-sdk, default_branch is main, description matches, and the documentation_index text matches the documentation artifact's result. The artifacts are marked bytes_verified with receiver-generated provenance for the required repository and documentation resources, and the documentation artifact is 1911 bytes, within the 8192-byte bound. No write effects or unresolved effects are indicated."
+          }
+        ],
+        "contract": {
+          "digest": "sha256:4c305684d20521d2f72628d5606a3537338691fc5f201177eca55b3aed1f5239",
+          "id": "https://contracts.example.net/capabilities/repository.inspect",
+          "version": "1.0.0"
+        },
+        "release": "accepted",
+        "request_digest": "sha256:d6e66b50f885e441de095f20e93c6e1def29df290eaa39858cc10934a51209d0",
+        "step_id": "semantic-verification"
+      },
+      "redacted": true,
+      "sequence": 14,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-797d0d0f47fc4d5bb8f2a3fff3acf723",
+      "timestamp": "2026-11-19T02:19:46.412Z"
+    },
+    {
+      "causal_parent_event_id": null,
+      "event_id": "event-4bcf1565814d4ba5b78ede77a2039469",
+      "kind": "verification",
+      "payload": {
+        "checks": [
+          {
+            "artifact_ids": [
+              "artifact-5716df0b97744aea8eb056d00cf6857a",
+              "artifact-417dc442c74f422c89bcb6dae63e9aad"
+            ],
+            "criterion_id": "verified-source-content",
+            "disposition": "passed",
+            "summary": "Retrieved repository metadata and documentation index from the approved LASA source operations; both returned durable evidence artifacts with source-operation receipts and digests."
+          }
+        ],
+        "contract": {
+          "digest": "sha256:4c305684d20521d2f72628d5606a3537338691fc5f201177eca55b3aed1f5239",
+          "id": "https://contracts.example.net/capabilities/repository.inspect",
+          "version": "1.0.0"
+        },
+        "release": "accepted",
+        "request_digest": "sha256:d6e66b50f885e441de095f20e93c6e1def29df290eaa39858cc10934a51209d0",
+        "step_id": "final-release"
+      },
+      "redacted": true,
+      "sequence": 15,
+      "service_id": "https://localhost:8443/lasa",
+      "task_id": "task-797d0d0f47fc4d5bb8f2a3fff3acf723",
+      "timestamp": "2026-11-19T02:19:46.448Z"
+    }
+  ],
+  "children_via_parent": [
+    {
+      "delegation_id": "delegation-ab269138f24e49a4822979c4599d9389",
+      "service_id": "https://192.168.0.188/lasa",
+      "state": "completed",
+      "task_id": "task-34a131fc132c4622a373527ecec6ac67",
+      "trace": {
+        "task_id": "task-34a131fc132c4622a373527ecec6ac67",
+        "events": [
+          {
+            "causal_parent_event_id": null,
+            "event_id": "event-e9ed915af189453eafff38c417060411",
+            "kind": "routing",
+            "payload": {
+              "assessment_summary": "No peer is configured; the approved local binding is the only execution path.",
+              "authorization_decision_id": "authority-75932848c03eb2f270a7cc8029cc9dfe",
+              "catalog_revision": null,
+              "contract": {
+                "digest": "sha256:4c305684d20521d2f72628d5606a3537338691fc5f201177eca55b3aed1f5239",
+                "id": "https://contracts.example.net/capabilities/repository.inspect",
+                "version": "1.0.0"
+              },
+              "decision_reason": "No peer is configured; routing settings are ignored.",
+              "local_assessment": "sufficient",
+              "offer_revision": null,
+              "peer_assessment": "not_configured",
+              "policy": {
+                "preferred_executor": "local",
+                "unclaimed_peer_fallback": "reject"
+              },
+              "requirement_ids": [
+                "verified-source-content"
+              ],
+              "selected_executor": "local",
+              "step_id": "step-local"
+            },
+            "redacted": true,
+            "sequence": 1,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-34a131fc132c4622a373527ecec6ac67",
+            "timestamp": "2026-11-19T02:18:38.199Z"
+          },
+          {
+            "causal_parent_event_id": null,
+            "content": {
+              "media_type": "application/json",
+              "text": "{\"input\":[{\"content\":[{\"text\":\"<environment_context>\\n  <cwd>/workspace</cwd>\\n  <shell>bash</shell>\\n  <current_date>2026-11-19</current_date>\\n  <timezone>Etc/UTC</timezone>\\n  <filesystem><workspace_roots><root>/workspace</root></workspace_roots><permission_profile type=\\\"managed\\\"><file_system type=\\\"restricted\\\"><entry access=\\\"read\\\"><special>:root</special></entry><entry access=\\\"write\\\"><path>/workspace</path></entry><entry access=\\\"write\\\"><special>:slash_tmp</special></entry><entry access=\\\"write\\\"><special>:tmpdir</special></entry><entry access=\\\"read\\\"><path>/workspace/.git</path></entry><entry access=\\\"read\\\"><path>/workspace/.agents</path></entry><entry access=\\\"read\\\"><path>/workspace/.codex</path></entry><entry access=\\\"read\\\"><path>/workspace/.aws</path></entry></file_system></permission_profile></filesystem>\\n</environment_context>\",\"type\":\"input_text\"}],\"id\":\"msg_01a1f199-5429-7cc3-bcde-59a04393f258\",\"role\":\"user\",\"type\":\"message\"},{\"content\":[{\"text\":\"{\\\"contract\\\":{\\\"digest\\\":\\\"sha256:4c305684d20521d2f72628d5606a3537338691fc5f201177eca55b3aed1f5239\\\",\\\"id\\\":\\\"https://contracts.example.net/capabilities/repository.inspect\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"dependency_results\\\":{},\\\"input\\\":{\\\"repository\\\":\\\"modelcontextprotocol/python-sdk\\\"},\\\"outcome_contract\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"readmit_if_no_uncertain_effect\\\",\\\"unknown_commit_possible\\\":false},\\\"failures\\\":[{\\\"code\\\":\\\"source_unavailable\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"A required approved source is unavailable, denied, or outside the allocation.\\\",\\\"retry\\\":\\\"readmission\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/repository.inspect\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"repository\\\":{\\\"const\\\":\\\"modelcontextprotocol/python-sdk\\\"}},\\\"required\\\":[\\\"repository\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"external.read\\\"],\\\"non_guarantees\\\":[\\\"Does not cover unapproved collections or assert that source-provided content is universally correct.\\\"],\\\"outcome\\\":\\\"Return repository identity, description and default branch from the approved metadata source and the exact documentation index from the approved documentation source. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"output_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"default_branch\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"description\\\":{\\\"maxLength\\\":4096,\\\"type\\\":[\\\"string\\\",\\\"null\\\"]},\\\"documentation_index\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"repository\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"sources\\\":{\\\"items\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"maxItems\\\":2,\\\"minItems\\\":2,\\\"type\\\":\\\"array\\\"}},\\\"required\\\":[\\\"repository\\\",\\\"description\\\",\\\"default_branch\\\",\\\"documentation_index\\\",\\\"sources\\\"],\\\"type\\\":\\\"object\\\"},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Return repository identity, description and default branch from the approved metadata source and the exact documentation index from the approved documentation source. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"evidence_required\\\":[\\\"Receiver-generated successful source-operation receipts and digest-verified source artifacts.\\\"],\\\"id\\\":\\\"verified-source-content\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"Inputs select an approved read-only collection.\\\",\\\"kind\\\":\\\"input_schema\\\"},{\\\"actions\\\":[\\\"read\\\"],\\\"description\\\":\\\"Read authority for the approved source is required.\\\",\\\"kind\\\":\\\"resource_authorized\\\",\\\"resource\\\":\\\"repository:python-sdk\\\"},{\\\"actions\\\":[\\\"read\\\"],\\\"description\\\":\\\"Read authority for the documentation source is required.\\\",\\\"kind\\\":\\\"resource_authorized\\\",\\\"resource\\\":\\\"documentation:python-sdk\\\"}],\\\"title\\\":\\\"Inspect repository metadata and documentation index\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"required_evidence_criterion_ids\\\":[\\\"verified-source-content\\\"],\\\"requirements\\\":[\\\"verified-source-content\\\"],\\\"source_execution\\\":\\\"Invoke the approved source operations needed for the selected input. Use their actual returned data as evidence. The server will assemble exact source fields and hashes from durable operation artifacts. Return output={ready_for_verification:true} only after retrieval succeeds; do not compute hashes or reproduce source bodies. Include evidence for every required criterion.\\\"}\",\"type\":\"input_text\"}],\"id\":\"msg_01a1f199-5429-7cc3-bcde-59ce61c3896d\",\"role\":\"user\",\"type\":\"message\"}],\"purpose\":\"execution\"}"
+            },
+            "event_id": "event-f873529c178240b8b347d0441be8040f",
+            "kind": "call",
+            "payload": {
+              "call_type": "model",
+              "input_bytes": 4720,
+              "input_digest": "sha256:09656f6481aea2174387226123b5f5b2591ba539c59952804438c00585a31491",
+              "operation_id": "model-229df0968d4e43c7982b0dc9696f5d11",
+              "output_bytes": 0,
+              "output_digest": null,
+              "payload_truncated": false,
+              "phase": "started",
+              "purpose": "execution",
+              "reserved": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 1,
+                "model_tokens": 43442,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 60000
+              },
+              "usage": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 0,
+                "model_tokens": 0,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 0
+              }
+            },
+            "redacted": true,
+            "sequence": 2,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-34a131fc132c4622a373527ecec6ac67",
+            "timestamp": "2026-11-19T02:18:40.146Z"
+          },
+          {
+            "causal_parent_event_id": null,
+            "content": {
+              "media_type": "application/json",
+              "text": "{\"output\":{\"output\":[{\"content\":[{\"annotations\":[],\"logprobs\":[],\"text\":\"{\\\"artifact_ids\\\":[],\\\"evidence\\\":[],\\\"output\\\":{\\\"ready_for_verification\\\":true}}\",\"type\":\"output_text\"}],\"id\":\"msg_07130d7cd2f1f0a0016afe5c83527c87d1ba65b4a24d900375\",\"internal_chat_message_metadata_passthrough\":{\"content_token_count\":19,\"create_time\":1795054723.324026,\"turn_id\":\"01a1f199-5420-77c0-80a2-a0d4cb2797fe\"},\"metadata\":{\"turn_id\":\"01a1f199-5420-77c0-80a2-a0d4cb2797fe\"},\"phase\":\"commentary\",\"role\":\"assistant\",\"status\":\"completed\",\"type\":\"message\"}]}}"
+            },
+            "event_id": "event-6b60b98941b048449dd94f93fc16378a",
+            "kind": "call",
+            "payload": {
+              "call_type": "model",
+              "input_bytes": 57,
+              "input_digest": "sha256:7318f0110d2a80041aefdff5d0b8087597225ad96a51c957799dc417ba0db0cd",
+              "operation_id": "model-229df0968d4e43c7982b0dc9696f5d11",
+              "output_bytes": 527,
+              "output_digest": "sha256:49a4b1c0ab1b07cae582bd5b2afc171d1697084d9496ef95485813020c9f096c",
+              "payload_truncated": false,
+              "phase": "finished",
+              "reserved": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 0,
+                "model_tokens": 0,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 0
+              },
+              "usage": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 1,
+                "model_tokens": 7665,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 4596
+              }
+            },
+            "redacted": true,
+            "sequence": 3,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-34a131fc132c4622a373527ecec6ac67",
+            "timestamp": "2026-11-19T02:18:44.764Z"
+          },
+          {
+            "causal_parent_event_id": null,
+            "content": {
+              "media_type": "application/json",
+              "text": "{\"input\":[{\"content\":[{\"text\":\"<environment_context>\\n  <cwd>/workspace</cwd>\\n  <shell>bash</shell>\\n  <current_date>2026-11-19</current_date>\\n  <timezone>Etc/UTC</timezone>\\n  <filesystem><workspace_roots><root>/workspace</root></workspace_roots><permission_profile type=\\\"managed\\\"><file_system type=\\\"restricted\\\"><entry access=\\\"read\\\"><special>:root</special></entry><entry access=\\\"write\\\"><path>/workspace</path></entry><entry access=\\\"write\\\"><special>:slash_tmp</special></entry><entry access=\\\"write\\\"><special>:tmpdir</special></entry><entry access=\\\"read\\\"><path>/workspace/.git</path></entry><entry access=\\\"read\\\"><path>/workspace/.agents</path></entry><entry access=\\\"read\\\"><path>/workspace/.codex</path></entry><entry access=\\\"read\\\"><path>/workspace/.aws</path></entry></file_system></permission_profile></filesystem>\\n</environment_context>\",\"type\":\"input_text\"}],\"id\":\"msg_01a1f199-5429-7cc3-bcde-59a04393f258\",\"role\":\"user\",\"type\":\"message\"},{\"content\":[{\"text\":\"{\\\"contract\\\":{\\\"digest\\\":\\\"sha256:4c305684d20521d2f72628d5606a3537338691fc5f201177eca55b3aed1f5239\\\",\\\"id\\\":\\\"https://contracts.example.net/capabilities/repository.inspect\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"dependency_results\\\":{},\\\"input\\\":{\\\"repository\\\":\\\"modelcontextprotocol/python-sdk\\\"},\\\"outcome_contract\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"readmit_if_no_uncertain_effect\\\",\\\"unknown_commit_possible\\\":false},\\\"failures\\\":[{\\\"code\\\":\\\"source_unavailable\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"A required approved source is unavailable, denied, or outside the allocation.\\\",\\\"retry\\\":\\\"readmission\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/repository.inspect\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"repository\\\":{\\\"const\\\":\\\"modelcontextprotocol/python-sdk\\\"}},\\\"required\\\":[\\\"repository\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"external.read\\\"],\\\"non_guarantees\\\":[\\\"Does not cover unapproved collections or assert that source-provided content is universally correct.\\\"],\\\"outcome\\\":\\\"Return repository identity, description and default branch from the approved metadata source and the exact documentation index from the approved documentation source. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"output_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"default_branch\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"description\\\":{\\\"maxLength\\\":4096,\\\"type\\\":[\\\"string\\\",\\\"null\\\"]},\\\"documentation_index\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"repository\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"sources\\\":{\\\"items\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"maxItems\\\":2,\\\"minItems\\\":2,\\\"type\\\":\\\"array\\\"}},\\\"required\\\":[\\\"repository\\\",\\\"description\\\",\\\"default_branch\\\",\\\"documentation_index\\\",\\\"sources\\\"],\\\"type\\\":\\\"object\\\"},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Return repository identity, description and default branch from the approved metadata source and the exact documentation index from the approved documentation source. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"evidence_required\\\":[\\\"Receiver-generated successful source-operation receipts and digest-verified source artifacts.\\\"],\\\"id\\\":\\\"verified-source-content\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"Inputs select an approved read-only collection.\\\",\\\"kind\\\":\\\"input_schema\\\"},{\\\"actions\\\":[\\\"read\\\"],\\\"description\\\":\\\"Read authority for the approved source is required.\\\",\\\"kind\\\":\\\"resource_authorized\\\",\\\"resource\\\":\\\"repository:python-sdk\\\"},{\\\"actions\\\":[\\\"read\\\"],\\\"description\\\":\\\"Read authority for the documentation source is required.\\\",\\\"kind\\\":\\\"resource_authorized\\\",\\\"resource\\\":\\\"documentation:python-sdk\\\"}],\\\"title\\\":\\\"Inspect repository metadata and documentation index\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"required_evidence_criterion_ids\\\":[\\\"verified-source-content\\\"],\\\"requirements\\\":[\\\"verified-source-content\\\"],\\\"source_execution\\\":\\\"Invoke the approved source operations needed for the selected input. Use their actual returned data as evidence. The server will assemble exact source fields and hashes from durable operation artifacts. Return output={ready_for_verification:true} only after retrieval succeeds; do not compute hashes or reproduce source bodies. Include evidence for every required criterion.\\\"}\",\"type\":\"input_text\"}],\"id\":\"msg_01a1f199-5429-7cc3-bcde-59ce61c3896d\",\"role\":\"user\",\"type\":\"message\"}],\"purpose\":\"execution\"}"
+            },
+            "event_id": "event-f40fede8e5dc4faea0d5aaa95237000d",
+            "kind": "call",
+            "payload": {
+              "call_type": "model",
+              "input_bytes": 4720,
+              "input_digest": "sha256:09656f6481aea2174387226123b5f5b2591ba539c59952804438c00585a31491",
+              "operation_id": "model-6d027dd83c2043ad8535dafb8368f23f",
+              "output_bytes": 0,
+              "output_digest": null,
+              "payload_truncated": false,
+              "phase": "started",
+              "purpose": "execution",
+              "reserved": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 1,
+                "model_tokens": 49473,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 60000
+              },
+              "usage": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 0,
+                "model_tokens": 0,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 0
+              }
+            },
+            "redacted": true,
+            "sequence": 4,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-34a131fc132c4622a373527ecec6ac67",
+            "timestamp": "2026-11-19T02:18:44.922Z"
+          },
+          {
+            "causal_parent_event_id": null,
+            "content": {
+              "media_type": "application/json",
+              "text": "{\"output\":{\"output\":[{\"content\":[{\"annotations\":[],\"logprobs\":[],\"text\":\"{\\\"artifact_ids\\\":[],\\\"evidence\\\":[],\\\"output\\\":{\\\"ready_for_verification\\\":true}}\",\"type\":\"output_text\"}],\"id\":\"msg_07130d7cd2f1f0a0016afe5c87ce8c87d185baf40e0de6e2e1\",\"internal_chat_message_metadata_passthrough\":{\"content_token_count\":19,\"create_time\":1795054725.787148,\"turn_id\":\"01a1f199-5420-77c0-80a2-a0d4cb2797fe\"},\"metadata\":{\"turn_id\":\"01a1f199-5420-77c0-80a2-a0d4cb2797fe\"},\"phase\":\"commentary\",\"role\":\"assistant\",\"status\":\"completed\",\"type\":\"message\"},{\"arguments\":\"{\\\"repoName\\\":\\\"modelcontextprotocol/python-sdk\\\"}\",\"call_id\":\"call_YRUICwkENlTNrcQIFLkDaTQ4\",\"id\":\"fc_07130d7cd2f1f0a0016afe5c895dd487d1bc496577bfd2f296\",\"internal_chat_message_metadata_passthrough\":{\"turn_id\":\"01a1f199-5420-77c0-80a2-a0d4cb2797fe\"},\"metadata\":{\"turn_id\":\"01a1f199-5420-77c0-80a2-a0d4cb2797fe\"},\"name\":\"repository_metadata\",\"namespace\":\"mcp__lasa\",\"status\":\"completed\",\"type\":\"function_call\"},{\"arguments\":\"{\\\"repoName\\\":\\\"modelcontextprotocol/python-sdk\\\"}\",\"call_id\":\"call_dJGYWOJURCyhqcosrjgogNle\",\"id\":\"fc_07130d7cd2f1f0a0016afe5c895de887d1ae00feb579ca648d\",\"internal_chat_message_metadata_passthrough\":{\"turn_id\":\"01a1f199-5420-77c0-80a2-a0d4cb2797fe\"},\"metadata\":{\"turn_id\":\"01a1f199-5420-77c0-80a2-a0d4cb2797fe\"},\"name\":\"repository_documentation\",\"namespace\":\"mcp__lasa\",\"status\":\"completed\",\"type\":\"function_call\"}]}}"
+            },
+            "event_id": "event-c0281ec154bc4a3a9e8abfed0ecfb8ca",
+            "kind": "call",
+            "payload": {
+              "call_type": "model",
+              "input_bytes": 57,
+              "input_digest": "sha256:acf3e186aa96478acf3750ac241f7fac9a27cf25ae9015cffdf094f9a9554aba",
+              "operation_id": "model-6d027dd83c2043ad8535dafb8368f23f",
+              "output_bytes": 1382,
+              "output_digest": "sha256:978adc0055a76658becb415d7daea50c840ea213d127acc7bb8cd7714f9f86cd",
+              "payload_truncated": false,
+              "phase": "finished",
+              "reserved": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 0,
+                "model_tokens": 0,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 0
+              },
+              "usage": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 1,
+                "model_tokens": 8065,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 5207
+              }
+            },
+            "redacted": true,
+            "sequence": 5,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-34a131fc132c4622a373527ecec6ac67",
+            "timestamp": "2026-11-19T02:18:50.151Z"
+          },
+          {
+            "causal_parent_event_id": null,
+            "content": {
+              "media_type": "application/json",
+              "text": "{\"arguments\":{\"repoName\":\"modelcontextprotocol/python-sdk\"},\"name\":\"repository.documentation\"}"
+            },
+            "event_id": "event-09f11e7386dd4234b2e0faf00ff59df5",
+            "kind": "call",
+            "payload": {
+              "call_type": "tool",
+              "input_bytes": 94,
+              "input_digest": "sha256:8ff343703fa0d1c53bc435c0dd6bbac0e07d01e4b9f266ae9779241b5adb4f50",
+              "operation_id": "tool-f98f8c068cb2c5e9616bc7b7c88722cf750e35086b855e42895474555125b627",
+              "output_bytes": 0,
+              "output_digest": null,
+              "payload_truncated": false,
+              "phase": "started",
+              "reserved": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 0,
+                "model_tokens": 0,
+                "output_bytes": 0,
+                "tool_calls": 1,
+                "wall_time_ms": 0
+              },
+              "usage": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 0,
+                "model_tokens": 0,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 0
+              }
+            },
+            "redacted": true,
+            "sequence": 6,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-34a131fc132c4622a373527ecec6ac67",
+            "timestamp": "2026-11-19T02:18:50.799Z"
+          },
+          {
+            "causal_parent_event_id": null,
+            "content": {
+              "media_type": "application/json",
+              "text": "{\"value\":{\"evidence_artifact\":{\"artifact_id\":\"artifact-a16fcc4abea64fbfbf1b3a5f1774ecb2\",\"bytes\":1911,\"digest\":\"sha256:e3777341fdbd271fbde48eeef94f517aeed48ec496c428b6135b46ca5140703f\",\"media_type\":\"application/json\",\"provenance\":{\"contract\":{\"digest\":\"sha256:4c305684d20521d2f72628d5606a3537338691fc5f201177eca55b3aed1f5239\",\"id\":\"https://contracts.example.net/capabilities/repository.inspect\",\"version\":\"1.0.0\"},\"input_digest\":\"sha256:336e56c0984b89f2229675367eff512550f38a0489617f63212218f15b00d971\",\"kind\":\"operation-result\",\"operation_id\":\"tool-f98f8c068cb2c5e9616bc7b7c88722cf750e35086b855e42895474555125b627\",\"resource\":\"documentation:python-sdk\",\"result_digest\":\"sha256:e3777341fdbd271fbde48eeef94f517aeed48ec496c428b6135b46ca5140703f\",\"schema_digest\":\"sha256:830605ce4c7109eee4a0cb9526b8b3ff1d7c442d5536ffca0de35484b040b2fd\",\"sequence\":3,\"service_id\":\"https://192.168.0.188/lasa\",\"task_id\":\"task-34a131fc132c4622a373527ecec6ac67\"},\"source_task_id\":\"task-34a131fc132c4622a373527ecec6ac67\"},\"output\":{\"result\":\"Available pages for modelcontextprotocol/python-sdk:\\n\\n- 1 Overview\\n  - 1.1 Installation & Dependencies\\n  - 1.2 Key Concepts & Architecture\\n- 2 FastMCP / MCPServer Framework\\n  - 2.1 Creating a FastMCP Server\\n  - 2.2 Tool System\\n  - 2.3 Resources & Prompts\\n  - 2.4 Function Metadata & Schema Generation\\n  - 2.5 Context Injection & Lifespan Management\\n  - 2.6 Extensions, Apps & Middleware\\n  - 2.7 Subscriptions & Caching\\n- 3 Client Framework\\n  - 3.1 Client & ClientSession API\\n  - 3.2 Making Requests\\n  - 3.3 Handling Server Notifications & Subscriptions\\n  - 3.4 Authentication & Authorization\\n  - 3.5 ClientSessionGroup\\n- 4 Transport Layer\\n  - 4.1 STDIO Transport\\n  - 4.2 SSE Transport\\n  - 4.3 StreamableHTTP Transport\\n  - 4.4 Transport Security & Configuration\\n- 5 Protocol & Types System\\n  - 5.1 JSON-RPC Messages & Types\\n  - 5.2 Request/Response Patterns\\n  - 5.3 Capabilities & Protocol Negotiation\\n  - 5.4 Progress & Notifications\\n  - 5.5 Multi-Round-Trip & Input Required\\n  - 5.6 Content Types & Structured Output\\n- 6 Low-Level Server API\\n  - 6.1 Server Architecture & Handler Registration\\n  - 6.2 ServerSession Management\\n  - 6.3 Implementing Request Handlers\\n  - 6.4 Session & Stream Management\\n- 7 Server-Side Authentication\\n  - 7.1 Token Verification & Authorization\\n  - 7.2 Authorization Server Configuration\\n- 8 Examples & Tutorials\\n  - 8.1 Simple Server Examples\\n  - 8.2 StreamableHTTP Server Examples\\n  - 8.3 Client Integration Examples\\n  - 8.4 OAuth Authentication Flow Example\\n- 9 Deployment & Integration\\n  - 9.1 Running Servers\\n  - 9.2 Claude Desktop Integration\\n  - 9.3 Production Deployment\\n- 10 Development Guide\\n  - 10.1 Development Environment Setup\\n  - 10.2 Testing Guidelines\\n  - 10.3 CI/CD Pipeline\\n- 11 Migration & API Changes\\n  - 11.1 v1 to v2 Migration Guide\\n  - 11.2 Deprecated Patterns & Replacements\\n- 12 Glossary\"}}}"
+            },
+            "event_id": "event-05e5c23a7719496c8a764fcd20444d13",
+            "kind": "call",
+            "payload": {
+              "call_type": "tool",
+              "input_bytes": 94,
+              "input_digest": "sha256:8ff343703fa0d1c53bc435c0dd6bbac0e07d01e4b9f266ae9779241b5adb4f50",
+              "operation_id": "tool-f98f8c068cb2c5e9616bc7b7c88722cf750e35086b855e42895474555125b627",
+              "output_bytes": 2920,
+              "output_digest": "sha256:5e7e01eece8bf8701d100d4711dbcfed67049cf0dea14803f723ca32f857eb45",
+              "payload_truncated": false,
+              "phase": "finished",
+              "reserved": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 0,
+                "model_tokens": 0,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 0
+              },
+              "usage": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 0,
+                "model_tokens": 0,
+                "output_bytes": 0,
+                "tool_calls": 1,
+                "wall_time_ms": 0
+              }
+            },
+            "redacted": true,
+            "sequence": 7,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-34a131fc132c4622a373527ecec6ac67",
+            "timestamp": "2026-11-19T02:18:52.323Z"
+          },
+          {
+            "causal_parent_event_id": null,
+            "content": {
+              "media_type": "application/json",
+              "text": "{\"input\":[{\"content\":[{\"text\":\"<environment_context>\\n  <cwd>/workspace</cwd>\\n  <shell>bash</shell>\\n  <current_date>2026-11-19</current_date>\\n  <timezone>Etc/UTC</timezone>\\n  <filesystem><workspace_roots><root>/workspace</root></workspace_roots><permission_profile type=\\\"managed\\\"><file_system type=\\\"restricted\\\"><entry access=\\\"read\\\"><special>:root</special></entry><entry access=\\\"write\\\"><path>/workspace</path></entry><entry access=\\\"write\\\"><special>:slash_tmp</special></entry><entry access=\\\"write\\\"><special>:tmpdir</special></entry><entry access=\\\"read\\\"><path>/workspace/.git</path></entry><entry access=\\\"read\\\"><path>/workspace/.agents</path></entry><entry access=\\\"read\\\"><path>/workspace/.codex</path></entry><entry access=\\\"read\\\"><path>/workspace/.aws</path></entry></file_system></permission_profile></filesystem>\\n</environment_context>\",\"type\":\"input_text\"}],\"id\":\"msg_01a1f199-5429-7cc3-bcde-59a04393f258\",\"role\":\"user\",\"type\":\"message\"},{\"content\":[{\"text\":\"{\\\"contract\\\":{\\\"digest\\\":\\\"sha256:4c305684d20521d2f72628d5606a3537338691fc5f201177eca55b3aed1f5239\\\",\\\"id\\\":\\\"https://contracts.example.net/capabilities/repository.inspect\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"dependency_results\\\":{},\\\"input\\\":{\\\"repository\\\":\\\"modelcontextprotocol/python-sdk\\\"},\\\"outcome_contract\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"readmit_if_no_uncertain_effect\\\",\\\"unknown_commit_possible\\\":false},\\\"failures\\\":[{\\\"code\\\":\\\"source_unavailable\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"A required approved source is unavailable, denied, or outside the allocation.\\\",\\\"retry\\\":\\\"readmission\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/repository.inspect\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"repository\\\":{\\\"const\\\":\\\"modelcontextprotocol/python-sdk\\\"}},\\\"required\\\":[\\\"repository\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"external.read\\\"],\\\"non_guarantees\\\":[\\\"Does not cover unapproved collections or assert that source-provided content is universally correct.\\\"],\\\"outcome\\\":\\\"Return repository identity, description and default branch from the approved metadata source and the exact documentation index from the approved documentation source. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"output_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"default_branch\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"description\\\":{\\\"maxLength\\\":4096,\\\"type\\\":[\\\"string\\\",\\\"null\\\"]},\\\"documentation_index\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"repository\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"sources\\\":{\\\"items\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"maxItems\\\":2,\\\"minItems\\\":2,\\\"type\\\":\\\"array\\\"}},\\\"required\\\":[\\\"repository\\\",\\\"description\\\",\\\"default_branch\\\",\\\"documentation_index\\\",\\\"sources\\\"],\\\"type\\\":\\\"object\\\"},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Return repository identity, description and default branch from the approved metadata source and the exact documentation index from the approved documentation source. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"evidence_required\\\":[\\\"Receiver-generated successful source-operation receipts and digest-verified source artifacts.\\\"],\\\"id\\\":\\\"verified-source-content\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"Inputs select an approved read-only collection.\\\",\\\"kind\\\":\\\"input_schema\\\"},{\\\"actions\\\":[\\\"read\\\"],\\\"description\\\":\\\"Read authority for the approved source is required.\\\",\\\"kind\\\":\\\"resource_authorized\\\",\\\"resource\\\":\\\"repository:python-sdk\\\"},{\\\"actions\\\":[\\\"read\\\"],\\\"description\\\":\\\"Read authority for the documentation source is required.\\\",\\\"kind\\\":\\\"resource_authorized\\\",\\\"resource\\\":\\\"documentation:python-sdk\\\"}],\\\"title\\\":\\\"Inspect repository metadata and documentation index\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"required_evidence_criterion_ids\\\":[\\\"verified-source-content\\\"],\\\"requirements\\\":[\\\"verified-source-content\\\"],\\\"source_execution\\\":\\\"Invoke the approved source operations needed for the selected input. Use their actual returned data as evidence. The server will assemble exact source fields and hashes from durable operation artifacts. Return output={ready_for_verification:true} only after retrieval succeeds; do not compute hashes or reproduce source bodies. Include evidence for every required criterion.\\\"}\",\"type\":\"input_text\"}],\"id\":\"msg_01a1f199-5429-7cc3-bcde-59ce61c3896d\",\"role\":\"user\",\"type\":\"message\"}],\"purpose\":\"execution\"}"
+            },
+            "event_id": "event-1f263cdb2e4a4b2f9bfb9c50d2960d18",
+            "kind": "call",
+            "payload": {
+              "call_type": "model",
+              "input_bytes": 4720,
+              "input_digest": "sha256:09656f6481aea2174387226123b5f5b2591ba539c59952804438c00585a31491",
+              "operation_id": "model-89a4c897a48f4a3997594ff88ecb068b",
+              "output_bytes": 0,
+              "output_digest": null,
+              "payload_truncated": false,
+              "phase": "started",
+              "purpose": "execution",
+              "reserved": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 1,
+                "model_tokens": 58558,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 60000
+              },
+              "usage": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 0,
+                "model_tokens": 0,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 0
+              }
+            },
+            "redacted": true,
+            "sequence": 8,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-34a131fc132c4622a373527ecec6ac67",
+            "timestamp": "2026-11-19T02:18:52.474Z"
+          },
+          {
+            "causal_parent_event_id": null,
+            "content": {
+              "media_type": "application/json",
+              "text": "{\"output\":{\"output\":[{\"arguments\":\"{}\",\"call_id\":\"call_le2H6x7JJSboD79Iloe7jEjY\",\"id\":\"fc_07130d7cd2f1f0a0016afe5c8e5bb487d197d95ed7d249947d\",\"internal_chat_message_metadata_passthrough\":{\"create_time\":1795054733.359913,\"turn_id\":\"01a1f199-5420-77c0-80a2-a0d4cb2797fe\"},\"metadata\":{\"turn_id\":\"01a1f199-5420-77c0-80a2-a0d4cb2797fe\"},\"name\":\"repository_metadata\",\"namespace\":\"mcp__lasa\",\"status\":\"completed\",\"type\":\"function_call\"}]}}"
+            },
+            "event_id": "event-1fbf0f178e99450fb22a2529dde73fc5",
+            "kind": "call",
+            "payload": {
+              "call_type": "model",
+              "input_bytes": 57,
+              "input_digest": "sha256:b77b6ba9f256c60015a97d9b90f0d8833e9f8538932ec747e018754bcc87247a",
+              "operation_id": "model-89a4c897a48f4a3997594ff88ecb068b",
+              "output_bytes": 421,
+              "output_digest": "sha256:83be76719f4de21f8ee7c6498f2320e4f28843a139bca59c7dc28cde496790bc",
+              "payload_truncated": false,
+              "phase": "finished",
+              "reserved": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 0,
+                "model_tokens": 0,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 0
+              },
+              "usage": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 1,
+                "model_tokens": 9161,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 2289
+              }
+            },
+            "redacted": true,
+            "sequence": 9,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-34a131fc132c4622a373527ecec6ac67",
+            "timestamp": "2026-11-19T02:18:54.786Z"
+          },
+          {
+            "causal_parent_event_id": null,
+            "content": {
+              "media_type": "application/json",
+              "text": "{\"arguments\":{},\"name\":\"repository.metadata\"}"
+            },
+            "event_id": "event-f6f425f051a941d29fa3eb4823982d15",
+            "kind": "call",
+            "payload": {
+              "call_type": "tool",
+              "input_bytes": 45,
+              "input_digest": "sha256:158aa1f5b4310214bb802dbd89fc7aee8d07c23fc09d207d8278c55a5d410af1",
+              "operation_id": "tool-9b5f0e3fa9fc78a7db0d59dc0dc47d2d6778e34c508f75d7235fcfeede4a2127",
+              "output_bytes": 0,
+              "output_digest": null,
+              "payload_truncated": false,
+              "phase": "started",
+              "reserved": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 0,
+                "model_tokens": 0,
+                "output_bytes": 0,
+                "tool_calls": 1,
+                "wall_time_ms": 0
+              },
+              "usage": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 0,
+                "model_tokens": 0,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 0
+              }
+            },
+            "redacted": true,
+            "sequence": 10,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-34a131fc132c4622a373527ecec6ac67",
+            "timestamp": "2026-11-19T02:18:55.285Z"
+          },
+          {
+            "causal_parent_event_id": null,
+            "content": {
+              "media_type": "application/json",
+              "text": "{\"value\":{\"evidence_artifact\":{\"artifact_id\":\"artifact-de85399fc90f449699e2036a63482f22\",\"bytes\":222,\"digest\":\"sha256:a5fa2798d539d3b33f7282587382225a39286e5e9a0f77ea7efec9f54aa000cf\",\"media_type\":\"application/json\",\"provenance\":{\"contract\":{\"digest\":\"sha256:4c305684d20521d2f72628d5606a3537338691fc5f201177eca55b3aed1f5239\",\"id\":\"https://contracts.example.net/capabilities/repository.inspect\",\"version\":\"1.0.0\"},\"input_digest\":\"sha256:336e56c0984b89f2229675367eff512550f38a0489617f63212218f15b00d971\",\"kind\":\"operation-result\",\"operation_id\":\"tool-9b5f0e3fa9fc78a7db0d59dc0dc47d2d6778e34c508f75d7235fcfeede4a2127\",\"resource\":\"repository:python-sdk\",\"result_digest\":\"sha256:a5fa2798d539d3b33f7282587382225a39286e5e9a0f77ea7efec9f54aa000cf\",\"schema_digest\":\"sha256:839e1447c0ebd1698c8d8d02c05d0f30bfa583516a6ba10050c7731648415a60\",\"sequence\":5,\"service_id\":\"https://192.168.0.188/lasa\",\"task_id\":\"task-34a131fc132c4622a373527ecec6ac67\"},\"source_task_id\":\"task-34a131fc132c4622a373527ecec6ac67\"},\"output\":{\"default_branch\":\"main\",\"description\":\"The official Python SDK for Model Context Protocol servers and clients\",\"full_name\":\"modelcontextprotocol/python-sdk\",\"html_url\":\"https://github.com/modelcontextprotocol/python-sdk\"}}}"
+            },
+            "event_id": "event-fd4f63ac29ea48dfad711aa0e8465387",
+            "kind": "call",
+            "payload": {
+              "call_type": "tool",
+              "input_bytes": 45,
+              "input_digest": "sha256:158aa1f5b4310214bb802dbd89fc7aee8d07c23fc09d207d8278c55a5d410af1",
+              "operation_id": "tool-9b5f0e3fa9fc78a7db0d59dc0dc47d2d6778e34c508f75d7235fcfeede4a2127",
+              "output_bytes": 1227,
+              "output_digest": "sha256:30c0bdf23e69aea0d2b6cd846b5c837b20c198c2b5bfdd79755b6fab28ba3020",
+              "payload_truncated": false,
+              "phase": "finished",
+              "reserved": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 0,
+                "model_tokens": 0,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 0
+              },
+              "usage": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 0,
+                "model_tokens": 0,
+                "output_bytes": 0,
+                "tool_calls": 1,
+                "wall_time_ms": 0
+              }
+            },
+            "redacted": true,
+            "sequence": 11,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-34a131fc132c4622a373527ecec6ac67",
+            "timestamp": "2026-11-19T02:18:56.745Z"
+          },
+          {
+            "causal_parent_event_id": null,
+            "content": {
+              "media_type": "application/json",
+              "text": "{\"input\":[{\"content\":[{\"text\":\"<environment_context>\\n  <cwd>/workspace</cwd>\\n  <shell>bash</shell>\\n  <current_date>2026-11-19</current_date>\\n  <timezone>Etc/UTC</timezone>\\n  <filesystem><workspace_roots><root>/workspace</root></workspace_roots><permission_profile type=\\\"managed\\\"><file_system type=\\\"restricted\\\"><entry access=\\\"read\\\"><special>:root</special></entry><entry access=\\\"write\\\"><path>/workspace</path></entry><entry access=\\\"write\\\"><special>:slash_tmp</special></entry><entry access=\\\"write\\\"><special>:tmpdir</special></entry><entry access=\\\"read\\\"><path>/workspace/.git</path></entry><entry access=\\\"read\\\"><path>/workspace/.agents</path></entry><entry access=\\\"read\\\"><path>/workspace/.codex</path></entry><entry access=\\\"read\\\"><path>/workspace/.aws</path></entry></file_system></permission_profile></filesystem>\\n</environment_context>\",\"type\":\"input_text\"}],\"id\":\"msg_01a1f199-5429-7cc3-bcde-59a04393f258\",\"role\":\"user\",\"type\":\"message\"},{\"content\":[{\"text\":\"{\\\"contract\\\":{\\\"digest\\\":\\\"sha256:4c305684d20521d2f72628d5606a3537338691fc5f201177eca55b3aed1f5239\\\",\\\"id\\\":\\\"https://contracts.example.net/capabilities/repository.inspect\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"dependency_results\\\":{},\\\"input\\\":{\\\"repository\\\":\\\"modelcontextprotocol/python-sdk\\\"},\\\"outcome_contract\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"readmit_if_no_uncertain_effect\\\",\\\"unknown_commit_possible\\\":false},\\\"failures\\\":[{\\\"code\\\":\\\"source_unavailable\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"A required approved source is unavailable, denied, or outside the allocation.\\\",\\\"retry\\\":\\\"readmission\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/repository.inspect\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"repository\\\":{\\\"const\\\":\\\"modelcontextprotocol/python-sdk\\\"}},\\\"required\\\":[\\\"repository\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"external.read\\\"],\\\"non_guarantees\\\":[\\\"Does not cover unapproved collections or assert that source-provided content is universally correct.\\\"],\\\"outcome\\\":\\\"Return repository identity, description and default branch from the approved metadata source and the exact documentation index from the approved documentation source. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"output_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"default_branch\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"description\\\":{\\\"maxLength\\\":4096,\\\"type\\\":[\\\"string\\\",\\\"null\\\"]},\\\"documentation_index\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"repository\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"sources\\\":{\\\"items\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"maxItems\\\":2,\\\"minItems\\\":2,\\\"type\\\":\\\"array\\\"}},\\\"required\\\":[\\\"repository\\\",\\\"description\\\",\\\"default_branch\\\",\\\"documentation_index\\\",\\\"sources\\\"],\\\"type\\\":\\\"object\\\"},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Return repository identity, description and default branch from the approved metadata source and the exact documentation index from the approved documentation source. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"evidence_required\\\":[\\\"Receiver-generated successful source-operation receipts and digest-verified source artifacts.\\\"],\\\"id\\\":\\\"verified-source-content\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"Inputs select an approved read-only collection.\\\",\\\"kind\\\":\\\"input_schema\\\"},{\\\"actions\\\":[\\\"read\\\"],\\\"description\\\":\\\"Read authority for the approved source is required.\\\",\\\"kind\\\":\\\"resource_authorized\\\",\\\"resource\\\":\\\"repository:python-sdk\\\"},{\\\"actions\\\":[\\\"read\\\"],\\\"description\\\":\\\"Read authority for the documentation source is required.\\\",\\\"kind\\\":\\\"resource_authorized\\\",\\\"resource\\\":\\\"documentation:python-sdk\\\"}],\\\"title\\\":\\\"Inspect repository metadata and documentation index\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"required_evidence_criterion_ids\\\":[\\\"verified-source-content\\\"],\\\"requirements\\\":[\\\"verified-source-content\\\"],\\\"source_execution\\\":\\\"Invoke the approved source operations needed for the selected input. Use their actual returned data as evidence. The server will assemble exact source fields and hashes from durable operation artifacts. Return output={ready_for_verification:true} only after retrieval succeeds; do not compute hashes or reproduce source bodies. Include evidence for every required criterion.\\\"}\",\"type\":\"input_text\"}],\"id\":\"msg_01a1f199-5429-7cc3-bcde-59ce61c3896d\",\"role\":\"user\",\"type\":\"message\"}],\"purpose\":\"execution\"}"
+            },
+            "event_id": "event-a89eb0cbaa104fcfa4c31d177144aebd",
+            "kind": "call",
+            "payload": {
+              "call_type": "model",
+              "input_bytes": 4720,
+              "input_digest": "sha256:09656f6481aea2174387226123b5f5b2591ba539c59952804438c00585a31491",
+              "operation_id": "model-418cc0d2a9e34a1480e70b44877ec079",
+              "output_bytes": 0,
+              "output_digest": null,
+              "payload_truncated": false,
+              "phase": "started",
+              "purpose": "execution",
+              "reserved": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 1,
+                "model_tokens": 62282,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 60000
+              },
+              "usage": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 0,
+                "model_tokens": 0,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 0
+              }
+            },
+            "redacted": true,
+            "sequence": 12,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-34a131fc132c4622a373527ecec6ac67",
+            "timestamp": "2026-11-19T02:18:56.900Z"
+          },
+          {
+            "causal_parent_event_id": null,
+            "content": {
+              "media_type": "application/json",
+              "text": "{\"output\":{\"output\":[]}}"
+            },
+            "event_id": "event-d530af0053a2446db336f52cd82b58b1",
+            "kind": "call",
+            "payload": {
+              "call_type": "model",
+              "input_bytes": 57,
+              "input_digest": "sha256:e89e89140caaa1e55232910393fdb911ea422de0a1fb69b19aaafa256d85c707",
+              "operation_id": "model-418cc0d2a9e34a1480e70b44877ec079",
+              "output_bytes": 13,
+              "output_digest": "sha256:03b7f5aeab0116fb327dabad7240a41a7fb01a469c0ac4b55fe425e78bcd6045",
+              "payload_truncated": false,
+              "phase": "finished",
+              "reserved": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 0,
+                "model_tokens": 0,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 0
+              },
+              "usage": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 1,
+                "model_tokens": 9688,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 2773
+              }
+            },
+            "redacted": true,
+            "sequence": 13,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-34a131fc132c4622a373527ecec6ac67",
+            "timestamp": "2026-11-19T02:18:59.697Z"
+          },
+          {
+            "causal_parent_event_id": null,
+            "content": {
+              "media_type": "application/json",
+              "text": "{\"input\":[{\"content\":[{\"text\":\"<environment_context>\\n  <cwd>/workspace</cwd>\\n  <shell>bash</shell>\\n  <current_date>2026-11-19</current_date>\\n  <timezone>Etc/UTC</timezone>\\n  <filesystem><workspace_roots><root>/workspace</root></workspace_roots><permission_profile type=\\\"managed\\\"><file_system type=\\\"restricted\\\"><entry access=\\\"read\\\"><special>:root</special></entry><entry access=\\\"write\\\"><path>/workspace</path></entry><entry access=\\\"write\\\"><special>:slash_tmp</special></entry><entry access=\\\"write\\\"><special>:tmpdir</special></entry><entry access=\\\"read\\\"><path>/workspace/.git</path></entry><entry access=\\\"read\\\"><path>/workspace/.agents</path></entry><entry access=\\\"read\\\"><path>/workspace/.codex</path></entry><entry access=\\\"read\\\"><path>/workspace/.aws</path></entry></file_system></permission_profile></filesystem>\\n</environment_context>\",\"type\":\"input_text\"}],\"id\":\"msg_01a1f199-5429-7cc3-bcde-59a04393f258\",\"role\":\"user\",\"type\":\"message\"},{\"content\":[{\"text\":\"{\\\"contract\\\":{\\\"digest\\\":\\\"sha256:4c305684d20521d2f72628d5606a3537338691fc5f201177eca55b3aed1f5239\\\",\\\"id\\\":\\\"https://contracts.example.net/capabilities/repository.inspect\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"dependency_results\\\":{},\\\"input\\\":{\\\"repository\\\":\\\"modelcontextprotocol/python-sdk\\\"},\\\"outcome_contract\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"readmit_if_no_uncertain_effect\\\",\\\"unknown_commit_possible\\\":false},\\\"failures\\\":[{\\\"code\\\":\\\"source_unavailable\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"A required approved source is unavailable, denied, or outside the allocation.\\\",\\\"retry\\\":\\\"readmission\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/repository.inspect\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"repository\\\":{\\\"const\\\":\\\"modelcontextprotocol/python-sdk\\\"}},\\\"required\\\":[\\\"repository\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"external.read\\\"],\\\"non_guarantees\\\":[\\\"Does not cover unapproved collections or assert that source-provided content is universally correct.\\\"],\\\"outcome\\\":\\\"Return repository identity, description and default branch from the approved metadata source and the exact documentation index from the approved documentation source. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"output_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"default_branch\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"description\\\":{\\\"maxLength\\\":4096,\\\"type\\\":[\\\"string\\\",\\\"null\\\"]},\\\"documentation_index\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"repository\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"sources\\\":{\\\"items\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"maxItems\\\":2,\\\"minItems\\\":2,\\\"type\\\":\\\"array\\\"}},\\\"required\\\":[\\\"repository\\\",\\\"description\\\",\\\"default_branch\\\",\\\"documentation_index\\\",\\\"sources\\\"],\\\"type\\\":\\\"object\\\"},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Return repository identity, description and default branch from the approved metadata source and the exact documentation index from the approved documentation source. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"evidence_required\\\":[\\\"Receiver-generated successful source-operation receipts and digest-verified source artifacts.\\\"],\\\"id\\\":\\\"verified-source-content\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"Inputs select an approved read-only collection.\\\",\\\"kind\\\":\\\"input_schema\\\"},{\\\"actions\\\":[\\\"read\\\"],\\\"description\\\":\\\"Read authority for the approved source is required.\\\",\\\"kind\\\":\\\"resource_authorized\\\",\\\"resource\\\":\\\"repository:python-sdk\\\"},{\\\"actions\\\":[\\\"read\\\"],\\\"description\\\":\\\"Read authority for the documentation source is required.\\\",\\\"kind\\\":\\\"resource_authorized\\\",\\\"resource\\\":\\\"documentation:python-sdk\\\"}],\\\"title\\\":\\\"Inspect repository metadata and documentation index\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"required_evidence_criterion_ids\\\":[\\\"verified-source-content\\\"],\\\"requirements\\\":[\\\"verified-source-content\\\"],\\\"source_execution\\\":\\\"Invoke the approved source operations needed for the selected input. Use their actual returned data as evidence. The server will assemble exact source fields and hashes from durable operation artifacts. Return output={ready_for_verification:true} only after retrieval succeeds; do not compute hashes or reproduce source bodies. Include evidence for every required criterion.\\\"}\",\"type\":\"input_text\"}],\"id\":\"msg_01a1f199-5429-7cc3-bcde-59ce61c3896d\",\"role\":\"user\",\"type\":\"message\"}],\"purpose\":\"execution\"}"
+            },
+            "event_id": "event-d442f42705194911bc9a3ee22cb6f06c",
+            "kind": "call",
+            "payload": {
+              "call_type": "model",
+              "input_bytes": 4720,
+              "input_digest": "sha256:09656f6481aea2174387226123b5f5b2591ba539c59952804438c00585a31491",
+              "operation_id": "model-44bbb103e2774f9ab029390addabb3ec",
+              "output_bytes": 0,
+              "output_digest": null,
+              "payload_truncated": false,
+              "phase": "started",
+              "purpose": "execution",
+              "reserved": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 1,
+                "model_tokens": 64822,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 60000
+              },
+              "usage": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 0,
+                "model_tokens": 0,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 0
+              }
+            },
+            "redacted": true,
+            "sequence": 14,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-34a131fc132c4622a373527ecec6ac67",
+            "timestamp": "2026-11-19T02:18:59.837Z"
+          },
+          {
+            "causal_parent_event_id": null,
+            "content": {
+              "media_type": "application/json",
+              "text": "{\"output\":{\"output\":[{\"content\":[{\"annotations\":[],\"logprobs\":[],\"text\":\"{\\\"artifact_ids\\\":[\\\"artifact-de85399fc90f449699e2036a63482f22\\\",\\\"artifact-a16fcc4abea64fbfbf1b3a5f1774ecb2\\\"],\\\"evidence\\\":[{\\\"artifact_ids\\\":[\\\"artifact-de85399fc90f449699e2036a63482f22\\\",\\\"artifact-a16fcc4abea64fbfbf1b3a5f1774ecb2\\\"],\\\"criterion_id\\\":\\\"verified-source-content\\\",\\\"disposition\\\":\\\"passed\\\",\\\"summary\\\":\\\"Retrieved repository metadata and documentation index from the approved LASA source operations; both returned durable evidence artifacts with source-operation receipts and digests.\\\"}],\\\"output\\\":{\\\"ready_for_verification\\\":true}}\",\"type\":\"output_text\"}],\"id\":\"msg_07130d7cd2f1f0a0016afe5c9700cc87d1ab85d27a83359d14\",\"internal_chat_message_metadata_passthrough\":{\"content_token_count\":148,\"create_time\":1795054740.965727,\"turn_id\":\"01a1f199-5420-77c0-80a2-a0d4cb2797fe\"},\"metadata\":{\"turn_id\":\"01a1f199-5420-77c0-80a2-a0d4cb2797fe\"},\"phase\":\"final_answer\",\"role\":\"assistant\",\"status\":\"completed\",\"type\":\"message\"}]}}"
+            },
+            "event_id": "event-a9d021ac7abf4f0ba9608f46b2d7f365",
+            "kind": "call",
+            "payload": {
+              "call_type": "model",
+              "input_bytes": 57,
+              "input_digest": "sha256:a3e71db3ecd6b9b4ff74385bb210953c80b86f45fc8252f89cf35676404a54ab",
+              "operation_id": "model-44bbb103e2774f9ab029390addabb3ec",
+              "output_bytes": 1002,
+              "output_digest": "sha256:bc4b8e9f265b87c5ad4aae34157df34f63f5412ef916aed8adacc14179a589a8",
+              "payload_truncated": false,
+              "phase": "finished",
+              "reserved": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 0,
+                "model_tokens": 0,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 0
+              },
+              "usage": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 1,
+                "model_tokens": 9930,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 6111
+              }
+            },
+            "redacted": true,
+            "sequence": 15,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-34a131fc132c4622a373527ecec6ac67",
+            "timestamp": "2026-11-19T02:19:05.971Z"
+          },
+          {
+            "causal_parent_event_id": null,
+            "content": {
+              "media_type": "application/json",
+              "text": "{\"input\":[{\"content\":[{\"text\":\"{\\\"candidate_output\\\":{\\\"default_branch\\\":\\\"main\\\",\\\"description\\\":\\\"The official Python SDK for Model Context Protocol servers and clients\\\",\\\"documentation_index\\\":\\\"Available pages for modelcontextprotocol/python-sdk:\\\\n\\\\n- 1 Overview\\\\n  - 1.1 Installation & Dependencies\\\\n  - 1.2 Key Concepts & Architecture\\\\n- 2 FastMCP / MCPServer Framework\\\\n  - 2.1 Creating a FastMCP Server\\\\n  - 2.2 Tool System\\\\n  - 2.3 Resources & Prompts\\\\n  - 2.4 Function Metadata & Schema Generation\\\\n  - 2.5 Context Injection & Lifespan Management\\\\n  - 2.6 Extensions, Apps & Middleware\\\\n  - 2.7 Subscriptions & Caching\\\\n- 3 Client Framework\\\\n  - 3.1 Client & ClientSession API\\\\n  - 3.2 Making Requests\\\\n  - 3.3 Handling Server Notifications & Subscriptions\\\\n  - 3.4 Authentication & Authorization\\\\n  - 3.5 ClientSessionGroup\\\\n- 4 Transport Layer\\\\n  - 4.1 STDIO Transport\\\\n  - 4.2 SSE Transport\\\\n  - 4.3 StreamableHTTP Transport\\\\n  - 4.4 Transport Security & Configuration\\\\n- 5 Protocol & Types System\\\\n  - 5.1 JSON-RPC Messages & Types\\\\n  - 5.2 Request/Response Patterns\\\\n  - 5.3 Capabilities & Protocol Negotiation\\\\n  - 5.4 Progress & Notifications\\\\n  - 5.5 Multi-Round-Trip & Input Required\\\\n  - 5.6 Content Types & Structured Output\\\\n- 6 Low-Level Server API\\\\n  - 6.1 Server Architecture & Handler Registration\\\\n  - 6.2 ServerSession Management\\\\n  - 6.3 Implementing Request Handlers\\\\n  - 6.4 Session & Stream Management\\\\n- 7 Server-Side Authentication\\\\n  - 7.1 Token Verification & Authorization\\\\n  - 7.2 Authorization Server Configuration\\\\n- 8 Examples & Tutorials\\\\n  - 8.1 Simple Server Examples\\\\n  - 8.2 StreamableHTTP Server Examples\\\\n  - 8.3 Client Integration Examples\\\\n  - 8.4 OAuth Authentication Flow Example\\\\n- 9 Deployment & Integration\\\\n  - 9.1 Running Servers\\\\n  - 9.2 Claude Desktop Integration\\\\n  - 9.3 Production Deployment\\\\n- 10 Development Guide\\\\n  - 10.1 Development Environment Setup\\\\n  - 10.2 Testing Guidelines\\\\n  - 10.3 CI/CD Pipeline\\\\n- 11 Migration & API Changes\\\\n  - 11.1 v1 to v2 Migration Guide\\\\n  - 11.2 Deprecated Patterns & Replacements\\\\n- 12 Glossary\\\",\\\"repository\\\":\\\"modelcontextprotocol/python-sdk\\\",\\\"sources\\\":[\\\"https://github.com/modelcontextprotocol/python-sdk\\\",\\\"https://deepwiki.com/modelcontextprotocol/python-sdk\\\"]},\\\"claimed_evidence\\\":[{\\\"artifact_ids\\\":[\\\"artifact-de85399fc90f449699e2036a63482f22\\\",\\\"artifact-a16fcc4abea64fbfbf1b3a5f1774ecb2\\\"],\\\"criterion_id\\\":\\\"verified-source-content\\\",\\\"disposition\\\":\\\"passed\\\",\\\"summary\\\":\\\"Retrieved repository metadata and documentation index from the approved LASA source operations; both returned durable evidence artifacts with source-operation receipts and digests.\\\"}],\\\"contract\\\":{\\\"definition_format\\\":\\\"lasa-capability/1.0\\\",\\\"effect_safety\\\":{\\\"external_write_commit_evidence_required\\\":false,\\\"retry_rule\\\":\\\"readmit_if_no_uncertain_effect\\\",\\\"unknown_commit_possible\\\":false},\\\"failures\\\":[{\\\"code\\\":\\\"source_unavailable\\\",\\\"effect_disposition\\\":\\\"known\\\",\\\"meaning\\\":\\\"A required approved source is unavailable, denied, or outside the allocation.\\\",\\\"retry\\\":\\\"readmission\\\"}],\\\"id\\\":\\\"https://contracts.example.net/capabilities/repository.inspect\\\",\\\"input_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"repository\\\":{\\\"const\\\":\\\"modelcontextprotocol/python-sdk\\\"}},\\\"required\\\":[\\\"repository\\\"],\\\"type\\\":\\\"object\\\"},\\\"max_effects\\\":[\\\"external.read\\\"],\\\"non_guarantees\\\":[\\\"Does not cover unapproved collections or assert that source-provided content is universally correct.\\\"],\\\"outcome\\\":\\\"Return repository identity, description and default branch from the approved metadata source and the exact documentation index from the approved documentation source. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"output_schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"default_branch\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"description\\\":{\\\"maxLength\\\":4096,\\\"type\\\":[\\\"string\\\",\\\"null\\\"]},\\\"documentation_index\\\":{\\\"maxLength\\\":8192,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"repository\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"sources\\\":{\\\"items\\\":{\\\"maxLength\\\":4096,\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"maxItems\\\":2,\\\"minItems\\\":2,\\\"type\\\":\\\"array\\\"}},\\\"required\\\":[\\\"repository\\\",\\\"description\\\",\\\"default_branch\\\",\\\"documentation_index\\\",\\\"sources\\\"],\\\"type\\\":\\\"object\\\"},\\\"postconditions\\\":[{\\\"criterion\\\":\\\"Return repository identity, description and default branch from the approved metadata source and the exact documentation index from the approved documentation source. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"evidence_required\\\":[\\\"Receiver-generated successful source-operation receipts and digest-verified source artifacts.\\\"],\\\"id\\\":\\\"verified-source-content\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"preconditions\\\":[{\\\"description\\\":\\\"Inputs select an approved read-only collection.\\\",\\\"kind\\\":\\\"input_schema\\\"},{\\\"actions\\\":[\\\"read\\\"],\\\"description\\\":\\\"Read authority for the approved source is required.\\\",\\\"kind\\\":\\\"resource_authorized\\\",\\\"resource\\\":\\\"repository:python-sdk\\\"},{\\\"actions\\\":[\\\"read\\\"],\\\"description\\\":\\\"Read authority for the documentation source is required.\\\",\\\"kind\\\":\\\"resource_authorized\\\",\\\"resource\\\":\\\"documentation:python-sdk\\\"}],\\\"title\\\":\\\"Inspect repository metadata and documentation index\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"input\\\":{\\\"repository\\\":\\\"modelcontextprotocol/python-sdk\\\"},\\\"instruction\\\":\\\"Independently check whether the supplied evidence supports the output and required postconditions. A schema-valid answer or a peer saying complete is insufficient. A fulfilled attempt must satisfy every requirement; unable is an honest attempt outcome but cannot fulfill an actual requested subtask. Reject unsupported factual claims, missing criterion coverage, inadequate evidence, or unresolved effects. State uncertainty as passed=false.\\\",\\\"original_requirements\\\":[{\\\"acceptance\\\":[{\\\"criterion\\\":\\\"Return repository identity, description and default branch from the approved metadata source and the exact documentation index from the approved documentation source. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"evidence_required\\\":[\\\"Receiver-generated successful source-operation receipts and digest-verified source artifacts.\\\"],\\\"id\\\":\\\"verified-source-content\\\",\\\"method\\\":\\\"semantic_review\\\"}],\\\"description\\\":\\\"Return repository identity, description and default branch from the approved metadata source and the exact documentation index from the approved documentation source. The exact text is bounded to 8192 UTF-8 bytes; larger source values fail rather than being silently truncated.\\\",\\\"mandatory\\\":true,\\\"requirement_id\\\":\\\"verified-source-content\\\",\\\"source\\\":\\\"derived\\\"}],\\\"trusted_execution_evidence\\\":{\\\"artifacts\\\":[{\\\"bytes_verified\\\":true,\\\"content\\\":{\\\"text\\\":\\\"{\\\\\\\"default_branch\\\\\\\":\\\\\\\"main\\\\\\\",\\\\\\\"description\\\\\\\":\\\\\\\"The official Python SDK for Model Context Protocol servers and clients\\\\\\\",\\\\\\\"full_name\\\\\\\":\\\\\\\"modelcontextprotocol/python-sdk\\\\\\\",\\\\\\\"html_url\\\\\\\":\\\\\\\"https://github.com/modelcontextprotocol/python-sdk\\\\\\\"}\\\"},\\\"manifest\\\":{\\\"artifact_id\\\":\\\"artifact-de85399fc90f449699e2036a63482f22\\\",\\\"bytes\\\":222,\\\"digest\\\":\\\"sha256:a5fa2798d539d3b33f7282587382225a39286e5e9a0f77ea7efec9f54aa000cf\\\",\\\"media_type\\\":\\\"application/json\\\",\\\"provenance\\\":{\\\"contract\\\":{\\\"digest\\\":\\\"sha256:4c305684d20521d2f72628d5606a3537338691fc5f201177eca55b3aed1f5239\\\",\\\"id\\\":\\\"https://contracts.example.net/capabilities/repository.inspect\\\",\\\"version\\\":\\\"1.0.0\\\"},\\\"input_digest\\\":\\\"sha256:336e56c0984b89f2229675367eff512550f38a0489617f63212218f15b00d971\\\",\\\"kind\\\":\\\"operation-result\\\",\\\"operation_id\\\":\\\"tool-9b5f0e3fa9fc78a7db0d59dc0dc47d2d6778e34c508f75d7235fcfeede4a2127\\\",\\\"resource\\\":\\\"repository:python-sdk\\\",\\\"result_digest\\\":\\\"sha256:a5fa2798d539d3b33f7282587382225a39286e5e9a0f77ea7efec9f54aa000cf\\\",\\\"schema_digest\\\":\\\"sha256:839e1447c0ebd1698c8d8d02c05d0f30bfa58351"
+            },
+            "event_id": "event-c144f4234c064093b7b0aec103c917ee",
+            "kind": "call",
+            "payload": {
+              "call_type": "model",
+              "input_bytes": 17670,
+              "input_digest": "sha256:34795dbf1dc76917134a1f253a884cb39b8da68beb6c3ebdd24272b780b37b47",
+              "operation_id": "model-edc1d867976d4e77a2ef2b53cd476f9a",
+              "output_bytes": 0,
+              "output_digest": null,
+              "payload_truncated": true,
+              "phase": "started",
+              "purpose": "verification",
+              "reserved": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 1,
+                "model_tokens": 22200,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 60000
+              },
+              "usage": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 0,
+                "model_tokens": 0,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 0
+              }
+            },
+            "redacted": true,
+            "sequence": 16,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-34a131fc132c4622a373527ecec6ac67",
+            "timestamp": "2026-11-19T02:19:06.712Z"
+          },
+          {
+            "causal_parent_event_id": null,
+            "content": {
+              "media_type": "application/json",
+              "text": "{\"output\":{\"passed\":true,\"reason\":\"The candidate output matches the supplied receiver-side evidence. The metadata artifact is bytes-verified and contains full_name=modelcontextprotocol/python-sdk, default_branch=main, the stated description, and the GitHub URL. The documentation artifact is bytes-verified and contains a JSON result whose text matches the candidate documentation_index. The operation receipts for repository.metadata and repository.documentation are marked succeeded with effect none and include durable artifact IDs/digests. The documentation text is within the 8192-byte bound, and no unresolved write effects are indicated.\"}}"
+            },
+            "event_id": "event-bc4240861b1f463ca0a8f0187e7be1b8",
+            "kind": "call",
+            "payload": {
+              "call_type": "model",
+              "input_bytes": 57,
+              "input_digest": "sha256:2b7b9ee84ecd55030929e14ea6e723b2d26a5eafabfa7525a22033fe5e9d7f50",
+              "operation_id": "model-edc1d867976d4e77a2ef2b53cd476f9a",
+              "output_bytes": 636,
+              "output_digest": "sha256:794e8efcf3194717ea4e64cfaf73d282bddf78aed557de63484e5016d2684ff6",
+              "payload_truncated": false,
+              "phase": "finished",
+              "reserved": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 0,
+                "model_tokens": 0,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 0
+              },
+              "usage": {
+                "artifact_bytes": 0,
+                "delegations": 0,
+                "input_bytes": 0,
+                "model_calls": 1,
+                "model_tokens": 5602,
+                "output_bytes": 0,
+                "tool_calls": 0,
+                "wall_time_ms": 10877
+              }
+            },
+            "redacted": true,
+            "sequence": 17,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-34a131fc132c4622a373527ecec6ac67",
+            "timestamp": "2026-11-19T02:19:17.614Z"
+          },
+          {
+            "causal_parent_event_id": null,
+            "event_id": "event-d724e6704aaa4a77a872b68fabb077ba",
+            "kind": "verification",
+            "payload": {
+              "checks": [
+                {
+                  "artifact_ids": [],
+                  "criterion_id": "verified-source-content",
+                  "disposition": "passed",
+                  "summary": "The candidate output matches the supplied receiver-side evidence. The metadata artifact is bytes-verified and contains full_name=modelcontextprotocol/python-sdk, default_branch=main, the stated description, and the GitHub URL. The documentation artifact is bytes-verified and contains a JSON result whose text matches the candidate documentation_index. The operation receipts for repository.metadata and repository.documentation are marked succeeded with effect none and include durable artifact IDs/digests. The documentation text is within the 8192-byte bound, and no unresolved write effects are indicated."
+                }
+              ],
+              "contract": {
+                "digest": "sha256:4c305684d20521d2f72628d5606a3537338691fc5f201177eca55b3aed1f5239",
+                "id": "https://contracts.example.net/capabilities/repository.inspect",
+                "version": "1.0.0"
+              },
+              "release": "accepted",
+              "request_digest": "sha256:2d3cf55d274d7d9b99ecaacebc087eb41d28cb691b123a6df49ca99690bc2c7b",
+              "step_id": "semantic-verification"
+            },
+            "redacted": true,
+            "sequence": 18,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-34a131fc132c4622a373527ecec6ac67",
+            "timestamp": "2026-11-19T02:19:17.642Z"
+          },
+          {
+            "causal_parent_event_id": null,
+            "event_id": "event-51192f9db9a84a4fb42578d67f3cd266",
+            "kind": "verification",
+            "payload": {
+              "checks": [
+                {
+                  "artifact_ids": [
+                    "artifact-de85399fc90f449699e2036a63482f22",
+                    "artifact-a16fcc4abea64fbfbf1b3a5f1774ecb2"
+                  ],
+                  "criterion_id": "verified-source-content",
+                  "disposition": "passed",
+                  "summary": "Retrieved repository metadata and documentation index from the approved LASA source operations; both returned durable evidence artifacts with source-operation receipts and digests."
+                }
+              ],
+              "contract": {
+                "digest": "sha256:4c305684d20521d2f72628d5606a3537338691fc5f201177eca55b3aed1f5239",
+                "id": "https://contracts.example.net/capabilities/repository.inspect",
+                "version": "1.0.0"
+              },
+              "release": "accepted",
+              "request_digest": "sha256:2d3cf55d274d7d9b99ecaacebc087eb41d28cb691b123a6df49ca99690bc2c7b",
+              "step_id": "final-release"
+            },
+            "redacted": true,
+            "sequence": 19,
+            "service_id": "https://192.168.0.188/lasa",
+            "task_id": "task-34a131fc132c4622a373527ecec6ac67",
+            "timestamp": "2026-11-19T02:19:17.692Z"
+          }
+        ],
+        "next_sequence": 20
+      }
+    }
+  ]
+}
