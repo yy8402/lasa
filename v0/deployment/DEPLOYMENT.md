@@ -68,7 +68,7 @@ The 1.5.1 containers and manifests are retained for rollback from 1.5.2. If cand
 
 ### Air188 configuration cleanup
 
-After verifying 1.5.2, air188 removed the superseded Docker manifests through 1.5.0, their legacy settings files, and the unused review JWKS. The live policies and review static-token registry are still in use at the paths above. The inactive `lasa-layer2.service` user unit was moved to `v0/.deploy/target/backups/lasa-layer2.retired-20261123.service`. The active system-managed HTTPS proxy continues to front both Docker services.
+After verifying 1.5.2, air188 removed the superseded Docker manifests through 1.5.0, their legacy settings files, and the unused review JWKS. The subsequent cleanup removed the old wheel deployment and staging files. Air188 archived the old task stores, workspaces, and backups, including the inactive `lasa-layer2.service` user unit. The live policies and review token registry still serve both 1.5.2 and the retained 1.5.1 rollback. A new mixed-auth dependent workflow completed after cleanup as `task-4c8c7455a5c1499fb7af8f443360dfd1`. See the [air188 runbook](air188.md) for the current layout, archive location, and verification.
 
 ## Historical deployment records
 
