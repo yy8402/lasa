@@ -1,6 +1,6 @@
 # LASA capabilities, discovery, and routing: proposed architecture
 
-Status: **implemented target contracts**. Updated 2026-11-18. Runtime evidence is in [the acceptance matrix](../VERIFICATION.md).
+Status: **implemented target contracts**. The [acceptance matrix](../VERIFICATION.md) records earlier runtime evidence.
 
 This package specifies the architecture implemented by the Python runtime. It derives its design from requirements and current standards. Isolated implementation evidence and separately authorized deployed-service verification are distinguished in [the deployment report](../deployment/DEPLOYMENT.md).
 
@@ -13,7 +13,8 @@ Read in this order:
 3. [Discovery, identity, HTTP API, and caching](discovery.md)
 4. [Planning, routing, admission, execution, and evidence](execution.md)
 5. [Implementation acceptance checklist](acceptance.md)
-6. [Standards and sources](sources.md)
+6. [Downstream multi-peer delegation](multi-peer-delegation.md)
+7. [Standards and sources](sources.md)
 
 Machine-readable artifacts (also packaged for the runtime):
 
@@ -21,7 +22,7 @@ Machine-readable artifacts (also packaged for the runtime):
 - [Examples](examples/manifest.json), including five capability definitions, caller-visible discovery, local configuration, a task and delegation, admission, results, and diagnostics.
 - [Design validator](validate.py) and [validation evidence](VALIDATION.md).
 
-Protocol target: `lasa/1.1`. This is a LASA design version, not a claim of conformance to an external LASA specification. JSON examples use reserved example domains and contain no usable credentials. Normative MUST/SHALL statements are LASA requirements; standards references are identified separately. Shapes and behavioral invariants both apply. A discrepancy is a design defect to resolve, not implementation discretion.
+The protocol target is `lasa/1.2`. JSON examples use reserved example domains and contain no usable credentials. Normative MUST and SHALL statements are LASA requirements. Shapes and behavioral invariants both apply.
 
 This design task has three finite acceptance milestones:
 

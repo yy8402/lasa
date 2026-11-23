@@ -8,6 +8,7 @@ import jwt
 
 from .contracts import digest, parse_json
 from .errors import LasaError
+from .grants import grant_key, intersect_grants
 
 
 class Authentication:
@@ -143,6 +144,7 @@ class Authorization:
             require(
                 principal["kind"] == "peer"
                 and principal.get("service_id") == envelope["parent_service_id"]
+                and envelope["recipient_service_id"] == self.config.service_id
                 and principal["service_id"]
                 in self.config.document["authorization"]["trusted_delegator_service_ids"],
                 "authority_denied",
@@ -208,8 +210,7 @@ class Authorization:
                 for r in rule["resources"]
             ],
             "allowed_effects": allowed_effects,
-            "allowed_disclosure_services": rule["disclosure_services"],
-            "allowed_delegated_contracts": rule["delegated_contracts"],
+            "delegation_grants": rule["delegation_grants"],
             "limits": effective_limits,
             "content_diagnostics_allowed": rule["content_diagnostics"],
         }
@@ -238,15 +239,11 @@ class Authorization:
                 for r in result["resources"]
             ]
             result["resources"] = [r for r in result["resources"] if r["actions"]]
-            result["allowed_disclosure_services"] = sorted(
-                set(result["allowed_disclosure_services"])
-                & set(ceiling["allowed_disclosure_services"])
+            grants = ceiling["delegation_grants"]
+            require(
+                len(grants) == len({grant_key(grant) for grant in grants}), "authority_denied", 403
             )
-            result["allowed_delegated_contracts"] = [
-                x
-                for x in result["allowed_delegated_contracts"]
-                if x in ceiling["allowed_delegated_contracts"]
-            ]
+            result["delegation_grants"] = intersect_grants(result["delegation_grants"], grants)
             result["content_diagnostics_allowed"] &= ceiling["content_diagnostics_allowed"]
         require(
             request["diagnostics"] != "content" or result["content_diagnostics_allowed"],

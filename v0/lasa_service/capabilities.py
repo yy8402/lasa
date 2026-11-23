@@ -217,7 +217,14 @@ class Publication:
         )
         offers = []
         configured = {x["digest"] for x in self.config.document["published_contracts"]}
+        peer_ids = {settings["expected_service_id"] for settings in self.config.peers}
         for rule in rules:
+            delegated = [
+                grant["contract"]
+                for grant in rule["delegation_grants"]
+                if grant["sender_service_id"] == self.config.service_id
+                and grant["receiver_service_id"] in peer_ids
+            ]
             for ref in rule["contracts"]:
                 if (
                     ref["digest"] not in configured
@@ -227,7 +234,7 @@ class Publication:
                     continue
                 definition = self.registry.get(ref)
                 can_local = any(x["contract"] == ref for x in self.config.document["bindings"])
-                can_delegate = self.config.peer is not None and ref in rule["delegated_contracts"]
+                can_delegate = ref in delegated
                 if not (can_local or can_delegate):
                     continue
                 allowed = sorted(set(rule["effects"]) & set(definition["max_effects"]))
@@ -266,7 +273,7 @@ class Publication:
                 }
                 for resource in ("model_calls", "model_tokens"):
                     minimum = self.config.document["limits"]["integration_reserve"][resource]
-                    if self.config.peer is not None:
+                    if self.config.peers:
                         minimum += self.config.document["limits"]["assessment_budget"][resource]
                     if resource == "model_calls":
                         minimum += 1

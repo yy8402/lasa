@@ -11,9 +11,9 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import NameOID
 
 
-def certificate(root):
+def certificate(root, *, dns_name=None):
     key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-    name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "LASA test")])
+    name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, dns_name or "LASA test")])
     cert = (
         x509.CertificateBuilder()
         .subject_name(name)
@@ -23,7 +23,11 @@ def certificate(root):
         .not_valid_before(datetime.now(UTC) - timedelta(minutes=1))
         .not_valid_after(datetime.now(UTC) + timedelta(days=1))
         .add_extension(
-            x509.SubjectAlternativeName([x509.IPAddress(ipaddress.ip_address("127.0.0.1"))]),
+            x509.SubjectAlternativeName(
+                [x509.DNSName(dns_name)]
+                if dns_name
+                else [x509.IPAddress(ipaddress.ip_address("127.0.0.1"))]
+            ),
             critical=False,
         )
         .add_extension(x509.BasicConstraints(ca=True, path_length=None), critical=True)

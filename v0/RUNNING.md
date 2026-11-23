@@ -32,7 +32,42 @@ uv run --project v0 python v0/deployment/run_service.py \
   --credentials /absolute/private/credentials.json
 ```
 
-The credential JSON contains environment-variable names mapped to secret values; its owner/mode are checked. The default generated model reference is `env:LASA_MODEL_API_KEY`. The backend listens on literal `127.0.0.1`; configure a TLS proxy so the generated HTTPS base URL reaches it. A private CA can be configured on the peer and CLI. HTTPS certificate validation remains enabled.
+The credential JSON contains environment-variable names mapped to secret values. Its owner and mode are checked. The default generated model reference is `env:LASA_MODEL_API_KEY`. The generator binds the backend to `127.0.0.1` for use with a TLS proxy. The service can also terminate TLS directly.
+
+## Running LASA in Docker
+
+Build the supervisor image after building the Codex worker image above:
+
+```sh
+docker build -f v0/Dockerfile.service -t lasa-service:1.2.0 v0
+```
+
+The image installs LASA and its locked production dependencies. It runs `lasa --config /etc/lasa/config.json` by default. For a bridge-network listener, set `storage.listen_host` to `0.0.0.0` and set `storage.tls.certificate_file` and `storage.tls.key_file` to the absolute paths of your server certificate and key. The certificate must cover the hostname in `service.base_url`. A model provider with private TLS can set `executors[].provider_ca_file` to its CA bundle. Peers use their own `ca_file` setting.
+
+Mount the generated configuration and writable state at the same absolute paths inside the supervisor and on the Docker host. The daemon resolves those paths when creating sibling Codex containers. Run the supervisor as the state directory owner and give it access to the daemon socket. The task containers receive their scoped workspace and runtime mounts.
+
+```sh
+lasa_directory=/absolute/path/to/lasa-config
+lasa_socket=/var/run/docker.sock
+lasa_socket_group=$(docker run --rm --network none \
+  --mount "type=bind,source=$lasa_socket,target=/var/run/docker.sock" \
+  --entrypoint stat lasa-service:1.2.0 -c '%g' /var/run/docker.sock)
+docker run --rm --user "$(id -u):$(id -g)" --group-add "$lasa_socket_group" \
+  --mount "type=bind,source=$lasa_socket,target=/var/run/docker.sock" \
+  --mount "type=bind,source=$lasa_directory,target=$lasa_directory" \
+  --publish 127.0.0.1:8443:8787 \
+  lasa-service:1.2.0 --config "$lasa_directory/config.json"
+```
+
+This example assumes the generated port `8787`, an HTTPS base URL on `localhost:8443`, and a model `credential_ref` pointing to a private file under the mounted directory.
+
+Run the local multi-peer check with both images available:
+
+```sh
+(cd v0 && .venv/bin/python -m tests.container_smoke)
+```
+
+The check creates a private Docker network with one parent, two downstream LASA services, and a deterministic HTTPS model fixture. It submits a task, verifies both child traces and the parent result, checks receiver-specific authentication, and removes the temporary containers and network. It uses the installed LASA CLI and the real Codex worker image.
 
 ## Model service and prompts
 
@@ -57,7 +92,7 @@ The script discovers caller-visible offers, creates a session, submits typed inp
 
 `--diagnostics content` additionally requires receiver policy permission. Metadata is always recorded. Content traces exclude service keys, private developer/system prompts, and hidden reasoning; truncation retains operation headers and digests. Child traces are retrieved by the parent using its own credentials, which are never returned to the caller.
 
-To configure two layers, generate layer 2 with `--trusted-parent-id` and `--trusted-parent-subject`. Give layer 1 the descriptor URL, expected service ID, and a private reference to a JWT issued for that layer-2 peer subject using `--peer-descriptor`, `--peer-service-id`, and `--peer-credential-ref`. Each receiver independently checks its policy. Absence of `peer` makes execution local and ignores both routing settings.
+To configure two layers, generate layer 2 with `--trusted-parent-id` and `--trusted-parent-subject`. Give layer 1 the descriptor URL, expected service ID, and a private reference to a JWT issued for that layer-2 peer subject using `--peer-descriptor`, `--peer-service-id`, and `--peer-credential-ref`. For additional delegates, add entries in downstream preference order to `peers` and authorize each exact sender, receiver, and contract in `delegation_grants`. Configure and authorize the parent workload separately on each receiver. An empty `peers` list enables local-only execution. [Multi-peer delegation](design/multi-peer-delegation.md)
 
 The private files have closed schemas in `design/private.schema.json`. One private `ConnectorPolicy.connectors` registry supports stdio MCP, Streamable HTTP MCP, and fixed HTTPS JSON GET application operations. Operations pin schemas and approved read-only resource effects. Binding `required_operations` defines both dependency readiness and the operation allowlist. The three source profiles assemble exact output fields from immutable operation-result artifacts before independent semantic verification. See [the connector design](design/connectors.md) and [managed connector verification](deployment/CONNECTORS.md). External-write bindings are rejected. Offer minimum budgets include required assessment/verification allocations; use smaller integration reserves for a leaf that only needs local verification. A generic attempt can report inability and does not claim expertise or missing access.
 

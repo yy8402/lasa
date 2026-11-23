@@ -1,11 +1,13 @@
 """Deterministic routing from verified claim, capacity, and authority facts."""
 
+import asyncio
 import copy
 import time
 
-from .capabilities import epoch, reference, require
+from .capabilities import epoch, instant, reference, require
 from .contracts import canonical, digest, parse_json
 from .errors import LasaError
+from .grants import find_grant, intersect_grants
 from .planning import check_plan
 from .preconditions import check_inputs, restrict
 
@@ -47,19 +49,27 @@ class RoutingController:
     def __init__(self, coordinator):
         self.coordinator = coordinator
 
-    async def suitability(self, task_id, request, offer, inputs, authority, rule, count):
+    def ancestry(self, request):
+        return [
+            *request.get("delegation", {}).get("ancestry", []),
+            self.coordinator.config.service_id,
+        ]
+
+    async def catalog(self, peer, contract=None):
+        try:
+            if contract is None:
+                return await peer.discover()
+            return await peer.discover(refresh=True, contract=contract)
+        except (LasaError, TimeoutError):
+            return None
+
+    async def suitability(self, peer, task_id, offer, inputs, authority, rule, grant, count):
         c = self.coordinator
-        if (
-            offer["contract"] not in authority["allowed_delegated_contracts"]
-            or offer["contract"] not in rule["delegated_contracts"]
-            or offer["authorization_ref"] != c.config.peer["authorization_ref"]
-            or request["requested_limits"]["max_hops"] <= 0
-        ):
-            return "denied"
         try:
             terms = offer["restrictions"]
-            current = restrict(authority, rule["effects"], rule["resources"])
-            candidate = restrict(current, terms["allowed_effects"], terms["resources"])
+            candidate = restrict(authority, rule["effects"], rule["resources"])
+            candidate = restrict(candidate, grant["effects"], grant["resources"])
+            candidate = restrict(candidate, terms["allowed_effects"], terms["resources"])
             candidate["limits"] = dict(authority["limits"])
             used = c.store.usage(task_id, reserved=True)
             reserve = c.config.document["limits"]["integration_reserve"]
@@ -72,8 +82,6 @@ class RoutingController:
                 )
                 for key in used
             }
-            if len(canonical(inputs)) > candidate["limits"]["budget"]["input_bytes"]:
-                return "unavailable"
             if (
                 epoch(authority["limits"]["deadline"]) - reserve["wall_time_ms"] / 1000
                 <= time.time()
@@ -87,61 +95,102 @@ class RoutingController:
                 candidate,
                 terms["additional_preconditions"],
             )
-            if artifacts and (
-                len(canonical(inputs)) + len(canonical(artifacts))
-                > candidate["limits"]["budget"]["input_bytes"]
-            ):
+            size = len(canonical(inputs)) + (len(canonical(artifacts)) if artifacts else 0)
+            if size > candidate["limits"]["budget"]["input_bytes"]:
                 return "unavailable"
-            await c.peer.definition(offer)
-            state = await c.peer.availability(offer)
-            return (
-                "matched"
-                if state == "available"
-                else "denied"
-                if state == "unauthorized"
-                else state
-            )
+            if any(
+                item["manifest"].get("provenance", {}).get("resource", "workspace:self")
+                not in grant["disclosure_resources"]
+                for item in artifacts
+            ):
+                return "denied"
+            async with asyncio.timeout(peer.settings["request_timeout_seconds"]):
+                await peer.definition(offer)
+                state = await peer.availability(offer)
+            return {"available": "matched", "unauthorized": "denied"}.get(state, state)
         except LasaError as exc:
-            return (
-                "denied"
-                if exc.code == "authority_denied"
-                else "unavailable"
-                if exc.code == "capacity_exhausted"
-                else "unknown"
-            )
+            if exc.code in {"authority_denied", "disclosure_denied"}:
+                return "denied"
+            if exc.code == "capacity_exhausted":
+                return "unavailable"
+            return "unknown"
         except TimeoutError:
             return "unknown"
 
-    async def match(self, candidates, task_id, request, inputs, authority, rule, count):
+    async def match(self, peer, snapshot, ref, task_id, inputs, authority, rule, grant, count):
+        if snapshot is None:
+            return "unknown", None
+        if not snapshot["offers"]:
+            return "not_claimed", None
         states = set()
-        for offer in candidates:
-            state = await self.suitability(task_id, request, offer, inputs, authority, rule, count)
+        for offer in sorted(snapshot["offers"], key=lambda offer: offer["offer_id"]):
+            if (
+                offer["contract"] != ref
+                or offer["authorization_ref"] != peer.settings["authorization_ref"]
+            ):
+                continue
+            state = await self.suitability(
+                peer, task_id, offer, inputs, authority, rule, grant, count
+            )
             if state == "matched":
-                return state, offer
+                return state, {
+                    "service_id": peer.service_id,
+                    "offer": offer,
+                    "catalog_revision": snapshot["revision"],
+                }
             states.add(state)
+        return self.assessment(states), None
+
+    @staticmethod
+    def assessment(states):
+        if states == {"not_claimed"}:
+            return "not_claimed"
         return next(
-            (state for state in ("busy", "denied", "unknown", "unavailable") if state in states),
+            (
+                state
+                for state in ("matched", "busy", "denied", "unknown", "unavailable")
+                if state in states
+            ),
             "unknown",
-        ), None
+        )
 
     async def prepare(self, task_id, request):
         c = self.coordinator
-        catalog = None
-        if c.config.peer:
-            try:
-                catalog = await c.peer.discover()
-            except (LasaError, TimeoutError):
-                catalog = None
-        requirements, proposals = await c.planner.propose(task_id, request, catalog)
+        authority = c.authority(task_id)
+        rule = c.authorization.rule(c.principal(task_id), request["authorization_ref"])
+        grants = intersect_grants(authority["delegation_grants"], rule["delegation_grants"])
+        ancestry = self.ancestry(request)
+        remaining = authority["limits"]["max_hops"]
+        outbound = {
+            grant["receiver_service_id"]
+            for grant in grants
+            if grant["sender_service_id"] == c.config.service_id
+        }
+        eligible = [
+            peer
+            for peer in c.peers.values()
+            if remaining > 0 and peer.service_id in outbound and peer.service_id not in ancestry
+        ]
+        planning_offers = []
+        for peer, snapshot in zip(
+            eligible, await asyncio.gather(*(self.catalog(peer) for peer in eligible)), strict=True
+        ):
+            if snapshot:
+                planning_offers.extend(
+                    offer
+                    for offer in snapshot["offers"]
+                    if offer["authorization_ref"] == peer.settings["authorization_ref"]
+                    and find_grant(grants, c.config.service_id, peer.service_id, offer["contract"])
+                )
+        requirements, proposals = await c.planner.propose(
+            task_id, request, {"offers": planning_offers} if eligible else None
+        )
         refreshed = {}
 
-        async def fresh(ref):
-            key = ref["digest"]
+        async def fresh(peer, ref):
+            key = (peer.service_id, ref["digest"])
             if key not in refreshed:
-                try:
-                    refreshed[key] = await c.peer.discover(refresh=True, contract=ref)
-                except (LasaError, TimeoutError):
-                    refreshed[key] = None
+                refreshed[key] = await self.catalog(peer, ref)
             return refreshed[key]
 
         require(
@@ -149,8 +198,6 @@ class RoutingController:
             "capacity_exhausted",
             429,
         )
-        authority = c.authority(task_id)
-        rule = c.authorization.rule(c.principal(task_id), request["authorization_ref"])
         policy = c.config.document["routing"]
         choices = []
         inputs = {}
@@ -183,31 +230,44 @@ class RoutingController:
                 except LasaError as exc:
                     local = "insufficient"
                     local_failure = exc
-            state = "not_configured"
-            matched = None
-            generic = None
-            snapshot = None
-            if c.config.peer:
-                permitted = (
-                    c.config.peer["expected_service_id"] in authority["allowed_disclosure_services"]
-                    and c.config.peer["expected_service_id"] in rule["disclosure_services"]
+            candidates = []
+            states = set()
+            permitted = []
+            for peer in eligible:
+                grant = find_grant(grants, c.config.service_id, peer.service_id, ref)
+                if grant is None:
+                    continue
+                permitted.append(peer.service_id)
+                snapshot = await fresh(peer, ref)
+                peer_state, route = await self.match(
+                    peer,
+                    snapshot,
+                    ref,
+                    task_id,
+                    value,
+                    authority,
+                    rule,
+                    grant,
+                    len(proposals),
                 )
-                if not permitted:
-                    state = "denied"
-                elif (snapshot := await fresh(ref)) is None:
-                    state = "unknown"
-                elif not snapshot["offers"]:
-                    state = "not_claimed"
-                else:
-                    state, matched = await self.match(
-                        (offer for offer in snapshot["offers"] if offer["contract"] == ref),
-                        task_id,
-                        request,
-                        value,
-                        authority,
-                        rule,
-                        len(proposals),
-                    )
+                states.add(peer_state)
+                if route:
+                    candidates.append(route)
+                    if len(candidates) == 2:
+                        break
+            if states:
+                state = self.assessment(states)
+            elif not c.peers:
+                state = "not_configured"
+            elif remaining and any(
+                peer_id in ancestry and find_grant(grants, c.config.service_id, peer_id, ref)
+                for peer_id in c.peers
+            ):
+                state = "ancestor"
+            else:
+                state = "denied"
+
+            generic = []
             if (
                 local == "insufficient"
                 and state == "not_claimed"
@@ -216,31 +276,42 @@ class RoutingController:
                 attempt = fallback_input(
                     definition, value, requirements, proposal["requirement_ids"]
                 )
-                options = []
-                for target in authority["allowed_delegated_contracts"]:
-                    if (
-                        target in rule["delegated_contracts"]
-                        and c.registry.verifiers.get(digest(target)) == "task-attempt-v1"
-                    ):
-                        alternative = await fresh(target)
-                        if alternative:
-                            options.extend(
-                                x for x in alternative["offers"] if x["contract"] == target
-                            )
-                if options:
-                    generic_state, generic = await self.match(
-                        options, task_id, request, attempt, authority, rule, len(proposals)
-                    )
-                    if generic is None:
-                        state = generic_state
+                for peer_id in permitted:
+                    peer = c.peers[peer_id]
+                    for grant in grants:
+                        target = grant["contract"]
+                        if (
+                            grant["sender_service_id"] != c.config.service_id
+                            or grant["receiver_service_id"] != peer_id
+                            or c.registry.verifiers.get(digest(target)) != "task-attempt-v1"
+                        ):
+                            continue
+                        generic_state, route = await self.match(
+                            peer,
+                            await fresh(peer, target),
+                            target,
+                            task_id,
+                            attempt,
+                            authority,
+                            rule,
+                            grant,
+                            len(proposals),
+                        )
+                        if route:
+                            generic.append(route)
+                            break
+                        if generic_state != "not_claimed":
+                            states.add(generic_state)
+                    if len(generic) == 2:
+                        break
+                if not generic:
+                    state = self.assessment(states)
+
             choice = decide(
-                local,
-                state,
-                policy,
-                configured=c.config.peer is not None,
-                generic_available=generic is not None,
+                local, state, policy, configured=bool(c.peers), generic_available=bool(generic)
             )
-            selected = matched if choice == "peer" else generic if choice == "attempt" else None
+            routes = candidates if choice == "peer" else generic if choice == "attempt" else []
+            selected = routes[0] if routes else None
             if choice == "local":
                 if local_failure:
                     raise local_failure
@@ -258,7 +329,7 @@ class RoutingController:
                 )
             reason = (
                 "No peer is configured; routing settings are ignored."
-                if not c.config.peer
+                if not c.peers
                 else (
                     "Both suitable; configured preference selects " + choice
                     if local == "sufficient" and state == "matched"
@@ -277,14 +348,16 @@ class RoutingController:
                 "local_assessment": local,
                 "peer_assessment": state,
                 "assessment_summary": proposal["assessment_summary"],
-                "catalog_revision": snapshot["revision"] if snapshot else None,
-                "offer_revision": selected["revision"] if selected else None,
+                "catalog_revision": selected["catalog_revision"] if selected else None,
+                "offer_revision": selected["offer"]["revision"] if selected else None,
                 "authorization_decision_id": authority["decision_id"],
                 "policy": policy,
                 "selected_executor": "peer" if choice in {"peer", "attempt"} else choice,
                 "contract": ref,
                 "decision_reason": reason,
             }
+            if selected:
+                evidence["peer_service_id"] = selected["service_id"]
             c.diagnostics.emit(task_id, "routing", evidence)
             if choice == "none":
                 raise LasaError(
@@ -294,6 +367,8 @@ class RoutingController:
                     if state == "busy"
                     else "peer_unavailable"
                     if state in {"unknown", "unavailable"}
+                    else "precondition_failed"
+                    if state == "ancestor"
                     else "unsupported_contract",
                     403
                     if state == "denied"
@@ -303,14 +378,15 @@ class RoutingController:
                     if state in {"unknown", "unavailable"}
                     else 422,
                 )
-            if choice in {"peer", "attempt"}:
-                require(request["requested_limits"]["max_hops"] > 0, "authority_denied", 403)
-                require(c.registry.supported(selected["contract"]), "unsupported_contract", 422)
             choices.append((proposal, ref, choice))
             inputs[proposal["step_id"]] = value
             assessments[proposal["step_id"]] = proposal
             if selected:
-                offers[proposal["step_id"]] = {"offer": selected, "fallback": choice == "attempt"}
+                offers[proposal["step_id"]] = {
+                    "routes": routes,
+                    "fallback": choice == "attempt",
+                    "absence_peers": permitted if choice == "attempt" else [],
+                }
         plan = {
             "revision": 1,
             "requirements": requirements,
@@ -332,10 +408,10 @@ class RoutingController:
             ),
         }
         private = {"document": plan, "inputs": inputs, "assessments": assessments, "offers": offers}
-        self.allocate(task_id, request, private)
+        self.allocate(task_id, private)
         return private
 
-    def allocate(self, task_id, request, private):
+    def allocate(self, task_id, private):
         c = self.coordinator
         authority = c.authority(task_id)
         plan = private["document"]
@@ -358,19 +434,26 @@ class RoutingController:
                 "max_hops": 0,
             }
             if step["executor"] == "peer":
-                from .capabilities import instant
-
-                offer = private["offers"][step["step_id"]]["offer"]
+                selection = private["offers"][step["step_id"]]
+                offer = selection["routes"][0]["offer"]
                 allocation["deadline"] = instant(
                     epoch(authority["limits"]["deadline"]) - reserve["wall_time_ms"] / 1000
                 )
-                allocation["max_hops"] = min(
-                    request["requested_limits"]["max_hops"] - 1, offer["max_hops"]
-                )
+                allocation["max_hops"] = min(authority["limits"]["max_hops"] - 1, offer["max_hops"])
                 allocation["budget"] = {
                     key: min(value, offer["max_budget"][key])
                     for key, value in allocation["budget"].items()
                 }
+                selection["routes"][1:] = [
+                    route
+                    for route in selection["routes"][1:]
+                    if route["offer"]["contract"] == offer["contract"]
+                    and route["offer"]["max_hops"] >= allocation["max_hops"]
+                    and all(
+                        route["offer"]["max_budget"][key] >= amount
+                        for key, amount in allocation["budget"].items()
+                    )
+                ]
                 require(epoch(allocation["deadline"]) > time.time(), "deadline_exceeded", 422)
             step["allocation"] = allocation
         check_plan(plan, c.registry, authority["limits"]["budget"], used)

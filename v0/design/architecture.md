@@ -2,9 +2,9 @@
 
 ## Required outcomes
 
-LASA accepts asynchronous work in durable sessions, each bound to a service-owned workspace. It can fulfill work locally and optionally through one configured immediate peer. It discovers the peer's contracts and request format, admits only authorized and feasible work, exposes useful diagnostic evidence, and reports completion or failure honestly. Each peer can repeat this pattern with its own immediate peer.
+LASA accepts asynchronous work in durable sessions, each bound to a service-owned workspace. It can fulfill work locally or through configured downstream peers. It discovers each peer's contracts and request format, admits only authorized and feasible work, exposes diagnostic evidence, and reports completion or failure. Each downstream peer can repeat this pattern under its own grants and the inherited allocation.
 
-The caller needs a stable request contract and accountable result. It does not need the peer's model provider, tool inventory, prompts, workspace layout, or internal delegation topology. A service may offer an outcome it fulfills through its peer. Consequently, published capabilities describe externally observable behavior, not locally installed tools.
+The caller needs a stable request contract and accountable result. A service may offer an outcome it fulfills through a configured downstream peer. Published capabilities describe externally observable behavior and keep execution details private.
 
 We assume configured administrative trust between immediate peers. TLS and workload credentials authenticate a peer; receiver policy still decides what it may do. This core design does not prove correctness against a malicious authorized service or implement a universal cross-organization authorization federation. Those assurances would need a separately specified trust profile; they must not be advertised by implication.
 
@@ -50,7 +50,7 @@ Codex App Server remains a possible local executor behind this boundary. The pub
 6. **MCP describes private tool integration.** MCP tool schemas are useful behind the service boundary, but they do not establish public outcome guarantees, caller permission, or delegation admission. Tool names and model settings stay private. [MCP tools](https://modelcontextprotocol.io/specification/2025-11-25/server/tools)
 7. **Exact contract selection.** An incompatible semantic change gets a new major capability version; every published revision is immutable. Admission pins an exact version and digest. No inferred substitution based on similarly shaped JSON.
 8. **Receiver-owned authorization.** Incoming JSON can request narrower limits, never grant itself permission. Authentication, receiver policy, and an independently resolved authority reference establish permission. Parent constraints only attenuate it. See [execution](execution.md).
-9. **One peer, arbitrary bounded recursion.** This covers the required layered system without a service marketplace or multi-peer scheduler. Ancestry, hops, deadline, and aggregate reservations bound recursion. Multiple peers would require an explicit later design, not guessed selection semantics now.
+9. **Configured downstream peers and bounded recursion.** A task step selects one receiver deterministically. Ancestry, hops, deadlines, and aggregate reservations bound recursion. See [multi-peer delegation](multi-peer-delegation.md).
 10. **No autonomous replay of uncertain effects.** Reliable operation identity and reconciliation matter more than an unjustified exactly-once claim. Cancellation is not rollback.
 
 The implementation replaces the superseded prototype structures. Its execution profile uses two explicitly approved verifier implementations and administratively trusted immediate peers. External-write bindings are rejected; this profile makes no federation or general semantic-correctness claim. See the runtime acceptance matrix.

@@ -13,7 +13,15 @@ from lasa_service.contracts import canonical, digest
 from lasa_service.errors import LasaError
 from lasa_service.outcomes import assemble_source_outcome
 
-from .conftest import FakeRuntime, documents, example, settled, submit, task_request
+from .conftest import (
+    FakeRuntime,
+    add_delegation_grant,
+    documents,
+    example,
+    settled,
+    submit,
+    task_request,
+)
 from .test_connector_transports import LIMITS, operation
 
 
@@ -60,10 +68,10 @@ def register_read(raw, *, local=True):
     for principal in policy["principals"]:
         for rule in principal["rules"]:
             rule["contracts"].append(ref)
-            rule["delegated_contracts"].append(ref)
             if "external.read" not in rule["effects"]:
                 rule["effects"].append("external.read")
             rule["resources"].append({"resource": "documents:lasa", "actions": ["read"]})
+            add_delegation_grant(raw, rule, ref)
     path.write_text(json.dumps(policy))
     return ref
 

@@ -9,6 +9,7 @@ import time
 from collections import OrderedDict
 
 import httpx
+import jwt
 
 from . import PROTOCOL_VERSION
 from .capabilities import epoch, offer_terms, require, validate_definition
@@ -18,9 +19,9 @@ from .errors import LasaError
 
 
 class PeerClient:
-    def __init__(self, config, *, transport=None):
+    def __init__(self, config, settings, *, transport=None):
         self.config = config
-        self.settings = config.peer
+        self.settings = settings
         self.contracts = config.contracts
         self.transport = transport
         self.client = None
@@ -29,13 +30,12 @@ class PeerClient:
         self.base = None
 
     async def start(self):
-        if not self.settings:
-            return
         verify = (
             ssl.create_default_context(cafile=self.settings["ca_file"])
             if "ca_file" in self.settings
             else True
         )
+
         self.client = httpx.AsyncClient(
             verify=verify,
             transport=self.transport,
@@ -44,24 +44,45 @@ class PeerClient:
             trust_env=False,
         )
 
+    @property
+    def service_id(self):
+        return self.settings["expected_service_id"]
+
     async def close(self):
         if self.client:
             await self.client.aclose()
 
-    def authentication_headers(self):
+    @staticmethod
+    def workload_identity(token):
+        try:
+            claims = jwt.decode(token, options={"verify_signature": False})
+            return {key: claims[key] for key in ("iss", "sub", "aud")}
+        except (jwt.InvalidTokenError, KeyError) as exc:
+            raise LasaError("peer_unavailable", 503) from exc
+
+    def binding(self):
+        return {
+            "base_url": self.base,
+            "protocol": PROTOCOL_VERSION,
+            "workload": self.workload_identity(self.authentication_headers()["Authorization"][7:]),
+        }
+
+    def authentication_headers(self, binding=None):
         try:
             token = self.config.secret(self.settings["credential_ref"])
         except (OSError, ValueError):
             raise LasaError("peer_unavailable", 503, retry="readmission") from None
+        if binding is not None:
+            require(self.workload_identity(token) == binding["workload"], "authority_denied", 403)
         return {"Authorization": "Bearer " + token}
 
-    async def request(self, method, url, body=None, key=None, etag=None):
+    async def request(self, method, url, body=None, key=None, etag=None, *, binding=None):
         require(
             self.client is not None and within_url(url, self.settings["allowed_base_url"]),
             "peer_unavailable",
             503,
         )
-        headers = self.authentication_headers()
+        headers = self.authentication_headers(binding)
         if key:
             headers["Idempotency-Key"] = key
         if etag:

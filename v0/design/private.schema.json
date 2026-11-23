@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://schemas.example.net/lasa/1.1/private.schema.json",
+  "$id": "https://schemas.example.net/lasa/1.2/private.schema.json",
   "$defs": {
     "Prompts": {
       "type": "object",
@@ -106,21 +106,6 @@
                       },
                       "uniqueItems": true
                     },
-                    "disclosure_services": {
-                      "type": "array",
-                      "items": {
-                        "type": "string",
-                        "format": "uri"
-                      },
-                      "uniqueItems": true
-                    },
-                    "delegated_contracts": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "contracts.schema.json#/$defs/CapabilityRef"
-                      },
-                      "uniqueItems": true
-                    },
                     "budget": {
                       "$ref": "contracts.schema.json#/$defs/Budget"
                     },
@@ -137,6 +122,13 @@
                       "items": {
                         "$ref": "contracts.schema.json#/$defs/Precondition"
                       }
+                    },
+                    "delegation_grants": {
+                      "type": "array",
+                      "uniqueItems": true,
+                      "items": {
+                        "$ref": "contracts.schema.json#/$defs/DelegationGrant"
+                      }
                     }
                   },
                   "required": [
@@ -144,11 +136,10 @@
                     "contracts",
                     "resources",
                     "effects",
-                    "disclosure_services",
-                    "delegated_contracts",
                     "budget",
                     "max_hops",
-                    "content_diagnostics"
+                    "content_diagnostics",
+                    "delegation_grants"
                   ],
                   "additionalProperties": false
                 },
@@ -620,7 +611,7 @@
           "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
         },
         "contract": {
-          "$ref": "https://schemas.example.net/lasa/1.1/contracts.schema.json#/$defs/CapabilityRef"
+          "$ref": "https://schemas.example.net/lasa/1.2/contracts.schema.json#/$defs/CapabilityRef"
         },
         "executor_id": {
           "type": "string",
@@ -629,7 +620,7 @@
         "approved_resources": {
           "type": "array",
           "items": {
-            "$ref": "https://schemas.example.net/lasa/1.1/contracts.schema.json#/$defs/ResourceRule"
+            "$ref": "https://schemas.example.net/lasa/1.2/contracts.schema.json#/$defs/ResourceRule"
           }
         },
         "allowed_effects": {

@@ -46,9 +46,29 @@ def token(subject="alice", audience="https://identity.example.net/services/layer
     )
 
 
+def delegation_grant(sender, receiver, contract, rule):
+    return {
+        "sender_service_id": sender,
+        "receiver_service_id": receiver,
+        "contract": contract,
+        "effects": list(rule["effects"]),
+        "resources": copy.deepcopy(rule["resources"]),
+        "disclosure_resources": [resource["resource"] for resource in rule["resources"]],
+    }
+
+
+def add_delegation_grant(raw, rule, contract):
+    rule["delegation_grants"].extend(
+        delegation_grant(raw["service"]["id"], peer["expected_service_id"], contract, rule)
+        for peer in raw["peers"]
+    )
+
+
 def documents(tmp_path, layer="layer1", *, peer=False):
     tmp_path.mkdir(parents=True, exist_ok=True)
     raw = example("config")
+    if not peer:
+        raw["peers"] = []
     raw["service"]["id"] = "https://identity.example.net/services/" + layer
     raw["service"]["base_url"] = "https://" + layer + ".example.net/prefix/lasa/v1"
     raw["service"]["descriptor_url"] = raw["service"]["base_url"] + "/descriptor"
@@ -71,12 +91,13 @@ def documents(tmp_path, layer="layer1", *, peer=False):
         "contracts": raw["published_contracts"],
         "resources": [{"resource": "workspace:self", "actions": ["read", "create", "update"]}],
         "effects": ["workspace.read", "workspace.write"],
-        "disclosure_services": ["https://identity.example.net/services/layer2"],
-        "delegated_contracts": raw["published_contracts"],
+        "delegation_grants": [],
         "budget": raw["limits"]["max_task_budget"],
         "max_hops": 2,
         "content_diagnostics": False,
     }
+    for contract in raw["published_contracts"]:
+        add_delegation_grant(raw, rule, contract)
     policy = {
         "revision": "policy-1",
         "principals": [
@@ -93,7 +114,7 @@ def documents(tmp_path, layer="layer1", *, peer=False):
     (tmp_path / "authorization.json").write_text(json.dumps(policy))
     raw["authorization"]["policy_file"] = str(tmp_path / "authorization.json")
     raw["authorization"]["trusted_delegator_service_ids"] = (
-        ["https://identity.example.net/services/layer1"] if layer == "layer2" else []
+        ["https://identity.example.net/services/layer1"] if layer != "layer1" else []
     )
     runtime = {
         "image": "sha256:9c31274cfb568f168c66a8d22d4ebee5737663cb0b36efa40cbf50ce18924d1e",
@@ -108,10 +129,8 @@ def documents(tmp_path, layer="layer1", *, peer=False):
         executor["connector_policy_file"] = str(tmp_path / "connectors.json")
         executor["credential_ref"] = "env:MODEL_KEY"
     raw["discovery_cache"]["page_size"] = 1
-    if not peer:
-        raw.pop("peer")
-    else:
-        raw["peer"].update(
+    if peer:
+        raw["peers"][0].update(
             descriptor_url="https://layer2.example.net/prefix/lasa/v1/descriptor",
             allowed_base_url="https://layer2.example.net/prefix/lasa/v1",
             authorization_ref="default",
@@ -125,7 +144,13 @@ def configuration(raw):
         raw,
         environ={
             "MODEL_KEY": "test-model-key",
-            "PEER_TOKEN": token("peer-layer1", "https://identity.example.net/services/layer2"),
+            **{
+                peer["credential_ref"][4:]: token(
+                    "peer-" + raw["service"]["id"].rsplit("/", 1)[-1], peer["expected_service_id"]
+                )
+                for peer in raw["peers"]
+                if peer["credential_ref"].startswith("env:")
+            },
         },
     )
 

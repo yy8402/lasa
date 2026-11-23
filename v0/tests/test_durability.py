@@ -333,9 +333,12 @@ async def test_lost_child_response_reconciles_without_reexecuting(services, tmp_
         raw=documents(tmp_path / "child", "layer2"), runtime=child_runtime
     )
     transport = httpx.ASGITransport(app=child_app)
+    receipts_unavailable = True
 
     class LoseAck(httpx.AsyncBaseTransport):
         async def handle_async_request(self, request):
+            if receipts_unavailable and "/operations/" in request.url.path:
+                return httpx.Response(503, request=request)
             response = await transport.handle_async_request(request)
             await response.aread()
             if request.method == "POST" and request.url.path.endswith("/tasks"):
@@ -353,6 +356,7 @@ async def test_lost_child_response_reconciles_without_reexecuting(services, tmp_
     c = app.state.coordinator
     child = c.store.children(task_id)[0]
     assert "task_id" not in child
+    receipts_unavailable = False
     body = {"operation_id": "reconcile-child"}
     resolved = await client.post(
         response.headers["Location"] + "/reconcile",

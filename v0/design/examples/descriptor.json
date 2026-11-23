@@ -6,7 +6,7 @@
   "valid_until": "2026-11-18T08:10:00Z",
   "protocols": [
     {
-      "version": "lasa/1.1",
+      "version": "lasa/1.2",
       "base_url": "https://layer2.example.net/lasa/v1",
       "openapi_url": "https://layer2.example.net/lasa/v1/openapi.json",
       "features": [
@@ -20,7 +20,7 @@
         "metadata-diagnostics",
         "bounded-delegation"
       ],
-      "wire_schema_digest": "sha256:7e7b4b8f638c579f5951f3efd4fdb29986c35c4edf899a653c11121286ce652b"
+      "wire_schema_digest": "sha256:e9cc16ddc47ae9b9c4b83bab2b92300888bd31d8aa3cbc6236677f8341f7211c"
     }
   ],
   "authentication": {

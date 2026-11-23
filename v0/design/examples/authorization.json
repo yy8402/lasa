@@ -21,8 +21,6 @@
   "allowed_effects": [
     "workspace.read"
   ],
-  "allowed_disclosure_services": [],
-  "allowed_delegated_contracts": [],
   "limits": {
     "budget": {
       "model_tokens": 8000,
@@ -37,5 +35,6 @@
     "deadline": "2026-11-18T08:01:00Z",
     "max_hops": 0
   },
-  "content_diagnostics_allowed": false
+  "content_diagnostics_allowed": false,
+  "delegation_grants": []
 }

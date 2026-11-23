@@ -69,6 +69,7 @@ class ModelService:
             trust_env=False,
             follow_redirects=False,
             timeout=60,
+            verify=coordinator.config.provider_verify(coordinator.config.executor()),
             transport=coordinator.model_transport,
         )
 
@@ -194,7 +195,7 @@ class Planner:
         requirements = self.requirements(request)
         if self.proposal:
             value = await self.proposal(c, task_id, request, peer_catalog, requirements)
-        elif not c.config.peer:
+        elif not c.config.peers:
             # A leaf has one executor path. A named contract's approved binding is the admission fact.
             value = {
                 "steps": [
@@ -221,7 +222,6 @@ class Planner:
                 offer
                 for offer in (peer_catalog or {}).get("offers", [])
                 if offer["contract"]["digest"] in c.registry.current
-                and offer["authorization_ref"] == c.config.peer["authorization_ref"]
                 and c.registry.supported(offer["contract"])
             ]
             definitions.update(
@@ -252,7 +252,7 @@ class Planner:
         return requirements, value["steps"]
 
     async def verify_plan(self, task_id, request, private_plan):
-        if self.proposal is not None or not self.coordinator.config.peer:
+        if self.proposal is not None or not self.coordinator.config.peers:
             return True
         c = self.coordinator
         plan = private_plan["document"]

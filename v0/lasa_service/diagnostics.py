@@ -127,7 +127,7 @@ class Diagnostics:
             payload["purpose"] = inputs["purpose"]
         if call_type == "child":
             payload["contract"] = inputs["selection"]["contract"]
-            payload["peer_service_id"] = self.coordinator.config.peer["expected_service_id"]
+            payload["peer_service_id"] = inputs["delegation"]["recipient_service_id"]
             child = next(
                 (
                     x
@@ -186,24 +186,20 @@ class Diagnostics:
             if "task_id" in child:
                 summary["task_id"] = child["task_id"]
             try:
-                if (
-                    not c.config.peer
-                    or child["service_id"] != c.config.peer["expected_service_id"]
-                    or "task_id" not in child
-                ):
+                if "task_id" not in child:
                     raise LasaError("peer_unavailable", 503)
                 async with asyncio.timeout(5):
-                    if not c.peer.base:
-                        await c.peer.discover()
+                    peer = await c.delegation.peer_for(child)
+                    binding = child["peer_binding"]
                     url = (
-                        c.peer.base
+                        binding["base_url"]
                         + "/tasks/"
                         + child["task_id"]
                         + "/events?after_sequence="
                         + str(after)
                         + "&limit=100"
                     )
-                    page, status, _ = await c.peer.request("GET", url)
+                    page, status, _ = await peer.request("GET", url, binding=binding)
                     if status != 200:
                         raise LasaError("peer_unavailable", 503)
                     c.contracts.validate("EventPage", page, "incompatible_protocol", 502)

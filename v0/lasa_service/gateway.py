@@ -122,7 +122,11 @@ class TaskGateway:
         executor = c.config.executor(self.context.binding)
         c.diagnostics.register_secret(task_id, self.token)
         self.client = httpx.AsyncClient(
-            trust_env=False, follow_redirects=False, timeout=60, transport=c.model_transport
+            trust_env=False,
+            follow_redirects=False,
+            timeout=60,
+            verify=c.config.provider_verify(executor),
+            transport=c.model_transport,
         )
         app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 

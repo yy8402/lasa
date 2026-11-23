@@ -206,6 +206,10 @@
             "pattern": "^https://",
             "maxLength": 2048
           },
+          "provider_ca_file": {
+            "type": "string",
+            "minLength": 1
+          },
           "credential_ref": {
             "type": "string",
             "minLength": 1,
@@ -238,7 +242,7 @@
     "bindings": {
       "type": "array",
       "items": {
-        "$ref": "https://schemas.example.net/lasa/1.1/private.schema.json#/$defs/FulfillmentBinding"
+        "$ref": "https://schemas.example.net/lasa/1.2/private.schema.json#/$defs/FulfillmentBinding"
       }
     },
     "published_contracts": {
@@ -307,57 +311,6 @@
     "routing": {
       "$ref": "contracts.schema.json#/$defs/RoutingPolicy"
     },
-    "peer": {
-      "type": "object",
-      "properties": {
-        "descriptor_url": {
-          "type": "string",
-          "format": "uri",
-          "pattern": "^https://",
-          "maxLength": 2048
-        },
-        "expected_service_id": {
-          "type": "string",
-          "format": "uri",
-          "pattern": "^https://",
-          "maxLength": 2048
-        },
-        "allowed_base_url": {
-          "type": "string",
-          "format": "uri",
-          "pattern": "^https://",
-          "maxLength": 2048
-        },
-        "credential_ref": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 2048
-        },
-        "authorization_ref": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 512
-        },
-        "request_timeout_seconds": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 60
-        },
-        "ca_file": {
-          "type": "string",
-          "minLength": 1
-        }
-      },
-      "required": [
-        "descriptor_url",
-        "expected_service_id",
-        "allowed_base_url",
-        "credential_ref",
-        "authorization_ref",
-        "request_timeout_seconds"
-      ],
-      "additionalProperties": false
-    },
     "discovery_cache": {
       "type": "object",
       "properties": {
@@ -398,12 +351,21 @@
           "minLength": 1
         },
         "listen_host": {
-          "const": "127.0.0.1"
+          "enum": ["127.0.0.1", "0.0.0.0"]
         },
         "listen_port": {
           "type": "integer",
           "minimum": 1,
           "maximum": 65535
+        },
+        "tls": {
+          "type": "object",
+          "properties": {
+            "certificate_file": {"type": "string", "minLength": 1},
+            "key_file": {"type": "string", "minLength": 1}
+          },
+          "required": ["certificate_file", "key_file"],
+          "additionalProperties": false
         }
       },
       "required": [
@@ -411,7 +373,9 @@
         "listen_host",
         "listen_port"
       ],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "if": {"properties": {"listen_host": {"const": "0.0.0.0"}}},
+      "then": {"required": ["tls"]}
     },
     "verifiers": {
       "type": "array",
@@ -438,6 +402,61 @@
         "additionalProperties": false
       },
       "uniqueItems": true
+    },
+    "peers": {
+      "type": "array",
+      "maxItems": 16,
+      "items": {
+        "type": "object",
+        "properties": {
+          "descriptor_url": {
+            "type": "string",
+            "format": "uri",
+            "pattern": "^https://",
+            "maxLength": 2048
+          },
+          "expected_service_id": {
+            "type": "string",
+            "format": "uri",
+            "pattern": "^https://",
+            "maxLength": 2048
+          },
+          "allowed_base_url": {
+            "type": "string",
+            "format": "uri",
+            "pattern": "^https://",
+            "maxLength": 2048
+          },
+          "credential_ref": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048
+          },
+          "authorization_ref": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          },
+          "request_timeout_seconds": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 60
+          },
+          "ca_file": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "descriptor_url",
+          "expected_service_id",
+          "allowed_base_url",
+          "credential_ref",
+          "authorization_ref",
+          "request_timeout_seconds"
+        ],
+        "additionalProperties": false
+      }
     }
   },
   "required": [
@@ -453,10 +472,11 @@
     "routing",
     "discovery_cache",
     "storage",
-    "verifiers"
+    "verifiers",
+    "peers"
   ],
   "additionalProperties": false,
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://schemas.example.net/lasa/1.1/config.schema.json",
+  "$id": "https://schemas.example.net/lasa/1.2/config.schema.json",
   "title": "Private LASA target configuration; not prototype configuration"
 }

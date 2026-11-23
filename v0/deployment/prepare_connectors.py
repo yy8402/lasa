@@ -296,8 +296,6 @@ def main():
         for principal in authorization["principals"]:
             for rule in principal["rules"]:
                 rule["contracts"] = config["published_contracts"]
-                if layer == "layer1":
-                    rule["delegated_contracts"] = config["published_contracts"]
                 rule["effects"] = ["workspace.read", "workspace.write", "external.read"]
                 rule["resources"] = [
                     rule["resources"][0],
@@ -309,6 +307,20 @@ def main():
                             "documentation:python-sdk",
                         ]
                     ],
+                ]
+                rule["delegation_grants"] = [
+                    {
+                        "sender_service_id": config["service"]["id"],
+                        "receiver_service_id": peer["expected_service_id"],
+                        "contract": contract,
+                        "effects": rule["effects"],
+                        "resources": rule["resources"],
+                        "disclosure_resources": [
+                            resource["resource"] for resource in rule["resources"]
+                        ],
+                    }
+                    for peer in config["peers"]
+                    for contract in config["published_contracts"]
                 ]
         registry = read(directory / "contracts.json")
         registry = [

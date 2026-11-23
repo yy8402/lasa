@@ -2,12 +2,14 @@
 
 import copy
 import os
+import ssl
 from dataclasses import dataclass, field
 from importlib.resources import files
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
 from .contracts import digest, parse_json, protocol_contracts
+from .grants import grant_key
 
 
 def require(condition, message):
@@ -79,13 +81,19 @@ class Configuration:
             data != workspace and data not in workspace.parents and workspace not in data.parents,
             "Private and workspace roots overlap",
         )
+        if tls := document["storage"].get("tls"):
+            require(
+                all(Path(path).is_absolute() for path in tls.values()), "TLS paths must be absolute"
+            )
         require(
             document["authentication"]["audience"] == document["service"]["id"],
             "Invalid receiver audience",
         )
-        if "peer" in document:
-            peer = document["peer"]
+        ids = {document["service"]["id"]}
+        for peer in document["peers"]:
             require(peer["expected_service_id"] != document["service"]["id"], "Self peer")
+            require(peer["expected_service_id"] not in ids, "Duplicate peer service ID")
+            ids.add(peer["expected_service_id"])
             require(
                 within_url(peer["descriptor_url"], peer["allowed_base_url"]),
                 "Peer descriptor escaped configured boundary",
@@ -105,6 +113,8 @@ class Configuration:
 
         for executor in document["executors"]:
             validate_url(executor["provider_base_url"])
+            if ca_file := executor.get("provider_ca_file"):
+                require(Path(ca_file).is_absolute(), "Provider CA path must be absolute")
             config.secret(executor["credential_ref"])
             config.read_private("RuntimeProfile", executor["runtime_profile_file"])
             policy = config.read_private("ConnectorPolicy", executor["connector_policy_file"])
@@ -195,8 +205,8 @@ class Configuration:
                     ),
                     "Binding cannot authorize its required operation",
                 )
-        if config.peer:
-            config.secret(config.peer["credential_ref"])
+        for peer in config.peers:
+            config.secret(peer["credential_ref"])
         config.policy()
         return config
 
@@ -213,8 +223,8 @@ class Configuration:
         return self.document["service"]["id"]
 
     @property
-    def peer(self):
-        return self.document.get("peer")
+    def peers(self):
+        return self.document["peers"]
 
     def secret(self, reference):
         self.check_secret_reference(reference)
@@ -243,8 +253,15 @@ class Configuration:
         for principal in policy["principals"]:
             names = [r["authorization_ref"] for r in principal["rules"]]
             require(len(names) == len(set(names)), "Duplicate authority reference")
+            for rule in principal["rules"]:
+                keys = [grant_key(grant) for grant in rule["delegation_grants"]]
+                require(len(keys) == len(set(keys)), "Duplicate delegation grant")
         return policy
 
     def executor(self, binding=None):
         executor_id = binding["executor_id"] if binding else self.document["executors"][0]["id"]
         return next(x for x in self.document["executors"] if x["id"] == executor_id)
+
+    def provider_verify(self, executor):
+        ca_file = executor.get("provider_ca_file")
+        return ssl.create_default_context(cafile=ca_file) if ca_file else True

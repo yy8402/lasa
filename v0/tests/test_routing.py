@@ -11,6 +11,7 @@ from lasa_service.routing import decide
 
 from .conftest import (
     FakeRuntime,
+    add_delegation_grant,
     deterministic_planner,
     documents,
     example,
@@ -194,14 +195,15 @@ async def test_peer_pinned_authority_and_verified_predecessor_output(services, t
         raw=raw, planner=plan, peer_transport=httpx.ASGITransport(app=child)
     )
     parent = app.state.coordinator
-    discover = parent.peer.discover
+    peer = next(iter(parent.peers.values()))
+    discover = peer.discover
 
     async def alternate_first(**kwargs):
         catalog = await discover(**kwargs)
         catalog["offers"].sort(key=lambda offer: offer["authorization_ref"] != "alternate")
         return catalog
 
-    parent.peer.discover = alternate_first
+    peer.discover = alternate_first
     result = await settled(client, await submit(client, app, await task_request(client, app)))
     assert result["status"] == "completed", result
     (receipt,) = parent.store.children(result["task_id"])
@@ -263,7 +265,7 @@ async def test_delegation_delivers_only_selected_session_artifact(services, tmp_
                 if child:
                     rule["offer_preconditions"] = [predicate]
                 rule["contracts"].append(ref)
-                rule["delegated_contracts"].append(ref)
+                add_delegation_grant(raw, rule, ref)
         path.write_text(json.dumps(policy))
         return raw
 
@@ -489,7 +491,7 @@ async def test_parent_rejects_mismatched_child_or_corrupt_artifact(services, tmp
     )
 
 
-@pytest.mark.parametrize("tamper", ["loop", "digest", "sender"])
+@pytest.mark.parametrize("tamper", ["loop", "digest", "sender", "recipient"])
 async def test_receiver_rejects_forged_delegation(services, tmp_path, tamper):
     from lasa_service.contracts import request_digest
 
@@ -506,6 +508,7 @@ async def test_receiver_rejects_forged_delegation(services, tmp_path, tamper):
         "delegation_id": "delegation-forged",
         "root_task_id": "task-parent",
         "parent_service_id": parent,
+        "recipient_service_id": raw["service"]["id"],
         "parent_task_id": "task-parent",
         "step_id": "step-main",
         "requirement_ids": ["requirement-main"],
@@ -514,11 +517,11 @@ async def test_receiver_rejects_forged_delegation(services, tmp_path, tamper):
         "request_digest": request_digest(request),
         "allocation": copy.deepcopy(request["requested_limits"]),
         "disclosed_artifacts": [],
+        "dependency_resources": [],
         "authority_ceiling": {
             "resources": [{"resource": "workspace:self", "actions": ["read"]}],
             "allowed_effects": ["workspace.read"],
-            "allowed_disclosure_services": [],
-            "allowed_delegated_contracts": [],
+            "delegation_grants": [],
             "content_diagnostics_allowed": False,
         },
     }
@@ -528,6 +531,10 @@ async def test_receiver_rejects_forged_delegation(services, tmp_path, tamper):
         request["delegation"]["request_digest"] = "sha256:" + "0" * 64
     if tamper == "sender":
         request["delegation"]["parent_service_id"] = "https://identity.example.net/services/other"
+    if tamper == "recipient":
+        request["delegation"]["recipient_service_id"] = (
+            "https://identity.example.net/services/other"
+        )
     response = await submit(client, app, request)
     assert response.status_code in (403, 422), response.text
     assert not app.state.coordinator.jobs

@@ -170,5 +170,6 @@
       },
       "verifier_id": "task-attempt-v1"
     }
-  ]
+  ],
+  "peers": []
 }

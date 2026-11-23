@@ -98,7 +98,10 @@ class Coordinator:
             self.authorization,
             self.historical_contract,
         )
-        self.peer = PeerClient(config, transport=peer_transport)
+        self.peers = {
+            settings["expected_service_id"]: PeerClient(config, settings, transport=peer_transport)
+            for settings in config.peers
+        }
         self.models = ModelService(self)
         self.planner = Planner(self, planner, verifier)
         from .delegation import DelegationController
@@ -128,7 +131,8 @@ class Coordinator:
 
     async def start(self):
         await self.authentication.start()
-        await self.peer.start()
+        for peer in self.peers.values():
+            await peer.start()
         await self.runtime.recover(self)
         for task_id in self.store.active():
             uncertain = self.store.uncertain(task_id)
@@ -158,7 +162,7 @@ class Coordinator:
         await asyncio.gather(*jobs, return_exceptions=True)
         await self.broker.close()
         await self.models.close()
-        await self.peer.close()
+        await asyncio.gather(*(peer.close() for peer in self.peers.values()))
         self.registry.close()
         self.store.close()
 
@@ -626,12 +630,19 @@ class Coordinator:
         prior_artifacts = {
             item for key in step["depends_on"] for item in completed[key]["artifact_ids"]
         }
+        request = self.request(task_id)
+        dependency_resources = set(request.get("delegation", {}).get("dependency_resources", []))
+        dependency_resources.update(
+            resource
+            for key in step["depends_on"]
+            for resource in completed[key]["disclosure_resources"]
+        )
         if step["executor"] == "peer":
             return await self.bounded_step(
                 task_id,
                 step["allocation"],
                 lambda: self.delegation.execute(
-                    task_id, step, inputs, dependencies, prior_artifacts
+                    task_id, step, inputs, dependencies, prior_artifacts, dependency_resources
                 ),
             )
         definition = self.registry.get(step["contract"])
@@ -656,8 +667,7 @@ class Coordinator:
         artifacts = check_inputs(
             self, task_id, definition, inputs, scoped, additional, prior_artifacts=prior_artifacts
         )
-        envelope = self.request(task_id)
-        delegated_dependencies = envelope.get("dependency_results", {})
+        delegated_dependencies = request.get("dependency_results", {})
         require(
             input_size(inputs, dependencies, delegated_dependencies, artifacts)
             <= scoped["limits"]["budget"]["input_bytes"],
@@ -714,6 +724,10 @@ class Coordinator:
             result["output"] = assemble_source_outcome(
                 profile, step["contract"], inputs, material
             ).output
+        result["disclosure_resources"] = sorted(
+            dependency_resources
+            | {rule["resource"] for rule in scoped["resources"] if rule["actions"]}
+        )
         return result
 
     async def run(self, task_id):
@@ -729,7 +743,7 @@ class Coordinator:
                         "precondition_failed",
                         422,
                     )
-                    self.routing.allocate(task_id, request, private_plan)
+                    self.routing.allocate(task_id, private_plan)
                 _, task = self.check_active(task_id, evaluating=True)
                 offer = self.publication.revalidate(
                     self.principal(task_id), self.authority(task_id)["selected_offer"]
@@ -779,7 +793,7 @@ class Coordinator:
                         "request_digest": request_digest(request),
                         "effective_limits": authority["limits"],
                         "authorization_decision_id": authority["decision_id"],
-                        "plan_digest": digest(plan),
+                        "plan_digest": digest(private_plan),
                     }
                     self.store.save_task(task)
                 self.hit("after_admission", task_id)

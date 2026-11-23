@@ -22,10 +22,13 @@ def main():
         parser.exit(2, f"Configuration could not be loaded ({type(exc).__name__}).\n")
     app = create_app(config)
     settings = config.document["storage"]
+    tls = settings.get("tls", {})
     uvicorn.run(
         app,
         host=settings["listen_host"],
         port=settings["listen_port"],
+        ssl_certfile=tls.get("certificate_file"),
+        ssl_keyfile=tls.get("key_file"),
         access_log=False,
         proxy_headers=False,
     )

@@ -114,8 +114,8 @@ async def run_case(directory, case, key, runtime_image):
             base_url=child_origin + prefix, descriptor_url=child_origin + prefix + "/descriptor"
         )
         raw, env = configure(directory / "parent", "layer1", case, key, runtime_image)
-        if "peer" in raw:
-            raw["peer"].update(
+        if raw["peers"]:
+            raw["peers"][0].update(
                 descriptor_url=child_origin + prefix + "/descriptor",
                 allowed_base_url=child_origin + prefix,
                 ca_file=str(tls[0]),

@@ -2,7 +2,7 @@
   "openapi": "3.2.1",
   "info": {
     "title": "LASA proposed task and delegation API",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "description": "Design only. LASA 1.0 transport; normative behavioral requirements are in this design package."
   },
   "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",

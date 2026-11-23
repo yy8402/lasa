@@ -54,7 +54,7 @@ All learned URLs must remain inside the configured allowed origin/prefix except 
 
 ## Configuration
 
-[Config schema](config.schema.json) and [example](examples/config.json) separate service identity/API, private execution bindings, authorization integration, bounded resources, and optional peer configuration. Absence of `peer` means local execution only; routing preference and unclaimed fallback are ignored. There is no automatic peer search.
+[Config schema](config.schema.json) and [example](examples/config.json) separate service identity and API, private execution bindings, authorization, bounded resources, and an ordered `peers` list. An empty list configures local execution. Entries identify downstream receivers and their private, receiver-scoped credentials.
 
 The configured model is an implementation detail behind an executor binding. Provider URLs and secret references are private configuration, never capability claims. Config changes produce an explicit deployment revision and invalidate affected offers/authority decisions; active tasks retain immutable input and contract records, while revoked permission stops new actions. This package introduces no aliases for previous prototype setting names.
 
@@ -62,4 +62,4 @@ The configured model is an implementation detail behind an executor binding. Pro
 
 The optional API catalog supports both GET Linkset JSON and HEAD with an `api-catalog` Link header. The negotiated wire bundle is available at `/contracts.schema.json`; each protocol entry pins `wire_schema_digest`. Operation receipts, bounded reconciliation, and parent-mediated child diagnostics use the resources specified in OpenAPI.
 
-Private authorization, runtime, and MCP tool files have closed schemas in `private.schema.json`. Authentication uses a configured local public JWKS file or a configured HTTPS JWKS URL. Storage paths are absolute. The optional `peer` block replaces the prototype's separate neighbor configuration format. Development provisioning and normal issuer configuration are described in the running instructions.
+Private authorization, runtime, and MCP tool files have closed schemas in `private.schema.json`. Authentication uses a configured local public JWKS file or a configured HTTPS JWKS URL. Storage paths are absolute. Development provisioning and issuer configuration are described in the running instructions.

@@ -68,6 +68,7 @@
       "max_hops": 0
     },
     "disclosed_artifacts": [],
+    "dependency_resources": [],
     "authority_ceiling": {
       "resources": [
         {
@@ -80,9 +81,9 @@
       "allowed_effects": [
         "workspace.read"
       ],
-      "allowed_disclosure_services": [],
-      "allowed_delegated_contracts": [],
-      "content_diagnostics_allowed": false
-    }
+      "content_diagnostics_allowed": false,
+      "delegation_grants": []
+    },
+    "recipient_service_id": "https://identity.example.net/services/layer2"
   }
 }

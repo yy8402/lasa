@@ -17,7 +17,7 @@ from jsonschema import Draft202012Validator, FormatChecker
 from referencing import Registry, Resource
 
 ROOT = Path(__file__).resolve().parent
-BASE = "https://schemas.example.net/lasa/1.1/"
+BASE = "https://schemas.example.net/lasa/1.2/"
 FORMAT = FormatChecker()
 
 
@@ -235,9 +235,10 @@ def validate() -> dict[str, int]:
                     "Delegated core changed",
                 )
                 require(
-                    envelope["ancestry"][-1] == envelope["parent_service_id"],
+                    envelope["ancestry"][-1] == envelope["parent_service_id"]
+                    and envelope["recipient_service_id"] not in envelope["ancestry"],
                     "ancestry",
-                    "Parent must end ancestry",
+                    "Parent ends ancestry and recipient is outside it",
                 )
                 require(
                     envelope["allocation"] == value["requested_limits"],
@@ -351,8 +352,12 @@ def validate() -> dict[str, int]:
                 "link_boundary",
                 "Own descriptor",
             )
-            if "peer" in value:
-                peer = value["peer"]
+            peer_ids = {value["service"]["id"]}
+            for peer in value["peers"]:
+                require(
+                    peer["expected_service_id"] not in peer_ids, "service_identity", "Unique peer"
+                )
+                peer_ids.add(peer["expected_service_id"])
                 require(
                     within_url(peer["descriptor_url"], peer["allowed_base_url"]),
                     "link_boundary",
@@ -421,9 +426,9 @@ def validate() -> dict[str, int]:
         "Authenticated delegator",
     )
     require(
-        authority["receiver_service_id"] not in child["delegation"]["ancestry"],
-        "ancestry",
-        "Loop at receiver",
+        authority["receiver_service_id"] == child["delegation"]["recipient_service_id"],
+        "authority_binding",
+        "Delegation addressed to the receiver",
     )
     require(
         authority["contract"] == child["selection"]["contract"]

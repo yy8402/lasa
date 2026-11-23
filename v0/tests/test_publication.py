@@ -89,7 +89,7 @@ def publication(registry):
         document=raw,
         revision="deployment1",
         service_id="https://identity.example/services/test",
-        peer={"configured": True},
+        peers=[{"expected_service_id": "https://identity.example/services/worker"}],
     )
     budget = raw["limits"]["max_task_budget"]
     rules = {
@@ -101,7 +101,13 @@ def publication(registry):
                 "resources": [{"resource": "workspace:self", "actions": ["read"]}],
                 "budget": budget,
                 "max_hops": 1,
-                "delegated_contracts": [attempt],
+                "delegation_grants": [
+                    {
+                        "sender_service_id": config.service_id,
+                        "receiver_service_id": config.peers[0]["expected_service_id"],
+                        "contract": attempt,
+                    }
+                ],
             }
         ],
         "bob": [],

@@ -38,7 +38,7 @@ async def run(args):
     token_file = (
         target / layer / ("metadata-token.txt" if args.deny_content else "operator-token.txt")
     )
-    source["peer"].update(
+    source["peers"][0].update(
         descriptor_url=receiver["service"]["descriptor_url"],
         expected_service_id=receiver["service"]["id"],
         allowed_base_url=receiver["service"]["base_url"],
@@ -47,7 +47,7 @@ async def run(args):
     cfg = Configuration.from_document(
         source, environ={"LASA_MODEL_API_KEY": "client-does-not-query-provider"}
     )
-    peer = PeerClient(cfg)
+    peer = PeerClient(cfg, cfg.peers[0])
     await peer.start()
     contracts = Contracts()
     try:
@@ -82,7 +82,7 @@ async def run(args):
                 ],
             }
         contracts.validate("CapabilityDefinition", definition)
-        context = ssl.create_default_context(cafile=source["peer"]["ca_file"])
+        context = ssl.create_default_context(cafile=source["peers"][0]["ca_file"])
         async with httpx.AsyncClient(
             verify=context,
             trust_env=False,

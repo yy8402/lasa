@@ -125,12 +125,23 @@ def main():
         "contracts": config["published_contracts"],
         "resources": [{"resource": "workspace:self", "actions": ["read", "create", "update"]}],
         "effects": ["workspace.read", "workspace.write"],
-        "disclosure_services": [args.peer_service_id] if peer else [],
-        "delegated_contracts": config["published_contracts"] if peer else [],
+        "delegation_grants": [],
         "budget": budget,
         "max_hops": config["limits"]["max_hops"],
         "content_diagnostics": False,
     }
+    if peer:
+        rule["delegation_grants"] = [
+            {
+                "sender_service_id": config["service"]["id"],
+                "receiver_service_id": args.peer_service_id,
+                "contract": contract,
+                "effects": rule["effects"],
+                "resources": rule["resources"],
+                "disclosure_resources": [resource["resource"] for resource in rule["resources"]],
+            }
+            for contract in config["published_contracts"]
+        ]
     principals = [{"subject": "operator", "kind": "user", "rules": [rule]}]
     if args.trusted_parent_id:
         principals.append(
@@ -167,7 +178,7 @@ def main():
             credential_ref="env:" + args.model_key_env,
         )
     if peer:
-        config["peer"] = {
+        settings = {
             "descriptor_url": args.peer_descriptor,
             "expected_service_id": args.peer_service_id,
             "allowed_base_url": args.peer_descriptor.rsplit("/", 1)[0],
@@ -176,9 +187,10 @@ def main():
             "request_timeout_seconds": 15,
         }
         if args.peer_ca_file:
-            config["peer"]["ca_file"] = str(Path(args.peer_ca_file).resolve())
+            settings["ca_file"] = str(Path(args.peer_ca_file).resolve())
+        config["peers"] = [settings]
     else:
-        config.pop("peer", None)
+        config["peers"] = []
     from lasa_service.contracts import Contracts
 
     Contracts().validate("Config", config)

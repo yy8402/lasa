@@ -12,7 +12,7 @@ Effective authority is the intersection of authenticated receiver policy, indepe
 
 A fresh selected offer is pinned at durable receipt together with the receiver authority decision. Its discovery expiry bounds new selection, not the lifetime of this received task. Evaluation rechecks current publication terms (contract, restrictions, ceilings and caller view), authorization, dependencies and the original deadline; expiry renewal alone cannot invalidate its immutable pin. Withdrawal or changed terms still reject admission. Accepted execution continues under its pinned ceilings and current policy checks.
 
-Peer discovery supplied to the planner is advisory. After planning, refresh offers scoped to each proposed contract ID and version. Evaluate eligible offers under the configured peer authorization reference and confirm the selected definition by digest. Immediately before dispatch, revalidate the selected offer by ID and fetch its availability. Use the renewed selection revision only if the semantic terms still match and the peer is available. A changed or withdrawn offer ends that dispatch.
+Peer discovery supplied to the planner is advisory. After planning, refresh offers scoped to each proposed contract ID and version. Evaluate eligible offers under each configured receiver's authorization reference and confirm the selected definition by digest. Immediately before dispatch, revalidate the selected offer by ID and fetch its availability. Use a renewed revision if the terms still match and the peer is available. An admitted alternate can be selected before the first remote mutation. [Multi-peer selection](multi-peer-delegation.md#peer-selection)
 
 ## Requirements and decomposition
 
@@ -30,7 +30,7 @@ Configuration uses two independent choices:
 {"routing":{"preferred_executor":"local","unclaimed_peer_fallback":"reject"}}
 ```
 
-`preferred_executor` is `local` or `peer` and breaks a tie when both can suitably fulfill a step. It never overrides required access, effects, authorization, or deadlines. `unclaimed_peer_fallback` is `reject` or `attempt`; `attempt` applies only when local execution is assessed insufficient **and** a fresh, complete peer catalog does not claim the needed outcome.
+`preferred_executor` is `local` or `peer` and breaks a tie when both can suitably fulfill a step. Access, effects, authorization, and deadlines determine eligibility. `unclaimed_peer_fallback` is `reject` or `attempt`. An attempt requires local insufficiency and fresh, complete catalogs from every eligible downstream peer showing no claim for the needed outcome.
 
 Assessment has explicit `sufficient`, `insufficient`, and `unknown` local states, and `matched`, `not_claimed`, and `unknown` peer states. Matching requires outcome semantics, all preconditions, compatible input/output, allowed effects/disclosure, and available or reservable resources. A catalog claim alone is not a match. Unknown/stale discovery, capacity failure, denied permission, or failed transport are not `not_claimed`.
 
@@ -47,11 +47,11 @@ Assessment has explicit `sufficient`, `insufficient`, and `unknown` local states
 
 For fallback, the peer MUST explicitly offer and authorize the generic `task.attempt` contract. The parent submits that contract with the unsatisfied requirement and allowed context; it does not invent a domain capability or bypass the catalog. A successful HTTP response or a `task.attempt` result of `unable` does not satisfy the original requirement. The parent must verify the actual requested outcome. There is no fallback permission escalation.
 
-The planner supplies semantic assessment and candidate inputs. The controller derives current catalog/authority/capacity facts and applies the table deterministically. It records both evidence and decision. User preference inside task text cannot alter receiver routing policy or authority. A failed selected executor can be replaced only after proving no uncertain committed effect remains, retaining operation identity where valid, and rechecking remaining resources; no blind local replay after a peer timeout.
+The planner supplies semantic assessment and candidate inputs. The controller derives catalog, authority, and capacity facts and applies the table deterministically. It records the evidence and decision. Receiver configuration supplies routing policy. Once the first remote mutation is possible, the parent pins the receiver for retries, cancellation, and reconciliation.
 
 ## Delegation envelope and budgets
 
-Every child request includes root/task/step/requirement IDs, parent service and task IDs, a stable child operation ID, ancestry including the parent, decremented hops, deadline, resource allocation, a digest of the canonical request core, and disclosure/artifact manifests. The core digest covers every `TaskRequest` field except `delegation`, including diagnostic consent; it excludes the envelope and transport credentials to avoid a self-reference. The envelope links this digest to a stable `delegation_id`. The peer authenticates the sender, requires it to equal `parent_service_id`, and enforces receiver policy plus ceilings. Envelope data alone confers no authority.
+Every child request includes root, task, step, and requirement IDs, parent and recipient service IDs, a stable child operation ID, ancestry including the parent, decremented hops, deadline, resource allocation, a digest of the canonical request core, and disclosures including dependency resources and artifact manifests. The core digest covers every `TaskRequest` field except `delegation`, including diagnostic consent. The envelope links this digest to a stable `delegation_id`. The receiving peer authenticates the sender, checks both service identities, and enforces receiver policy and the inherited ceilings.
 
 Before dispatch the parent durably reserves an allocation in its aggregate ledger. All child allocations plus local use, pending reservations, and the integration reserve must fit the root ceiling. The child receives only its allocation and can allocate smaller descendants. The ledger updates held and spent totals transactionally with allocation changes. Uncertain allocations remain held until reconciled. The core trusts each authorized service to enforce its ledger.
 

@@ -140,14 +140,6 @@
     "preferred_executor": "peer",
     "unclaimed_peer_fallback": "attempt"
   },
-  "peer": {
-    "descriptor_url": "https://layer2.example.net/lasa/v1/descriptor",
-    "expected_service_id": "https://identity.example.net/services/layer2",
-    "allowed_base_url": "https://layer2.example.net/lasa/v1",
-    "credential_ref": "secret:lasa/peer-workload-token",
-    "authorization_ref": "receiver-policy:trusted-layer1",
-    "request_timeout_seconds": 15
-  },
   "discovery_cache": {
     "descriptor_max_age_seconds": 300,
     "catalog_max_age_seconds": 60,
@@ -175,6 +167,16 @@
         "digest": "sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23"
       },
       "verifier_id": "task-attempt-v1"
+    }
+  ],
+  "peers": [
+    {
+      "descriptor_url": "https://layer2.example.net/lasa/v1/descriptor",
+      "expected_service_id": "https://identity.example.net/services/layer2",
+      "allowed_base_url": "https://layer2.example.net/lasa/v1",
+      "credential_ref": "secret:lasa/peer-workload-token",
+      "authorization_ref": "receiver-policy:trusted-layer1",
+      "request_timeout_seconds": 15
     }
   ]
 }

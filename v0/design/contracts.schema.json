@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://schemas.example.net/lasa/1.1/contracts.schema.json",
+  "$id": "https://schemas.example.net/lasa/1.2/contracts.schema.json",
   "title": "Proposed LASA 1.0 contracts",
   "description": "Design only. Public wire contracts and explicitly private internal snapshots share definitions, not authority.",
   "not": {},
@@ -685,7 +685,7 @@
       "type": "object",
       "properties": {
         "version": {
-          "const": "lasa/1.1"
+          "const": "lasa/1.2"
         },
         "base_url": {
           "type": "string",
@@ -952,28 +952,18 @@
           },
           "uniqueItems": true
         },
-        "allowed_disclosure_services": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "format": "uri",
-            "pattern": "^https://",
-            "maxLength": 2048
-          },
-          "uniqueItems": true
-        },
-        "allowed_delegated_contracts": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/CapabilityRef"
-          },
-          "uniqueItems": true
-        },
         "limits": {
           "$ref": "#/$defs/ExecutionLimits"
         },
         "content_diagnostics_allowed": {
           "type": "boolean"
+        },
+        "delegation_grants": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/DelegationGrant"
+          }
         }
       },
       "required": [
@@ -986,10 +976,9 @@
         "valid_until",
         "resources",
         "allowed_effects",
-        "allowed_disclosure_services",
-        "allowed_delegated_contracts",
         "limits",
-        "content_diagnostics_allowed"
+        "content_diagnostics_allowed",
+        "delegation_grants"
       ],
       "additionalProperties": false
     },
@@ -1121,16 +1110,37 @@
           "items": {
             "type": "object",
             "properties": {
-              "manifest": {"$ref": "#/$defs/ArtifactManifest"},
-              "text": {"type": "string"}
+              "manifest": {
+                "$ref": "#/$defs/ArtifactManifest"
+              },
+              "text": {
+                "type": "string"
+              }
             },
-            "required": ["manifest", "text"],
+            "required": [
+              "manifest",
+              "text"
+            ],
             "additionalProperties": false
           },
           "maxItems": 16
         },
         "authority_ceiling": {
           "$ref": "#/$defs/AuthorityCeiling"
+        },
+        "recipient_service_id": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://",
+          "maxLength": 2048
+        },
+        "dependency_resources": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
         }
       },
       "required": [
@@ -1145,7 +1155,9 @@
         "request_digest",
         "allocation",
         "disclosed_artifacts",
-        "authority_ceiling"
+        "authority_ceiling",
+        "recipient_service_id",
+        "dependency_resources"
       ],
       "additionalProperties": false
     },
@@ -1963,7 +1975,8 @@
             "unavailable",
             "denied",
             "not_configured",
-            "busy"
+            "busy",
+            "ancestor"
           ]
         },
         "assessment_summary": {
@@ -2004,6 +2017,12 @@
         "decision_reason": {
           "type": "string",
           "minLength": 1,
+          "maxLength": 2048
+        },
+        "peer_service_id": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://",
           "maxLength": 2048
         }
       },
@@ -2385,33 +2404,22 @@
           },
           "uniqueItems": true
         },
-        "allowed_disclosure_services": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "format": "uri",
-            "pattern": "^https://",
-            "maxLength": 2048
-          },
-          "uniqueItems": true
-        },
-        "allowed_delegated_contracts": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/CapabilityRef"
-          },
-          "uniqueItems": true
-        },
         "content_diagnostics_allowed": {
           "type": "boolean"
+        },
+        "delegation_grants": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/DelegationGrant"
+          }
         }
       },
       "required": [
         "resources",
         "allowed_effects",
-        "allowed_disclosure_services",
-        "allowed_delegated_contracts",
-        "content_diagnostics_allowed"
+        "content_diagnostics_allowed",
+        "delegation_grants"
       ],
       "additionalProperties": false
     },
@@ -2574,6 +2582,62 @@
         "schema_digest",
         "contract",
         "sequence"
+      ],
+      "additionalProperties": false
+    },
+    "DelegationGrant": {
+      "type": "object",
+      "properties": {
+        "sender_service_id": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://",
+          "maxLength": 2048
+        },
+        "receiver_service_id": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://",
+          "maxLength": 2048
+        },
+        "contract": {
+          "$ref": "#/$defs/CapabilityRef"
+        },
+        "effects": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "workspace.read",
+              "workspace.write",
+              "external.read",
+              "external.write"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "resources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ResourceRule"
+          }
+        },
+        "disclosure_resources": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "sender_service_id",
+        "receiver_service_id",
+        "contract",
+        "effects",
+        "resources",
+        "disclosure_resources"
       ],
       "additionalProperties": false
     }

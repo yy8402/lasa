@@ -155,7 +155,7 @@ async def test_real_http_peer_contract_discovery_and_boundary(tmp_path):
                 return httpx.Response(200, json=document, headers={"cache-control": "max-age=60"})
             return response
 
-    peer = PeerClient(parent, transport=RecordDiscovery(app=app))
+    peer = PeerClient(parent, parent.peers[0], transport=RecordDiscovery(app=app))
     await peer.start()
     try:
         catalog = await peer.discover()
@@ -205,24 +205,24 @@ async def test_tls_real_socket_accepts_configured_ca_and_rejects_untrusted(tmp_p
     try:
         async with live_http(app, tls=tls) as origin:
             raw = documents(tmp_path / "parent", peer=True)
-            raw["peer"].update(
+            raw["peers"][0].update(
                 descriptor_url=origin + "/prefix/lasa/v1/descriptor",
                 allowed_base_url=origin + "/prefix/lasa/v1",
                 ca_file=str(tls[0]),
             )
-            peer = PeerClient(configuration(raw))
+            peer = PeerClient(configuration(raw), raw["peers"][0])
             await peer.start()
             try:
-                value = await peer.get(raw["peer"]["descriptor_url"])
+                value = await peer.get(raw["peers"][0]["descriptor_url"])
                 assert value["service_id"] == cfg.service_id
             finally:
                 await peer.close()
-            raw["peer"].pop("ca_file")
-            peer = PeerClient(configuration(raw))
+            raw["peers"][0].pop("ca_file")
+            peer = PeerClient(configuration(raw), raw["peers"][0])
             await peer.start()
             try:
                 with pytest.raises(LasaError, match="peer_unavailable"):
-                    await peer.get(raw["peer"]["descriptor_url"])
+                    await peer.get(raw["peers"][0]["descriptor_url"])
             finally:
                 await peer.close()
     finally:
