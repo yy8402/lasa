@@ -72,9 +72,19 @@ def local_bindings(published, executor_id):
 
 def effective_document(manifest, defaults):
     document = copy.deepcopy(manifest)
-    for section in ("service", "runtime", "limits", "discovery_cache", "storage", "routing"):
+    for section in (
+        "service",
+        "runtime",
+        "limits",
+        "discovery_cache",
+        "storage",
+        "routing",
+        "authorization",
+    ):
         document[section] = copy.deepcopy(defaults[section]) | document.get(section, {})
-    document["authentication"].setdefault("mode", "jwt")
+    authn = document["authentication"]
+    if authn.setdefault("mode", "jwt") == "static_token":
+        authn.setdefault("tokens_file", defaults["static_tokens_file"])
     document.setdefault("default_executor", document["executors"][0]["id"])
     document.setdefault("peers", [])
     document.setdefault("contract_publishers", [])
@@ -169,17 +179,6 @@ class Configuration:
                 validate_url(authn["jwks_url"])
         authz = document["authorization"]
         authz["policy_file"] = artifact(authz["policy_file"])
-        require(
-            Path(document["storage"]["data_root"]).is_absolute()
-            and Path(document["service"]["workspace_root"]).is_absolute(),
-            "Storage paths must be absolute",
-        )
-        data = Path(document["storage"]["data_root"]).resolve()
-        workspace = Path(document["service"]["workspace_root"]).resolve()
-        require(
-            data != workspace and data not in workspace.parents and workspace not in data.parents,
-            "Private and workspace roots overlap",
-        )
         tls = document["storage"].get("tls")
         require(
             document["storage"]["listen_host"] == "127.0.0.1" or tls,
@@ -226,6 +225,11 @@ class Configuration:
 
         config = cls(
             document, dict(os.environ if environ is None else environ), prompts, publishers
+        )
+        require(config.state_root.is_absolute(), "State root path must be absolute")
+        require(
+            not any(path.is_symlink() for path in (config.private_root, config.workspace_root)),
+            "Private and workspace directories must be direct children of the state root",
         )
         if "deployment_revision" not in service:
             service["deployment_revision"] = f"{__version__}-{config.revision[7:23]}"
@@ -358,6 +362,18 @@ class Configuration:
     @property
     def service_id(self):
         return self.document["service"]["id"]
+
+    @property
+    def state_root(self):
+        return Path(self.document["storage"]["state_root"])
+
+    @property
+    def private_root(self):
+        return self.state_root / "private"
+
+    @property
+    def workspace_root(self):
+        return self.state_root / "workspaces"
 
     @property
     def descriptor_url(self):

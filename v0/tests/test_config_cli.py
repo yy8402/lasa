@@ -7,7 +7,8 @@ import time
 
 import pytest
 
-from lasa_service.config import Configuration
+from lasa_service import cli as cli_module
+from lasa_service.config import Configuration, ConfigurationError
 from lasa_service.errors import LasaError
 
 from .conftest import ISSUER, JWK, delegation_grant, token
@@ -69,12 +70,12 @@ def test_scaffold_defaults_and_secrets_are_checked_without_startup(tmp_path, dep
         "config_version",
         "service",
         "authentication",
-        "authorization",
         "executors",
         "runtime",
         "storage",
     }
-    assert manifest["authorization"]["policy_file"] == policy.name
+    assert manifest["config_version"] == "3.0"
+    assert manifest["storage"] == {"state_root": str(tmp_path / "state")}
     assert not key_file.exists()
 
     result = cli(tmp_path, "check", "--config", path, "--offline")
@@ -91,6 +92,9 @@ def test_scaffold_defaults_and_secrets_are_checked_without_startup(tmp_path, dep
     assert cfg.auth_mode == "jwt"
     assert cfg.descriptor_url == "https://lasa.example.net/prefix/descriptor"
     assert cfg.executor()["model"] == "review-model"
+    assert cfg.private_root == tmp_path / "state" / "private"
+    assert cfg.workspace_root == tmp_path / "state" / "workspaces"
+    assert cfg.document["authorization"]["policy_file"] == str(policy)
     assert cfg.peers == [] and cfg.document["storage"]["listen_host"] == "127.0.0.1"
     assert len(cfg.document["bindings"]) == 2
     assert cfg.policy()["principals"][0]["rules"][0]["effects"] == ["workspace.read"]
@@ -159,10 +163,7 @@ def static_deployment(tmp_path, deployment):
 
 def test_static_config_check_and_safe_token_issuance(tmp_path, static_deployment):
     config, policy, registry = static_deployment
-    assert json.loads(config.read_text())["authentication"] == {
-        "mode": "static_token",
-        "tokens_file": registry.name,
-    }
+    assert json.loads(config.read_text())["authentication"] == {"mode": "static_token"}
     token = tmp_path / "caller-token.txt"
     issue = ("issue-token", "--config", config, "--subject", "alice")
     refused = cli(tmp_path, *issue, "--output", config.parent / "leak.txt")
@@ -222,3 +223,39 @@ def test_config_check_validates_each_outbound_credential(tmp_path, static_deploy
     credential.write_text(opaque if mode == "jwt" else signed)
     result = cli(tmp_path, "check", "--config", config, "--offline")
     assert result.returncode == 2 and "configured authentication mode" in result.stderr
+
+
+def test_default_config_path_is_shared_by_init_check_and_startup(tmp_path, deployment, monkeypatch):
+    manifest_dir, key_file, args = deployment
+    path = manifest_dir / "config.json"
+    monkeypatch.setattr(cli_module, "DEFAULT_CONFIG_PATH", path)
+    command, _, _, *flags = args
+    monkeypatch.setattr(sys, "argv", ["lasa", "config", command, *map(str, flags)])
+    cli_module.main()
+    assert path.is_file()
+    key_file.write_text("fixture-key")
+    monkeypatch.setattr(sys, "argv", ["lasa", "config", "check", "--offline"])
+    cli_module.main()
+    monkeypatch.setattr(sys, "argv", ["lasa"])
+    started = []
+    monkeypatch.setattr(cli_module, "run_service", started.append)
+    cli_module.main()
+    assert started[0].state_root == tmp_path / "state"
+
+
+@pytest.mark.parametrize("blocked", ["private", "workspaces"])
+def test_check_rejects_conflicting_state_directories(tmp_path, deployment, blocked):
+    manifest_dir, key_file, args = deployment
+    assert cli(tmp_path, *args).returncode == 0
+    key_file.write_text("fixture-key")
+    path = manifest_dir / "config.json"
+    root = tmp_path / "state"
+    root.mkdir()
+    conflict = root / blocked
+    conflict.write_text("fixture")
+    result = cli(tmp_path, "check", "--config", path, "--offline")
+    assert result.returncode == 2 and str(conflict) in result.stderr
+    conflict.unlink()
+    conflict.symlink_to(manifest_dir, target_is_directory=True)
+    with pytest.raises(ConfigurationError, match="direct children"):
+        Configuration.load(path)

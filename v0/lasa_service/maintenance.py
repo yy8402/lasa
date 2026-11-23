@@ -5,7 +5,6 @@ import logging
 import re
 import shutil
 import time
-from pathlib import Path
 
 from .capabilities import instant
 
@@ -21,7 +20,7 @@ class Maintenance:
         self.coordinator = coordinator
         self.store = coordinator.store
         self.roots = {
-            "session": Path(coordinator.config.document["service"]["workspace_root"]),
+            "session": coordinator.config.workspace_root,
             "task": coordinator.root / "runtime",
         }
 

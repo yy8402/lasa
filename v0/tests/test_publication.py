@@ -125,9 +125,7 @@ def test_caller_scoped_paging_and_private_separation(registry):
     assert len(first["offers"]) == len(second["offers"]) == 1
     assert pub.catalog({"subject": "bob"})["offers"] == []
     encoded = json.dumps(first) + json.dumps(second)
-    assert all(
-        x not in encoded for x in ["executor_id", "credential_ref", "gpt-5.5", "workspace_root"]
-    )
+    assert all(x not in encoded for x in ["executor_id", "credential_ref", "gpt-5.5", "state_root"])
     assert pub.availability(alice, first["offers"][0]["offer_id"])["state"] == "available"
     rules["alice"][0]["effects"] = []
     with pytest.raises(LasaError, match="catalog_changed"):

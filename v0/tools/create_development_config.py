@@ -64,9 +64,9 @@ def main():
         model="gpt-5.5",
         provider_url="https://api.openai.com/v1/",
         credential_ref="env:" + args.model_key_env,
+        state_root=root / "state",
     )
-    config["service"]["workspace_root"] = str(root / "workspaces")
-    config["storage"] = {"data_root": str(root / "private"), "listen_port": args.listen_port}
+    config["storage"]["listen_port"] = args.listen_port
     config["routing"] = {"preferred_executor": "peer", "unclaimed_peer_fallback": "attempt"}
     config["peers"] = []
     defaults = packaged_defaults()

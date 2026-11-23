@@ -5,7 +5,6 @@ import copy
 import hashlib
 import time
 from dataclasses import dataclass
-from pathlib import Path
 from weakref import WeakValueDictionary
 
 from .auth import Authentication, Authorization
@@ -53,7 +52,7 @@ class Coordinator:
         self.contracts = config.contracts
         self.runtime = runtime
         self.model_transport = model_transport
-        self.root = Path(config.document["storage"]["data_root"])
+        self.root = config.private_root
         self.store = Store(self.root)
         try:
             self.registry = CapabilityRegistry.configured(config, self.root)
@@ -276,7 +275,7 @@ class Coordinator:
 
     def workspace(self, session_id):
         return Workspace(
-            Path(self.config.document["service"]["workspace_root"]) / session_id,
+            self.config.workspace_root / session_id,
             self.config.document["limits"]["max_task_budget"]["artifact_bytes"],
         )
 
@@ -378,7 +377,7 @@ class Coordinator:
                 "retention_until": retention,
                 "active_task_id": None,
             }
-            path = Path(self.config.document["service"]["workspace_root"]) / session_id
+            path = self.config.workspace_root / session_id
             path.mkdir(parents=True, mode=0o700)
             self.store.db.execute(
                 "INSERT INTO sessions VALUES(?,?,?)", (session_id, owner, encode(document))

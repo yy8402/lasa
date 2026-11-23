@@ -100,9 +100,11 @@ def configure(root, name, namespace, runtime):
                 }
             )
         save(directory / "static-tokens.json", registry)
-        config["authentication"] = {"mode": "static_token", "tokens_file": "static-tokens.json"}
+        config["authentication"] = {"mode": "static_token"}
     config["storage"].update(
-        listen_host="0.0.0.0", tls={"certificate_file": str(cert), "key_file": str(key)}
+        state_root=str(root / "state" / name),
+        listen_host="0.0.0.0",
+        tls={"certificate_file": str(cert), "key_file": str(key)},
     )
     for executor in config["executors"]:
         executor.update(
@@ -113,7 +115,7 @@ def configure(root, name, namespace, runtime):
 
 def authorize(root, configs):
     parent = configs["parent"]
-    policy_path = root / "parent" / parent["authorization"]["policy_file"]
+    policy_path = root / "parent" / "authorization.json"
     policy = read(policy_path)
     rule = policy["principals"][0]["rules"][0]
     parent["routing"]["unclaimed_peer_fallback"] = "reject"
@@ -517,7 +519,9 @@ def run(args, root):
             "model",
             model,
         )
-        for name in configs:
+        for name, config in configs.items():
+            state = Path(config["storage"]["state_root"])
+            state.mkdir(mode=0o700, parents=True)
             containers.append(namespace + "-" + name)
             docker(
                 "run",
@@ -535,7 +539,9 @@ def run(args, root):
                 "--mount",
                 socket_mount,
                 "--mount",
-                mount(root / name, read_only=False),
+                mount(root / name),
+                "--mount",
+                mount(state, read_only=False),
                 "--mount",
                 mount(ca),
                 "--env",
@@ -570,6 +576,9 @@ def run(args, root):
         for config in configs.values():
             label = "label=com.lasa.service_id=" + config["service"]["id"]
             assert not docker("ps", "-aq", "--filter", label), "A task enclosure was left running"
+            state = Path(config["storage"]["state_root"])
+            assert (state / "private" / "tasks.sqlite3").is_file()
+            assert any((state / "workspaces").iterdir())
     except Exception:
         for container in containers:
             logs = docker("logs", "--tail", "80", container, check=False)
@@ -595,7 +604,7 @@ if __name__ == "__main__":
         verify(Path(sys.argv[2]))
     else:
         parser = argparse.ArgumentParser(description=__doc__)
-        parser.add_argument("--service-image", default="lasa-service:1.5.2")
+        parser.add_argument("--service-image", default="lasa-service:local")
         parser.add_argument("--runtime-image", default="lasa-codex:target-v1")
         parser.add_argument("--docker-socket", type=Path, default=Path("/var/run/docker.sock"))
         with tempfile.TemporaryDirectory(prefix="lasa-container-") as directory:

@@ -19,9 +19,16 @@ from .provisioning import (
     write_scaffold,
 )
 
+DEFAULT_CONFIG_PATH = Path("/etc/lasa/config.json")
+
 
 def add_init_options(parser):
-    parser.add_argument("--output", type=Path, required=True, help="Configuration directory")
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=DEFAULT_CONFIG_PATH.parent,
+        help=f"Configuration directory (default: {DEFAULT_CONFIG_PATH.parent})",
+    )
     parser.add_argument("--service-id", required=True)
     parser.add_argument("--base-url", required=True)
     parser.add_argument("--auth-mode", choices=["jwt", "static_token"], default="jwt")
@@ -60,7 +67,7 @@ def initialize(args):
     else:
         if any((args.issuer, args.jwks_url, args.jwks_file, args.jwt_algorithm)):
             raise ConfigurationError("JWT issuer and signing-key options require --auth-mode jwt")
-        authentication = {"mode": "static_token", "tokens_file": "static-tokens.json"}
+        authentication = {"mode": "static_token"}
     manifest = initial_manifest(
         service_id=args.service_id,
         base_url=args.base_url,
@@ -69,11 +76,8 @@ def initialize(args):
         model=args.model,
         provider_url=args.provider_url,
         credential_ref=args.credential_ref,
+        state_root=args.state_root,
     )
-    if args.state_root is not None:
-        root = args.state_root.absolute()
-        manifest["service"]["workspace_root"] = str(root / "workspaces")
-        manifest["storage"] = {"data_root": str(root / "private")}
     write_scaffold(args.output, manifest, initial_policy(args.operator_subject))
     print(f"Created LASA configuration in {args.output}.")
 
@@ -110,9 +114,18 @@ def run_service(config):
     )
 
 
+def add_config_path(parser):
+    parser.add_argument(
+        "--config",
+        type=Path,
+        default=argparse.SUPPRESS,
+        help=f"Path to the LASA manifest (default: {DEFAULT_CONFIG_PATH})",
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(description="LASA service using Codex App Server")
-    parser.add_argument("--config", type=Path, help="Path to the LASA config.json used at startup")
+    add_config_path(parser)
     commands = parser.add_subparsers(dest="command")
     config_command = commands.add_parser("config", help="Scaffold or check service configuration")
     config_commands = config_command.add_subparsers(dest="action", required=True)
@@ -120,25 +133,24 @@ def main():
         config_commands.add_parser("init", help="Create a manifest and receiver policy")
     )
     check = config_commands.add_parser("check", help="Validate a deployment without starting LASA")
-    check.add_argument("--config", type=Path, required=True)
+    add_config_path(check)
     check.add_argument("--offline", action="store_true", help="Skip remote JWKS and Docker checks")
     issue = config_commands.add_parser("issue-token", help="Issue a standalone caller token")
-    issue.add_argument("--config", type=Path, required=True)
+    add_config_path(issue)
     issue.add_argument("--subject", required=True)
     issue.add_argument("--output", type=Path, required=True, help="New caller-owned token file")
     issue.add_argument("--ttl-hours", type=int, default=720)
     args = parser.parse_args()
-    if args.command is None and args.config is None:
-        parser.error("provide --config or a configuration command")
     os.umask(0o077)
     try:
         if args.command == "config" and args.action == "init":
             initialize(args)
             return
-        config = Configuration.load(args.config)
+        config_path = getattr(args, "config", DEFAULT_CONFIG_PATH)
+        config = Configuration.load(config_path)
         if args.command == "config" and args.action == "issue-token":
             issue_static_token(
-                config, args.config.parent, args.subject, args.output, args.ttl_hours
+                config, config_path.parent, args.subject, args.output, args.ttl_hours
             )
             print(f"Issued a static token for {args.subject} in {args.output}.")
         elif args.command == "config":

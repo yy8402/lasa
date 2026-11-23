@@ -34,7 +34,15 @@ from .runtime import CodexRuntime
 
 
 def initial_manifest(
-    *, service_id, base_url, authentication, image, model, provider_url, credential_ref
+    *,
+    service_id,
+    base_url,
+    authentication,
+    image,
+    model,
+    provider_url,
+    credential_ref,
+    state_root=None,
 ):
     for url in (service_id, base_url, provider_url):
         validate_url(url)
@@ -43,10 +51,9 @@ def initial_manifest(
             validate_url(authentication[key])
     Configuration.check_secret_reference(credential_ref)
     manifest = {
-        "config_version": "2.0",
+        "config_version": "3.0",
         "service": {"id": service_id, "base_url": base_url},
         "authentication": authentication,
-        "authorization": {"policy_file": "authorization.json"},
         "executors": [
             {
                 "id": "codex",
@@ -57,6 +64,8 @@ def initial_manifest(
         ],
         "runtime": {"image": image},
     }
+    if state_root is not None:
+        manifest["storage"] = {"state_root": str(Path(state_root).absolute())}
     return protocol_contracts().validate("Config", manifest)
 
 
@@ -88,10 +97,11 @@ def initial_policy(operator_subject):
 
 def write_scaffold(directory, manifest, policy):
     directory.mkdir(parents=True, exist_ok=True, mode=0o700)
-    documents = {"authorization.json": policy}
+    defaults = packaged_defaults()
+    documents = {defaults["authorization"]["policy_file"]: policy}
     authentication = manifest["authentication"]
     if authentication.get("mode") == "static_token":
-        documents[authentication["tokens_file"]] = {"tokens": []}
+        documents[defaults["static_tokens_file"]] = {"tokens": []}
     documents["config.json"] = manifest
     created = []
     try:
@@ -162,14 +172,14 @@ def replace_token_registry(path, data):
         Path(temporary).unlink(missing_ok=True)
 
 
-def check_storage(settings, service):
-    for value in (settings["data_root"], service["workspace_root"]):
-        directory = Path(value)
+def check_storage(config):
+    for path in (config.private_root, config.workspace_root):
+        directory = path
         while not directory.exists() and not directory.is_symlink():
             directory = directory.parent
         require(
             directory.is_dir() and os.access(directory, os.W_OK | os.X_OK),
-            "Private state and workspace paths must be writable directories",
+            f"State directory unavailable for {path}: {directory} must be a writable directory",
         )
 
 
@@ -182,7 +192,7 @@ def check_deployment(config, *, offline):
         ) from None
 
     settings = config.document["storage"]
-    check_storage(settings, config.document["service"])
+    check_storage(config)
     if tls := settings.get("tls"):
         try:
             ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER).load_cert_chain(

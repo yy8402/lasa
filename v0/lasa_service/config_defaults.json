@@ -44,7 +44,7 @@
     "page_size": 50
   },
   "storage": {
-    "data_root": "/var/lib/lasa/private",
+    "state_root": "/var/lib/lasa",
     "listen_host": "127.0.0.1",
     "listen_port": 8787
   },
@@ -54,9 +54,12 @@
   },
   "service": {
     "publish_api_catalog": false,
-    "workspace_root": "/var/lib/lasa/workspaces",
     "session_retention_seconds": 604800
   },
+  "authorization": {
+    "policy_file": "authorization.json"
+  },
+  "static_tokens_file": "static-tokens.json",
   "runtime": {
     "executable": "/usr/local/bin/codex",
     "expected_version": "0.169.0-alpha.11.1",

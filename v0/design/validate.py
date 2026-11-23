@@ -450,7 +450,7 @@ def validate() -> dict[str, int]:
             "executor_id",
             "tool_ids",
             "credential_ref",
-            "workspace_root",
+            "state_root",
             "model",
             "jwks_url",
         }

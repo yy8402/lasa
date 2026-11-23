@@ -1,5 +1,5 @@
 {
-  "config_version": "2.0",
+  "config_version": "3.0",
   "service": {
     "id": "https://identity.example.net/services/layer2",
     "base_url": "https://layer2.example.net/lasa/v1"
@@ -10,9 +10,6 @@
     "allowed_algorithms": [
       "ES256"
     ]
-  },
-  "authorization": {
-    "policy_file": "authorization.json"
   },
   "executors": [
     {

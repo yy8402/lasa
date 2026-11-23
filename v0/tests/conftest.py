@@ -71,8 +71,7 @@ def documents(tmp_path, layer="layer1", *, peer=False):
         raw["peers"] = []
     raw["service"]["id"] = "https://identity.example.net/services/" + layer
     raw["service"]["base_url"] = "https://" + layer + ".example.net/prefix/lasa/v1"
-    raw["service"]["workspace_root"] = str(tmp_path / "workspaces")
-    raw["storage"]["data_root"] = str(tmp_path / "private")
+    raw["storage"]["state_root"] = str(tmp_path)
     raw["authentication"].pop("jwks_url")
     raw["authentication"]["jwks_file"] = str(tmp_path / "jwks.json")
     (tmp_path / "jwks.json").write_text(json.dumps({"keys": [JWK]}))

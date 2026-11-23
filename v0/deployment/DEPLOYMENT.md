@@ -1,16 +1,30 @@
 # Managed LASA deployment
 
+## 1.6.0 rollout on 2026-11-23
+
+The Mac parent and both air188 backends run LASA **1.6.0**, protocol `lasa/1.2`, and deployment revision `docker-1.6.0-v3-34fe28cf1d36`. The Mac parent and air188 primary use JWT. Air188 review uses a static token with a workload identity pin. The existing HTTPS endpoints and capability catalogs passed before-and-after checks. [Air188 runbook](air188.md)
+
+Each role loads `~/.config/lasa/<role>/config.json` and the adjacent `authorization.json`. Credentials have a separate stable directory at `~/.config/lasa/secrets/<role>/`. The v3 manifest sets `storage.state_root` to `~/.local/state/lasa/<role>`, with `private/` and `workspaces/` derived from that single writable state mount.
+
+The cutover stopped the parent first and started it last. Moving the existing state directories preserved 40 task records and 116 workspace entries across all three services. Historical child trace events and persisted workload pins matched the baseline. The 1.5.2 and 1.5.1 containers passed rollback configuration checks using the retained paths to the same state.
+
+### 1.6.0 dependent workflow verification
+
+The Mac completed a fresh replay using the live `gpt-5.5` model. Air188 review completed the `design.review` step over static-token authentication. Air188 primary consumed the exact verified review output in its JWT-authenticated `task.attempt` step. Both original step inputs reached the final verifier without truncation, their digests matched the receiver inputs, and the Mac accepted the integrated result as `task-2efa2bd0a7d64fd8a4d4779de2caf81f`. [Air188 task IDs](air188.md#mixed-auth-verification-after-the-v3-rollout)
+
+The release passed 210 tests, offline design validation, isolated package verification, and the mixed-auth Docker smoke test. All 81 installed runtime and contract files matched the verified wheel on both hosts. The Mac's private deployment evidence is in `v0/.deploy/target/docker-1.6.0/`.
+
 ## 1.5.2 rollout on 2026-11-23
 
-The Mac parent and both air188 backends run LASA **1.5.2**, protocol `lasa/1.2`, and deployment revision `docker-1.5.2-evidence-77a289b938cd`. Docker supervises all three services behind the managed HTTPS proxies.
+The Mac parent and both air188 backends ran LASA **1.5.2**, protocol `lasa/1.2`, and deployment revision `docker-1.5.2-evidence-77a289b938cd`. Docker supervised all three services behind the managed HTTPS proxies.
 
-| Service | HTTPS API | Stable service ID | Active container | Incoming authentication |
+| Service | HTTPS API | Stable service ID | Container | Incoming authentication |
 |---|---|---|---|---|
 | Mac parent | `https://localhost:8443/lasa/v1` | `https://localhost:8443/lasa` | `lasa-parent-152` | JWT |
 | air188 primary | `https://192.168.0.188/lasa/v1` | `https://192.168.0.188/lasa` | `lasa-primary-152` | JWT |
 | air188 review | `https://192.168.0.188/review/lasa/v1` | `https://192.168.0.188/review/lasa` | `lasa-review-152` | Static token |
 
-On each host, the role directories live under `v0/.deploy/target/docker-1.2.0`. The active v2 manifests are `<role>/deployment-1.5.2/config.json`, with separate receiver policies at `<role>/deployment-1.3.0/authorization.json`. Air188 primary uses its public JWKS and a receiver-scoped JWT from the Mac. The review peer entry pins the `peer-layer1` subject and references a private caller token file. Air188 review uses `review/deployment-1.5.0/static-tokens.json` for token digests, subjects, and expirations. The static tokens issued for the 1.5.0 rollout expire on 2026-12-23 in Asia/Shanghai. See the [issuance and rotation instructions](../RUNNING.md#static-tokens).
+The v2 manifests used `v0/.deploy/target/docker-1.2.0/<role>/deployment-1.5.2/config.json` with separate receiver policies in `<role>/deployment-1.3.0/authorization.json`. Air188 primary used its public JWKS and a receiver-scoped JWT from the Mac. The review peer entry pinned the `peer-layer1` subject and referenced a private caller token file. Its receiver registry was `review/deployment-1.5.0/static-tokens.json` under the Docker deployment root. The static tokens issued for the 1.5.0 rollout expire on 2026-12-23 in Asia/Shanghai. See the [issuance and rotation instructions](../RUNNING.md#static-tokens).
 
 All three manifests passed `lasa config check` with their production mounts and Docker user settings. The images on the Mac and air188 each matched 81 files from the verified wheel, whose SHA-256 is `77a289b938cddd087655652801571748c13b8f838fcf358ca8e58c6086167b4f`. The rollout verified authenticated HTTPS readiness, the expected service identities and wire-schema digest, and unchanged capability catalogs. Review accepted the correctly pinned static workload and returned HTTP 401 for a missing or incorrect pin. Both cross-receiver credential probes returned HTTP 401. The completed 1.5.0 result and both child states remained readable.
 
@@ -20,7 +34,7 @@ The 1.5.1 fix introduced an explicit `authentication.historical_jwt_issuer` on t
 
 The Mac retrieved both child traces for the 1.3.1, 1.4.0, and 1.5.0 workflow runs. In each case the review events matched a direct receiver read. The stored pin digests matched their pre-fix values. The Mac also retrieved both child traces for the new 1.5.2 run with the current mixed-auth pins.
 
-The active containers use the Docker restart policy `unless-stopped`. Check them from the Mac.
+The 1.5.2 containers used the Docker restart policy `unless-stopped` during that rollout. The following commands identify the retained containers.
 
 ```sh
 docker inspect --format '{{.Name}} {{.State.Status}}' lasa-parent-152
@@ -60,15 +74,15 @@ uv pip install --python "$release_dir/venv/bin/python" \
   --wheel "$release_dir"/*.whl --sdist "$release_dir"/*.tar.gz
 ```
 
-For the live Docker rollout, build the supervisor for `linux/amd64`, load the same image on air188, and compare the installed runtime and contract files on both hosts with the verified wheel. Stage the v2 manifests and run `lasa config check` using each service's actual user, mounts, and daemon access before stopping any backend.
+For a live Docker rollout, build the supervisor for `linux/amd64`, load the same image on air188, and compare the installed runtime and contract files on both hosts with the verified wheel. Stage the manifests for the candidate package and run `lasa config check` using each service's actual user, mounts, and daemon access before stopping any backend.
 
 Wait until all three task stores are idle. Stop the Mac parent first, then the air188 backends. Start air188 primary and review, checking each HTTPS readiness endpoint and descriptor against the expected revision. Start and check the Mac parent last. The rollout keeps each role's database, workspace, and HTTPS binding at its existing location.
 
-The 1.5.1 containers and manifests are retained for rollback from 1.5.2. If candidate startup or verification of readiness fails, stop the candidate containers, restore the previous backends before the parent, and verify their prior revision over authenticated HTTPS. Restore the running containers' restart policies so that only the active release restarts on daemon startup.
+Retain the previous images, containers, and matching manifests. The 1.5.2 and 1.5.1 releases are retained for 1.6.0 rollback. If candidate startup or verification of readiness fails, stop the candidate containers, restore the previous backends before the parent, and verify their prior revision over authenticated HTTPS. Restore the running containers' restart policies so that only the active release restarts on daemon startup.
 
 ### Air188 configuration cleanup
 
-After verifying 1.5.2, air188 removed the superseded Docker manifests through 1.5.0, their legacy settings files, and the unused review JWKS. The subsequent cleanup removed the old wheel deployment and staging files. Air188 archived the old task stores, workspaces, and backups, including the inactive `lasa-layer2.service` user unit. The live policies and review token registry still serve both 1.5.2 and the retained 1.5.1 rollback. A new mixed-auth dependent workflow completed after cleanup as `task-4c8c7455a5c1499fb7af8f443360dfd1`. See the [air188 runbook](air188.md) for the current layout, archive location, and verification.
+After verifying 1.5.2, air188 removed the superseded Docker manifests through 1.5.0, their legacy settings files, and the unused review JWKS. The subsequent cleanup removed the old wheel deployment and staging files. Air188 archived the old task stores, workspaces, and backups, including the inactive `lasa-layer2.service` user unit. A mixed-auth dependent workflow completed after that cleanup as `task-4c8c7455a5c1499fb7af8f443360dfd1`. See the [air188 runbook](air188.md) for the current layout, archive location, and verification.
 
 ## Historical deployment records
 
