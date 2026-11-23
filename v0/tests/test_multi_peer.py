@@ -4,7 +4,7 @@ from pathlib import Path
 import httpx
 import pytest
 
-from lasa_service.contracts import digest
+from lasa_service.contracts import digest, parse_json
 
 from .conftest import (
     FakeRuntime,
@@ -140,9 +140,22 @@ async def test_two_peers_scope_each_step_and_recover_lost_responses(
     downstream = workers[second].state.coordinator
     reviews, checklists, checks = [], [], []
 
-    async def assess_parent(task_id, purpose, payload, schema, *, candidate_output, **_):
+    async def assess_parent(
+        task_id, purpose, payload, schema, *, candidate_output, instruction, **_
+    ):
         material = payload["trusted_execution_evidence"]
         dependencies = material.get("dependencies", [])
+        if material["step_id"] is None:
+            planned = parse_json(parent.store.task(task_id)[0]["plan"])["inputs"]
+            assert "trusted_execution_evidence.step_inputs" in instruction
+            assert material["step_inputs"] == [
+                {"step_id": key, "input_digest": digest(planned[key]), "content": planned[key]}
+                for key in ("step-review", "step-main")
+            ]
+            for key, host in (("step-review", first), ("step-main", second)):
+                assert planned[key] == runtimes[host].prompts[0]["input"]
+        else:
+            assert "step_inputs" not in material
         if payload["contract"]["ref"]["id"].endswith("/design.review"):
             assert dependencies == []
             reviews.append((payload["contract"]["ref"], candidate_output))
@@ -245,6 +258,17 @@ async def test_two_peers_scope_each_step_and_recover_lost_responses(
     report = (await client.get(response.headers["Location"] + "/delegations")).json()
     assert [item["trace"]["task_id"] for item in report["children"]] == [
         item["task_id"] for item in children
+    ]
+    row, _ = parent.store.task(result["task_id"])
+    planned = parse_json(row["plan"])["inputs"]
+    audit = parent.store.db.execute(
+        "SELECT document FROM audit WHERE task_id=? AND kind='verification_material' "
+        "ORDER BY rowid DESC LIMIT 1",
+        (result["task_id"],),
+    ).fetchone()
+    assert parse_json(audit["document"])["step_inputs"] == [
+        {"step_id": key, "input_digest": digest(planned[key])}
+        for key in ("step-review", "step-main")
     ]
 
 

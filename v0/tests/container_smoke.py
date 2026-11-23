@@ -280,7 +280,14 @@ def serve_model(directory):
                 assert set(candidate) == {"coverage", "findings"}
             else:
                 assert candidate["disposition"] == "fulfilled"
-                assert context["trusted_execution_evidence"]["dependencies"]
+                material = context["trusted_execution_evidence"]
+                assert material["dependencies"]
+                if material["step_id"] is None and len(material["dependencies"]) == 2:
+                    review_input, attempt_input = material["step_inputs"]
+                    assert review_input["step_id"] == "step-review"
+                    assert review_input["content"]["criteria"][0]["id"] == "selection"
+                    assert attempt_input["step_id"] == "step-attempt"
+                    assert attempt_input["content"] == context["input"]
         schema = message_format["schema"]
         answer = (
             propose_plan(payload(body))
@@ -588,7 +595,7 @@ if __name__ == "__main__":
         verify(Path(sys.argv[2]))
     else:
         parser = argparse.ArgumentParser(description=__doc__)
-        parser.add_argument("--service-image", default="lasa-service:1.5.0")
+        parser.add_argument("--service-image", default="lasa-service:1.5.2")
         parser.add_argument("--runtime-image", default="lasa-codex:target-v1")
         parser.add_argument("--docker-socket", type=Path, default=Path("/var/run/docker.sock"))
         with tempfile.TemporaryDirectory(prefix="lasa-container-") as directory:

@@ -69,6 +69,8 @@ On the receiver, set up a `kind: peer` principal whose subject matches the sende
 
 LASA attaches a workload identity fingerprint to static peer requests. The receiver checks it against the authenticated token subject, the subject's configured service identity, and the receiver's own service ID. Keep those identities stable when rotating a token so child receipts and retries stay bound to the same workload. `lasa config check` validates the local credential against each peer's configured mode. Peer discovery checks the receiver's advertised mode and the exact wire-schema digest when the sender connects.
 
+When switching a peer from JWT to static credentials, set `authentication.historical_jwt_issuer` in that peer entry to the previous issuer if the same workload needs traces from finished child tasks. LASA checks the stored issuer, subject, caller service, and receiver against the configured transition and the receiver's original task owner. The historical binding still governs task operations, receipts, cancellation, and reconciliation.
+
 ### Isolated development
 
 For local experiments that need test JWTs, use [the development generator](tools/create_development_config.py) with Python dependencies installed in the checkout. It generates a development issuer, public JWKS, and 24-hour test tokens under an empty output directory. Use the normal issuer and receiver policy for an installed service.
@@ -87,7 +89,7 @@ uv run --project v0 python v0/tools/create_development_config.py \
 Build the supervisor image after building the Codex worker image above:
 
 ```sh
-docker build -f v0/Dockerfile.service -t lasa-service:1.5.0 v0
+docker build -f v0/Dockerfile.service -t lasa-service:1.5.2 v0
 ```
 
 The image installs LASA and its locked production dependencies. It runs `lasa --config /etc/lasa/config.json` by default. For a bridge-network listener, set `storage.listen_host` to `0.0.0.0` and set `storage.tls.certificate_file` and `storage.tls.key_file` to the absolute paths of your server certificate and key. The certificate must cover the hostname in `service.base_url`. A model provider with private TLS can set `executors[].provider_ca_file` to its CA bundle. Peers use their own `ca_file` setting.
@@ -99,12 +101,12 @@ lasa_directory=/absolute/path/to/lasa-config
 lasa_socket=/var/run/docker.sock
 lasa_socket_group=$(docker run --rm --network none \
   --mount "type=bind,source=$lasa_socket,target=/var/run/docker.sock" \
-  --entrypoint stat lasa-service:1.5.0 -c '%g' /var/run/docker.sock)
+  --entrypoint stat lasa-service:1.5.2 -c '%g' /var/run/docker.sock)
 docker run --rm --user "$(id -u):$(id -g)" --group-add "$lasa_socket_group" \
   --mount "type=bind,source=$lasa_socket,target=/var/run/docker.sock" \
   --mount "type=bind,source=$lasa_directory,target=$lasa_directory" \
   --publish 127.0.0.1:8443:8787 \
-  lasa-service:1.5.0 --config "$lasa_directory/config.json"
+  lasa-service:1.5.2 --config "$lasa_directory/config.json"
 ```
 
 This example assumes the generated port `8787`, an HTTPS base URL on `localhost:8443`, and a model `credential_ref` pointing to a private file under the mounted directory.

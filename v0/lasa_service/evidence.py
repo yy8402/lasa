@@ -1,4 +1,4 @@
-"""Bounded verification material from execution records and verified predecessors.
+"""Bounded verification material from admitted plans and execution records.
 
 Receipts establish provenance and returned bytes. Semantic judgments remain
 the verifier's responsibility.
@@ -152,12 +152,18 @@ def append_evidence(c, task_id, material, kind, receipt, content):
         material["truncated"] = True
 
 
-def add_dependency_evidence(c, task_id, material, verified_steps):
+def add_workflow_evidence(c, task_id, material, verified_steps, *, include_step_inputs):
     row, task = c.store.task(task_id)
     request = parse_json(row["request"])
     inherited = request.get("dependency_results", {})
-    if not inherited and not verified_steps:
+    if not inherited and not verified_steps and not include_step_inputs:
         return
+    if verified_steps or include_step_inputs:
+        admitted_plan = parse_json(row["plan"])
+        require(
+            digest(admitted_plan) == task["admission"]["plan_digest"], "verification_failed", 422
+        )
+        steps = {step["step_id"]: step for step in admitted_plan["document"]["steps"]}
     records = []
     if inherited:
         envelope = request.get("delegation")
@@ -189,33 +195,43 @@ def add_dependency_evidence(c, task_id, material, verified_steps):
             "request_digest": envelope["request_digest"],
         }
         records.extend((key, output, attestation) for key, output in inherited.items())
-    if verified_steps:
-        plan = {step["step_id"]: step for step in parse_json(row["plan"])["document"]["steps"]}
-        for key, result in verified_steps.items():
-            step = plan[key]
-            records.append(
-                (
-                    key,
-                    result["output"],
-                    {
-                        "source": "receiver_verified_step",
-                        "service_id": c.config.service_id,
-                        "task_id": task_id,
-                        "contract": step["contract"],
-                        "executor": step["executor"],
-                        "depends_on": step["depends_on"],
-                    },
-                )
+    for key, result in verified_steps.items():
+        step = steps[key]
+        records.append(
+            (
+                key,
+                result["output"],
+                {
+                    "source": "receiver_verified_step",
+                    "service_id": c.config.service_id,
+                    "task_id": task_id,
+                    "contract": step["contract"],
+                    "executor": step["executor"],
+                    "depends_on": step["depends_on"],
+                },
             )
-    if len(canonical(material)) + len(b',"dependencies":[]') > MAX_BYTES:
-        material["truncated"] = True
-        return
-    material["dependencies"] = []
-    for step_id, output, provenance in records:
-        receipt = c.diagnostics.redact(
-            {**provenance, "step_id": step_id, "output_digest": digest(output)}, task_id
         )
-        append_evidence(c, task_id, material, "dependencies", receipt, output)
+    if records and start_evidence_list(material, "dependencies"):
+        for step_id, output, provenance in records:
+            receipt = c.diagnostics.redact(
+                {**provenance, "step_id": step_id, "output_digest": digest(output)}, task_id
+            )
+            append_evidence(c, task_id, material, "dependencies", receipt, output)
+    if include_step_inputs and start_evidence_list(material, "step_inputs"):
+        for step_id in steps:
+            inputs = admitted_plan["inputs"][step_id]
+            receipt = c.diagnostics.redact(
+                {"step_id": step_id, "input_digest": digest(inputs)}, task_id
+            )
+            append_evidence(c, task_id, material, "step_inputs", receipt, inputs)
+
+
+def start_evidence_list(material, kind):
+    if len(canonical({**material, kind: []})) > MAX_BYTES:
+        material["truncated"] = True
+        return False
+    material[kind] = []
+    return True
 
 
 def verification_material(coordinator, task_id, *, step_id=None, artifact_ids=()):

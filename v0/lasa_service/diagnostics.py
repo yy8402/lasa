@@ -143,6 +143,14 @@ class Diagnostics:
     def page(self, task_id, principal, after=0, limit=50):
         c = self.coordinator
         row, _ = c.store.task(task_id, principal["subject"])
+        owner = parse_json(row["principal"])
+        original_identity = (owner.get("kind"), owner.get("service_id"))
+        current_identity = (principal.get("kind"), principal.get("service_id"))
+        if (
+            "peer" in (original_identity[0], current_identity[0])
+            and original_identity != current_identity
+        ):
+            raise LasaError("authority_denied", 403)
         try:
             allowed = c.authorization.rule(
                 principal, parse_json(row["request"])["authorization_ref"]
@@ -186,20 +194,8 @@ class Diagnostics:
             if "task_id" in child:
                 summary["task_id"] = child["task_id"]
             try:
-                if "task_id" not in child:
-                    raise LasaError("peer_unavailable", 503)
                 async with asyncio.timeout(5):
-                    peer = await c.delegation.peer_for(child)
-                    binding = child["peer_binding"]
-                    url = (
-                        binding["base_url"]
-                        + "/tasks/"
-                        + child["task_id"]
-                        + "/events?after_sequence="
-                        + str(after)
-                        + "&limit=100"
-                    )
-                    page, status, _ = await peer.request("GET", url, binding=binding)
+                    page, status, _ = await c.delegation.child_trace(child, after)
                     if status != 200:
                         raise LasaError("peer_unavailable", 503)
                     c.contracts.validate("EventPage", page, "incompatible_protocol", 502)

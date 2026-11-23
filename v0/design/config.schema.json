@@ -444,7 +444,14 @@
                 "type": "object",
                 "properties": {
                   "mode": {"const": "static_token"},
-                  "subject": {"type": "string", "minLength": 1}
+                  "subject": {"type": "string", "minLength": 1},
+                  "historical_jwt_issuer": {
+                    "type": "string",
+                    "format": "uri",
+                    "pattern": "^https://",
+                    "maxLength": 2048,
+                    "description": "Previous JWT issuer authorized for read-only traces of finished child tasks."
+                  }
                 },
                 "required": ["mode", "subject"],
                 "additionalProperties": false

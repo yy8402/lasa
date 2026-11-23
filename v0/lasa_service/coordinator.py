@@ -915,6 +915,7 @@ class Coordinator:
                         final["evidence"],
                         requirements=plan["requirements"],
                         artifact_ids=final["artifact_ids"],
+                        include_step_inputs=True,
                         verified_steps={
                             step["step_id"]: completed[step["step_id"]]
                             for step in plan["steps"]
