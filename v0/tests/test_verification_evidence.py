@@ -7,7 +7,7 @@ import pytest
 
 from lasa_service.contracts import canonical, digest, parse_json
 from lasa_service.errors import LasaError
-from lasa_service.evidence import MAX_BYTES, verification_material
+from lasa_service.evidence import MAX_BYTES, append_evidence, verification_material
 from lasa_service.planning import Planner
 from lasa_service.store import encode
 
@@ -111,6 +111,16 @@ async def test_material_is_task_and_step_scoped_bounded_redacted_and_policy_chec
     assert "test-model-key" not in canonical(material).decode()
     assert material["operations"][0]["content_omitted"]
     assert material["operations"][1]["content"]["request"]["arguments"]["text"] == "[REDACTED]"
+    material["dependencies"] = []
+    append_evidence(
+        c, task_id, material, "dependencies", {"step_id": "large-step"}, "x" * MAX_BYTES
+    )
+    append_evidence(
+        c, task_id, material, "dependencies", {"step_id": "secret-step"}, "test-model-key"
+    )
+    assert len(canonical(material)) <= MAX_BYTES
+    assert material["dependencies"][0]["content_omitted"]
+    assert material["dependencies"][1]["content"] == "[REDACTED]"
     assert verification_material(c, task_id, step_id="another-step")["operations"] == []
     c.runtime = FakeRuntime()
     another = await settled(client, await submit(client, app, await task_request(client, app)))

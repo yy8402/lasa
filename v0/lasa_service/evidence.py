@@ -1,13 +1,13 @@
-"""Bounded receiver-owned verification material from durable execution records.
+"""Bounded verification material from execution records and verified predecessors.
 
-Receipts establish operation disposition and returned bytes, never the truth of
-arbitrary tool text. No live workspace reads or private model prompts are used.
+Receipts establish provenance and returned bytes. Semantic judgments remain
+the verifier's responsibility.
 """
 
 import hashlib
 
 from .capabilities import require
-from .contracts import canonical, digest, parse_json
+from .contracts import canonical, digest, parse_json, request_digest
 
 MAX_BYTES = 16384
 MAX_OPERATIONS = 32
@@ -141,6 +141,84 @@ def release_readbacks(c, task_id, output):
     return bounded
 
 
+def append_evidence(c, task_id, material, kind, receipt, content):
+    value = {**receipt, "content": c.diagnostics.redact(content, task_id)}
+    if len(canonical(material)) + len(canonical(value)) + 2 > MAX_BYTES:
+        value = {**receipt, "content_omitted": True}
+        material["truncated"] = True
+    if len(canonical(material)) + len(canonical(value)) + 2 <= MAX_BYTES:
+        material[kind].append(value)
+    else:
+        material["truncated"] = True
+
+
+def add_dependency_evidence(c, task_id, material, verified_steps):
+    row, task = c.store.task(task_id)
+    request = parse_json(row["request"])
+    inherited = request.get("dependency_results", {})
+    if not inherited and not verified_steps:
+        return
+    records = []
+    if inherited:
+        envelope = request.get("delegation")
+        principal = parse_json(row["principal"])
+        authority = parse_json(row["authority"])
+        require(
+            envelope
+            and principal["kind"] == "peer"
+            and principal["subject"] == authority["principal_id"]
+            and principal.get("service_id") == envelope["parent_service_id"]
+            and principal["service_id"]
+            in c.config.document["authorization"]["trusted_delegator_service_ids"]
+            and envelope["recipient_service_id"]
+            == authority["receiver_service_id"]
+            == c.config.service_id
+            and envelope["request_digest"]
+            == authority["request_digest"]
+            == task["request_digest"]
+            == request_digest(request),
+            "verification_failed",
+            422,
+        )
+        # These outputs were disclosed as request data by the authenticated parent.
+        # They grant no authority to read the parent's source resources.
+        attestation = {
+            "source": "authenticated_parent_request",
+            "service_id": envelope["parent_service_id"],
+            "task_id": envelope["parent_task_id"],
+            "delegation_id": envelope["delegation_id"],
+            "request_digest": envelope["request_digest"],
+        }
+        records.extend((key, output, attestation) for key, output in inherited.items())
+    if verified_steps:
+        plan = {step["step_id"]: step for step in parse_json(row["plan"])["document"]["steps"]}
+        for key, result in verified_steps.items():
+            step = plan[key]
+            records.append(
+                (
+                    key,
+                    result["output"],
+                    {
+                        "source": "receiver_verified_step",
+                        "service_id": c.config.service_id,
+                        "task_id": task_id,
+                        "contract": step["contract"],
+                        "executor": step["executor"],
+                        "depends_on": step["depends_on"],
+                    },
+                )
+            )
+    if len(canonical(material)) + len(b',"dependencies":[]') > MAX_BYTES:
+        material["truncated"] = True
+        return
+    material["dependencies"] = []
+    for step_id, output, provenance in records:
+        receipt = c.diagnostics.redact(
+            {**provenance, "step_id": step_id, "output_digest": digest(output)}, task_id
+        )
+        append_evidence(c, task_id, material, "dependencies", receipt, output)
+
+
 def verification_material(coordinator, task_id, *, step_id=None, artifact_ids=()):
     c = coordinator
     authority = c.authority(task_id)
@@ -155,17 +233,6 @@ def verification_material(coordinator, task_id, *, step_id=None, artifact_ids=()
         "workspace_readbacks": [],
         "truncated": False,
     }
-
-    def append(kind, receipt, content):
-        clean = c.diagnostics.redact(content, task_id)
-        value = {**receipt, "content": clean}
-        if len(canonical(material)) + len(canonical(value)) + 2 > MAX_BYTES:
-            value = {**receipt, "content_omitted": True}
-            material["truncated"] = True
-        if len(canonical(material)) + len(canonical(value)) + 2 <= MAX_BYTES:
-            material[kind].append(value)
-        else:
-            material["truncated"] = True
 
     ids = list(dict.fromkeys(artifact_ids))
     require(len(ids) <= MAX_ARTIFACTS, "capacity_exhausted", 429)
@@ -191,7 +258,10 @@ def verification_material(coordinator, task_id, *, step_id=None, artifact_ids=()
         elif not permitted(authority, rule, "workspace.read", "workspace:self", "read"):
             continue
         # Exported/imported snapshots are immutable evidence, not live workspace paths.
-        append(
+        append_evidence(
+            c,
+            task_id,
+            material,
             "artifacts",
             {"manifest": manifest, "bytes_verified": True},
             {"text": data.decode("utf-8", errors="replace")},
@@ -230,7 +300,10 @@ def verification_material(coordinator, task_id, *, step_id=None, artifact_ids=()
         intent = parse_json(row["intent"])
         require(digest(intent) == row["digest"], "verification_failed", 422)
         result = parse_json(row["result"]) if row["result"] is not None else None
-        append(
+        append_evidence(
+            c,
+            task_id,
+            material,
             "operations",
             {
                 "operation_id": row["operation_id"],

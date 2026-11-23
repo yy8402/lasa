@@ -4,6 +4,9 @@ from pathlib import Path
 import httpx
 import pytest
 
+from lasa_service.capabilities import reference
+from lasa_service.contracts import digest
+
 from .conftest import (
     FakeRuntime,
     add_delegation_grant,
@@ -134,6 +137,72 @@ async def test_two_peers_scope_each_step_and_recover_lost_responses(
         contracts_by_peer={"layer2": {"design.review"}, "layer3": {"task.attempt"}},
     )
     first, second = "layer2.example.net", "layer3.example.net"
+    parent = app.state.coordinator
+    downstream = workers[second].state.coordinator
+    reviews, checklists, checks = [], [], []
+
+    async def assess_parent(task_id, purpose, payload, schema):
+        material = payload["trusted_execution_evidence"]
+        dependencies = material.get("dependencies", [])
+        if payload["contract"]["id"].endswith("/design.review"):
+            assert dependencies == []
+            reviews.append((reference(payload["contract"]), payload["candidate_output"]))
+        else:
+            contract, review_output = reviews[0]
+            expected = [
+                {
+                    "source": "receiver_verified_step",
+                    "service_id": parent.config.service_id,
+                    "task_id": task_id,
+                    "step_id": "step-review",
+                    "contract": contract,
+                    "executor": "peer",
+                    "depends_on": [],
+                    "output_digest": digest(review_output),
+                    "content": review_output,
+                }
+            ]
+            if material["step_id"] is None:
+                expected.append(
+                    {
+                        "source": "receiver_verified_step",
+                        "service_id": parent.config.service_id,
+                        "task_id": task_id,
+                        "step_id": "step-main",
+                        "contract": reference(payload["contract"]),
+                        "executor": "peer",
+                        "depends_on": ["step-review"],
+                        "output_digest": digest(checklists[0]),
+                        "content": checklists[0],
+                    }
+                )
+            else:
+                checklists.append(payload["candidate_output"])
+            assert dependencies == expected
+            checks.append(("parent", material["step_id"]))
+        return {"passed": True, "reason": "Verified against the recorded workflow evidence."}
+
+    async def assess_downstream(task_id, purpose, payload, schema):
+        request = downstream.request(task_id)
+        envelope = request["delegation"]
+        (dependency,) = payload["trusted_execution_evidence"]["dependencies"]
+        assert dependency == {
+            "source": "authenticated_parent_request",
+            "service_id": parent.config.service_id,
+            "task_id": envelope["parent_task_id"],
+            "step_id": "step-review",
+            "delegation_id": envelope["delegation_id"],
+            "request_digest": envelope["request_digest"],
+            "output_digest": digest(reviews[0][1]),
+            "content": reviews[0][1],
+        }
+        checks.append(("downstream", None))
+        return {"passed": True, "reason": "Verified against the authenticated review output."}
+
+    for receiver, assess in [(parent, assess_parent), (downstream, assess_downstream)]:
+        receiver.planner.verifier = None
+        receiver.models.ask = assess
+
     if not share_predecessor:
         path = Path(app.state.coordinator.config.document["authorization"]["policy_file"])
         policy = json.loads(path.read_text())
@@ -152,9 +221,11 @@ async def test_two_peers_scope_each_step_and_recover_lost_responses(
         )
         assert transport.submissions() == [first]
         assert not any(host == second and method == "POST" for host, method, _ in transport.calls)
+        assert checks == []
         return
 
     assert result["status"] == "completed", result
+    assert checks == [("downstream", None), ("parent", "step-main"), ("parent", None)]
     assert result["result"]["usage"]["delegations"] == 2
     assert transport.submissions() == [first, second]
     assert [

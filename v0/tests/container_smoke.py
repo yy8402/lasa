@@ -532,7 +532,7 @@ if __name__ == "__main__":
         verify(Path(sys.argv[2]))
     else:
         parser = argparse.ArgumentParser(description=__doc__)
-        parser.add_argument("--service-image", default="lasa-service:1.2.0")
+        parser.add_argument("--service-image", default="lasa-service:1.2.2")
         parser.add_argument("--runtime-image", default="lasa-codex:target-v1")
         parser.add_argument("--docker-socket", type=Path, default=Path("/var/run/docker.sock"))
         with tempfile.TemporaryDirectory(prefix="lasa-container-") as directory:

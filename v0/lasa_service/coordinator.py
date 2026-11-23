@@ -625,24 +625,23 @@ class Coordinator:
             content={"output": output},
         )
 
-    async def execute_step(self, task_id, step, inputs, completed):
-        dependencies = {key: completed[key]["output"] for key in step["depends_on"]}
+    async def execute_step(self, task_id, step, inputs, predecessors):
         prior_artifacts = {
-            item for key in step["depends_on"] for item in completed[key]["artifact_ids"]
+            item for result in predecessors.values() for item in result["artifact_ids"]
         }
         request = self.request(task_id)
         dependency_resources = set(request.get("delegation", {}).get("dependency_resources", []))
         dependency_resources.update(
             resource
-            for key in step["depends_on"]
-            for resource in completed[key]["disclosure_resources"]
+            for result in predecessors.values()
+            for resource in result["disclosure_resources"]
         )
         if step["executor"] == "peer":
             return await self.bounded_step(
                 task_id,
                 step["allocation"],
                 lambda: self.delegation.execute(
-                    task_id, step, inputs, dependencies, prior_artifacts, dependency_resources
+                    task_id, step, inputs, predecessors, prior_artifacts, dependency_resources
                 ),
             )
         definition = self.registry.get(step["contract"])
@@ -668,6 +667,7 @@ class Coordinator:
             self, task_id, definition, inputs, scoped, additional, prior_artifacts=prior_artifacts
         )
         delegated_dependencies = request.get("dependency_results", {})
+        dependencies = {key: result["output"] for key, result in predecessors.items()}
         require(
             input_size(inputs, dependencies, delegated_dependencies, artifacts)
             <= scoped["limits"]["budget"]["input_bytes"],
@@ -810,8 +810,9 @@ class Coordinator:
                     _, task = self.check_active(task_id)
                     task["status"] = "executing"
                     self.store.save_task(task)
+                    predecessors = {key: completed[key] for key in step["depends_on"]}
                     result = await self.execute_step(
-                        task_id, step, private_plan["inputs"][step["step_id"]], completed
+                        task_id, step, private_plan["inputs"][step["step_id"]], predecessors
                     )
                     self.store.event(
                         task_id,
@@ -834,6 +835,7 @@ class Coordinator:
                                 result["evidence"],
                                 artifact_ids=result["artifact_ids"],
                                 step_id=step["step_id"],
+                                verified_steps=predecessors,
                             ),
                             "verification_failed",
                             422,
@@ -842,10 +844,11 @@ class Coordinator:
                     pending.remove(step)
                 with self.store.transaction():
                     self.store.settle(task_id, "integration-reserve", zero())
-                if (
+                reuse_step = (
                     len(plan["steps"]) == 1
                     and plan["steps"][0]["contract"] == request["selection"]["contract"]
-                ):
+                )
+                if reuse_step:
                     final = completed[plan["steps"][0]["step_id"]]
                 elif self.registry.source_profile(request["selection"]["contract"]):
                     from .evidence import verification_material
@@ -937,6 +940,13 @@ class Coordinator:
                         final["evidence"],
                         requirements=plan["requirements"],
                         artifact_ids=final["artifact_ids"],
+                        verified_steps={
+                            step["step_id"]: completed[step["step_id"]]
+                            for step in plan["steps"]
+                            if step["executor"] == "peer" or step["step_id"] in prerequisite_steps
+                        }
+                        if not reuse_step
+                        else {},
                     ),
                     "verification_failed",
                     422,

@@ -163,7 +163,7 @@ class DelegationController:
         return ceiling, artifacts
 
     async def execute(
-        self, task_id, step, inputs, dependencies, prior_artifacts, dependency_resources
+        self, task_id, step, inputs, predecessors, prior_artifacts, dependency_resources
     ):
         c = self.coordinator
         request = c.request(task_id)
@@ -259,8 +259,10 @@ class DelegationController:
             if authority["content_diagnostics_allowed"]
             else "metadata",
         }
-        if dependencies:
-            body["dependency_results"] = dependencies
+        if predecessors:
+            body["dependency_results"] = {
+                key: result["output"] for key, result in predecessors.items()
+            }
         body["delegation"] = {
             "delegation_id": delegation_id,
             "root_task_id": request.get("delegation", {}).get("root_task_id", task_id),
@@ -520,6 +522,7 @@ class DelegationController:
                     result["evidence"],
                     artifact_ids=result["artifact_ids"],
                     step_id=step["step_id"],
+                    verified_steps=predecessors,
                 ),
                 "verification_failed",
                 422,

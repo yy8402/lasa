@@ -39,7 +39,7 @@ The credential JSON contains environment-variable names mapped to secret values.
 Build the supervisor image after building the Codex worker image above:
 
 ```sh
-docker build -f v0/Dockerfile.service -t lasa-service:1.2.0 v0
+docker build -f v0/Dockerfile.service -t lasa-service:1.2.2 v0
 ```
 
 The image installs LASA and its locked production dependencies. It runs `lasa --config /etc/lasa/config.json` by default. For a bridge-network listener, set `storage.listen_host` to `0.0.0.0` and set `storage.tls.certificate_file` and `storage.tls.key_file` to the absolute paths of your server certificate and key. The certificate must cover the hostname in `service.base_url`. A model provider with private TLS can set `executors[].provider_ca_file` to its CA bundle. Peers use their own `ca_file` setting.
@@ -51,12 +51,12 @@ lasa_directory=/absolute/path/to/lasa-config
 lasa_socket=/var/run/docker.sock
 lasa_socket_group=$(docker run --rm --network none \
   --mount "type=bind,source=$lasa_socket,target=/var/run/docker.sock" \
-  --entrypoint stat lasa-service:1.2.0 -c '%g' /var/run/docker.sock)
+  --entrypoint stat lasa-service:1.2.2 -c '%g' /var/run/docker.sock)
 docker run --rm --user "$(id -u):$(id -g)" --group-add "$lasa_socket_group" \
   --mount "type=bind,source=$lasa_socket,target=/var/run/docker.sock" \
   --mount "type=bind,source=$lasa_directory,target=$lasa_directory" \
   --publish 127.0.0.1:8443:8787 \
-  lasa-service:1.2.0 --config "$lasa_directory/config.json"
+  lasa-service:1.2.2 --config "$lasa_directory/config.json"
 ```
 
 This example assumes the generated port `8787`, an HTTPS base URL on `localhost:8443`, and a model `credential_ref` pointing to a private file under the mounted directory.
