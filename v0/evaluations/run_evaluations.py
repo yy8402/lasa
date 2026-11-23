@@ -313,7 +313,7 @@ async def main():
         default=Path.home() / ".config/lasa/two-layer/credentials.local.json",
     )
     parser.add_argument("--output", type=Path)
-    parser.add_argument("--image", default="lasa-codex:target-v1")
+    parser.add_argument("--image", default="lasa-codex-worker:1.0.0")
     args = parser.parse_args()
     key = json.loads(await asyncio.to_thread(args.credentials.read_text))["LASA_MODEL_API_KEY"]
     output = args.output or EVALUATION_ROOT / ".evaluation-runs" / uuid4().hex

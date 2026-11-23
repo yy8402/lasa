@@ -160,7 +160,8 @@ def check_installed_files(project, fingerprints):
 def check_installation(project, fingerprints):
     from importlib.resources import files
 
-    from lasa_service.contracts import Contracts
+    from lasa_service import PROTOCOL_VERSION, __version__
+    from lasa_service.contracts import Contracts, digest
 
     check_installed_files(project, fingerprints)
     cli = subprocess.run(
@@ -174,6 +175,18 @@ def check_installation(project, fingerprints):
         raise ValueError("Installed service CLI does not expose configuration")
     contracts = Contracts()
     examples = files("lasa_contracts").joinpath("examples")
+    descriptor = json.loads(examples.joinpath("descriptor.json").read_bytes())
+    release = project["version"]
+    if (
+        __version__ != release
+        or contracts.api["info"]["version"] != release
+        or contracts.config["properties"]["config_version"]["const"] != release
+        or descriptor["descriptor_version"] != release
+        or PROTOCOL_VERSION != f"lasa/{release}"
+        or descriptor["protocols"][0]["version"] != PROTOCOL_VERSION
+        or descriptor["protocols"][0]["wire_schema_digest"] != digest(contracts.bundle)
+    ):
+        raise ValueError("Packaged LASA versions or wire schema digest differ from the release")
     manifest = json.loads(examples.joinpath("manifest.json").read_bytes())
     for example in manifest:
         schema = example["schema"]

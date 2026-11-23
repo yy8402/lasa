@@ -23,7 +23,7 @@ def test_accounting_totals_backfill_and_roll_back_with_source_rows(tmp_path):
         db.executescript("""
             CREATE TABLE allocations(task_id TEXT,operation_id TEXT,kind TEXT,state TEXT,reserved TEXT,usage TEXT,details TEXT,PRIMARY KEY(task_id,operation_id));
             CREATE TABLE events(task_id TEXT,sequence INTEGER,document TEXT,PRIMARY KEY(task_id,sequence));
-            PRAGMA user_version=11;
+            PRAGMA user_version=1;
         """)
         db.execute(
             "INSERT INTO allocations VALUES(?,?,?,?,?,?,?)",

@@ -2,7 +2,7 @@
   "type": "object",
   "properties": {
     "config_version": {
-      "const": "3.0"
+      "const": "1.0.0"
     },
     "prompts_file": {
       "description": "Optional absolute path to the administrator's complete prompt file.",
@@ -214,7 +214,7 @@
     "bindings": {
       "type": "array",
       "items": {
-        "$ref": "https://schemas.example.net/lasa/1.2/private.schema.json#/$defs/FulfillmentBinding"
+        "$ref": "https://schemas.example.net/lasa/1.0.0/private.schema.json#/$defs/FulfillmentBinding"
       }
     },
     "published_contracts": {
@@ -436,14 +436,7 @@
                 "type": "object",
                 "properties": {
                   "mode": {"const": "static_token"},
-                  "subject": {"type": "string", "minLength": 1},
-                  "historical_jwt_issuer": {
-                    "type": "string",
-                    "format": "uri",
-                    "pattern": "^https://",
-                    "maxLength": 2048,
-                    "description": "Previous JWT issuer authorized for read-only traces of finished child tasks."
-                  }
+                  "subject": {"type": "string", "minLength": 1}
                 },
                 "required": ["mode", "subject"],
                 "additionalProperties": false
@@ -507,7 +500,7 @@
   ],
   "additionalProperties": false,
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://schemas.example.net/lasa/1.2/config.schema.json",
+  "$id": "https://schemas.example.net/lasa/1.0.0/config.schema.json",
   "title": "LASA service deployment manifest",
   "allOf": [
     {

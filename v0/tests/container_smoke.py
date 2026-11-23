@@ -351,7 +351,8 @@ def verify(root):
         assert "bounded-delegation" in review["protocols"][0]["features"]
         descriptor = client.get(base("parent") + "/descriptor").raise_for_status().json()
         protocol = descriptor["protocols"][0]["version"]
-        assert protocol == "lasa/1.2", descriptor
+        assert protocol == review["protocols"][0]["version"] == "lasa/1.0.0", descriptor
+        assert descriptor["descriptor_version"] == review["descriptor_version"] == "1.0.0"
         sibling_token = (root / "review/peer-token.txt").read_text().strip()
         assert (
             client.get(
@@ -604,8 +605,8 @@ if __name__ == "__main__":
         verify(Path(sys.argv[2]))
     else:
         parser = argparse.ArgumentParser(description=__doc__)
-        parser.add_argument("--service-image", default="lasa-service:local")
-        parser.add_argument("--runtime-image", default="lasa-codex:target-v1")
+        parser.add_argument("--service-image", default="lasa-supervisor:1.0.0")
+        parser.add_argument("--runtime-image", default="lasa-codex-worker:1.0.0")
         parser.add_argument("--docker-socket", type=Path, default=Path("/var/run/docker.sock"))
         with tempfile.TemporaryDirectory(prefix="lasa-container-") as directory:
             run(parser.parse_args(), Path(directory).resolve())

@@ -1,6 +1,6 @@
 # LASA config.json reference
 
-Use one v3 manifest for each LASA service. Keep it at a stable path such as `/etc/lasa/review/config.json`. It describes the service, its execution environment, and its optional downstream peers. The receiver policy and credentials live in separate files or secret sources.
+Use one `1.0.0` manifest for each LASA service. Keep it at a stable path such as `/etc/lasa/review/config.json`. It describes the service, its execution environment, and its optional downstream peers. The receiver policy and credentials live in separate files or secret sources.
 
 Start with `lasa config init`. Add only the overrides your deployment needs. Run `lasa config check --config /path/to/config.json` as the service user with the same mounts and credentials before restarting. Use `--offline` for local validation when Docker or a remote JWKS is unavailable. A manifest change takes effect on restart. Policy files and file-backed credentials are reread during use. [Provisioning and deployment](RUNNING.md#provision-an-installed-service)
 
@@ -10,7 +10,7 @@ In the tables, **Required** means the field must appear in the supplied object. 
 
 | Setting | Required | Default | Allowed values | What it does and when to set it |
 | --- | --- | --- | --- | --- |
-| `config_version` | Yes | None. Init writes `"3.0"`. | `"3.0"` | Selects the manifest format. For an existing deployment, convert the old state paths using the [v2 upgrade steps](RUNNING.md#upgrading-a-v2-manifest). |
+| `config_version` | Yes | None. Init writes `"1.0.0"`. | `"1.0.0"` | Selects the manifest format for this release. |
 | `service` | Yes | See below | Object | Sets the stable service identity, advertised URL, and workspace settings. |
 | `authentication` | Yes | See below | JWT or static-token object | Verifies incoming callers. Choose static tokens explicitly when provisioning an opaque bearer credential. |
 | `authorization` | No | The policy file `authorization.json` beside the manifest | Object with optional `policy_file` | Points to the separate policy that determines what authenticated subjects can do. |
@@ -164,7 +164,6 @@ Incoming authentication and outgoing authentication are independent. Put only do
 | `peers[].authentication` | No | JWT | Object for the selected peer mode | Pins the peer's credential type independently of incoming authentication. Set it explicitly when the peer uses a static token. |
 | `peers[].authentication.mode` | With an explicit peer authentication object | `jwt` when the object is omitted | `jwt` or `static_token` | Selects JWT identity or a static workload pin. Match the receiver's incoming mode. |
 | `peers[].authentication.subject` | For a static peer | None | Non-empty subject string | Pins the static token's policy subject. Match the receiver's `kind: peer` principal for the sender. |
-| `peers[].authentication.historical_jwt_issuer` | Optional for static peers | None | HTTPS URI with host, up to 2,048 characters | Allows event reads for terminal children with a known disposition and a matching historical JWT issuer and workload identity. Set it to the prior issuer only when migrating that same peer from JWT and retaining access to those traces. |
 | `peers[].authorization_ref` | Yes | None | Receiver policy reference, 1–512 characters | Selects the receiver rule for this peer credential. Match the rule configured for the sender's subject on the receiver. |
 | `peers[].request_timeout_seconds` | No | `15` | Integer 1–60 | Bounds peer HTTP requests and discovery. Adjust for a known network or discovery latency within the task deadline. |
 | `peers[].ca_file` | No | Normal TLS trust | Non-empty path to a readable CA bundle | Supplies trust for this peer's private CA. Use an absolute mount path for portability. |
@@ -215,7 +214,7 @@ This is a complete manifest. Replace the example URLs, model ID, and all-zero pl
 
 ```json
 {
-  "config_version": "3.0",
+  "config_version": "1.0.0",
   "service": {
     "id": "https://identity.example.net/services/primary",
     "base_url": "https://primary.example.net/lasa/v1"
@@ -245,7 +244,7 @@ The parent uses JWT for incoming callers. It prefers two downstream services for
 
 ```json
 {
-  "config_version": "3.0",
+  "config_version": "1.0.0",
   "service": {
     "id": "https://identity.example.net/services/parent",
     "base_url": "https://parent.example.net/lasa/v1"
@@ -292,4 +291,4 @@ The parent uses JWT for incoming callers. It prefers two downstream services for
 - **Primary receiver.** Use the standalone JWT manifest on primary and set `published_contracts` to `["task.attempt"]` if this peer should specialize in checklists. Issue a JWT with primary's `service.id` as its audience and `peer-parent` as its subject. Its receiver policy maps that subject to the parent ID and grants `task.attempt` under `parent-checklist`.
 - **Review receiver.** Use the standalone manifest as a base, with the review service ID and base URL from the parent peer entry. Replace the entire `authentication` object with `{"mode": "static_token"}`. Keep the registry at the default `static-tokens.json` path. Set `published_contracts` to `["design.review"]` if this peer should specialize in reviews. Its policy maps `peer-parent` to the parent ID and grants `design.review` under `parent-review`. Issue the token on review with `lasa config issue-token --config /etc/lasa/review/config.json --subject peer-parent --output /absolute/private/client/lasa-review-token` and mount it at the parent's referenced path.
 - **Policies and state.** Each receiver lists the parent in `trusted_delegator_service_ids` and declares its subject as `kind: peer` with the parent's service ID. The parent's policy grants each exact contract and receiver in `delegation_grants`. Grant any predecessor disclosure explicitly for the chosen receiver. Give each service its own policy and state root, such as `/var/lib/lasa/primary` and `/var/lib/lasa/review` for the two receivers. Add user principals if operators also call the delegates directly.
-- **Preflight.** Replace the placeholder deployment values on every service, set task and assessment budgets appropriate for the workflow, and run `lasa config check` for each service. Then test with the real credentials over HTTPS. [Live mixed-auth example](deployment/air188.md#mixed-auth-verification-after-the-v3-rollout)
+- **Preflight.** Replace the placeholder deployment values on every service, set task and assessment budgets appropriate for the workflow, and run `lasa config check` for each service. Then test with the real credentials over HTTPS. [Air188 runbook](deployment/air188.md)

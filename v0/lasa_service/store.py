@@ -10,6 +10,7 @@ from uuid import uuid4
 from .capabilities import instant, require
 from .contracts import canonical, parse_json
 
+STORAGE_SCHEMA_VERSION = 1
 TERMINAL = frozenset({"completed", "failed", "rejected", "cancelled", "indeterminate"})
 ACTIVE_TASKS = "state NOT IN (" + ",".join(repr(state) for state in sorted(TERMINAL)) + ")"
 RETENTION_UNTIL = "json_extract(document,'$.retention_until')"
@@ -82,10 +83,10 @@ class Store:
         self.db.execute("PRAGMA journal_mode=WAL")
         self.db.execute("PRAGMA synchronous=FULL")
         self.db.execute("PRAGMA foreign_keys=ON")
-        if self.db.execute("PRAGMA user_version").fetchone()[0] not in (0, 11):
+        if self.db.execute("PRAGMA user_version").fetchone()[0] not in (0, STORAGE_SCHEMA_VERSION):
             self.close()
             raise ValueError("Unsupported target storage version")
-        self.db.executescript("""
+        self.db.executescript(f"""
 CREATE TABLE IF NOT EXISTS sessions(id TEXT PRIMARY KEY,owner TEXT,document TEXT);
 CREATE TABLE IF NOT EXISTS tasks(id TEXT PRIMARY KEY,session_id TEXT REFERENCES sessions(id),state TEXT,document TEXT,request TEXT,principal TEXT,authority TEXT,plan TEXT);
 CREATE TABLE IF NOT EXISTS operations(owner TEXT,route TEXT,key TEXT,digest TEXT,operation_id TEXT,resource_id TEXT,kind TEXT,status INTEGER,PRIMARY KEY(owner,route,key),UNIQUE(owner,operation_id));
@@ -103,7 +104,7 @@ CREATE INDEX IF NOT EXISTS operation_resources ON operations(kind,resource_id);
 CREATE INDEX IF NOT EXISTS children_by_task ON children(task_id);
 CREATE INDEX IF NOT EXISTS audit_by_task ON audit(task_id);
 CREATE INDEX IF NOT EXISTS artifacts_by_task ON artifacts(task_id);
-PRAGMA user_version=11;
+PRAGMA user_version={STORAGE_SCHEMA_VERSION};
 """)
         self.db.execute(
             f"CREATE INDEX IF NOT EXISTS active_tasks ON tasks(session_id, id) WHERE {ACTIVE_TASKS}"

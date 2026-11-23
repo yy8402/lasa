@@ -1,12 +1,12 @@
 {
-  "descriptor_version": "1.0",
+  "descriptor_version": "1.0.0",
   "service_id": "https://identity.example.net/services/layer2",
   "deployment_revision": "deploy-20261118-a",
   "revision": "descriptor-r4",
   "valid_until": "2026-11-18T08:10:00Z",
   "protocols": [
     {
-      "version": "lasa/1.2",
+      "version": "lasa/1.0.0",
       "base_url": "https://layer2.example.net/lasa/v1",
       "openapi_url": "https://layer2.example.net/lasa/v1/openapi.json",
       "features": [
@@ -20,7 +20,7 @@
         "metadata-diagnostics",
         "bounded-delegation"
       ],
-      "wire_schema_digest": "sha256:e9cc16ddc47ae9b9c4b83bab2b92300888bd31d8aa3cbc6236677f8341f7211c"
+      "wire_schema_digest": "sha256:0edf6c83bc73824633bc1831d4c846d0e64446163934ae2b8b2252a32896a77a"
     }
   ],
   "authentication": {

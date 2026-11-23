@@ -14,7 +14,7 @@ The bootstrap document contains only approved links and public labels. It may be
 
 1. Authenticate transport using normal HTTPS validation and a configured trust store. Resolve credentials privately; never place them in a descriptor or URL.
 2. Fetch the configured descriptor. Verify `service_id` against the configured expected identity and bind that identity to the configured origin/path. Service identity is stable across restarts; `deployment_revision` describes a deployment, not a new identity.
-3. Select a mutually supported exact LASA protocol version and required features. The descriptor format has its own `descriptor_version`. Unknown mandatory features, unsupported protocol majors, or changed service identity fail negotiation. A newer minor is usable only after explicit support is declared; no optimistic parsing.
+3. Select the exact LASA protocol version and required features. The `1.0.0` descriptor advertises `lasa/1.0.0`. Unknown mandatory features, an unsupported protocol version, or a changed service identity fail negotiation.
 4. Fetch the versioned OpenAPI document and caller-scoped offer catalog using this protocol. Peers match the advertised wire schema digest and required HTTP operations. OpenAPI's `info.version` identifies the implementation release. Fetch definitions as needed from the advertised contract endpoint and verify their digests and trusted publisher namespace.
 5. Match semantic requirements and preconditions against offers in the caller's configured authorization view. Refresh the selected offer and its availability by offer ID before submission. Submit the exact contract, offer revision, and public `authorization_ref` from that offer. Admission independently checks current authority and capacity.
 

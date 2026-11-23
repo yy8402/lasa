@@ -1,7 +1,0 @@
-{
-  "credential_scan": "passed",
-  "files_scanned": 108,
-  "saved_secret_matches": 0,
-  "retained_model_evidence_sha256": "passed",
-  "remaining_task_owned_verification_processes": []
-}

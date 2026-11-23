@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://schemas.example.net/lasa/1.2/contracts.schema.json",
-  "title": "Proposed LASA 1.0 contracts",
+  "$id": "https://schemas.example.net/lasa/1.0.0/contracts.schema.json",
+  "title": "LASA 1.0.0 contracts",
   "description": "Design only. Public wire contracts and explicitly private internal snapshots share definitions, not authority.",
   "not": {},
   "$defs": {
@@ -384,7 +384,7 @@
       "type": "object",
       "properties": {
         "definition_format": {
-          "const": "lasa-capability/1.0"
+          "const": "lasa-capability/1.0.0"
         },
         "id": {
           "type": "string",
@@ -685,7 +685,7 @@
       "type": "object",
       "properties": {
         "version": {
-          "const": "lasa/1.2"
+          "const": "lasa/1.0.0"
         },
         "base_url": {
           "type": "string",
@@ -743,7 +743,7 @@
       "type": "object",
       "properties": {
         "descriptor_version": {
-          "const": "1.0"
+          "const": "1.0.0"
         },
         "service_id": {
           "type": "string",

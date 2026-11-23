@@ -11,21 +11,21 @@
     "contract": {
       "id": "https://contracts.example.net/capabilities/design.review",
       "version": "1.0.0",
-      "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce"
+      "digest": "sha256:269986e0e622b8b4d7c7528a5e4f66c5e0413e6a452fd762e8a9aafcab99a27c"
     },
     "offer_id": "offer-design-review",
     "offer_revision": "offer-review-r1",
     "catalog_view": "view-layer1-policy7"
   },
-  "request_digest": "sha256:f1be4bd1d08d9cd7ea73fdec23ecd74aa6c71f265d52874d64e5ec45bed8bb45",
+  "request_digest": "sha256:e0a7e56cae1514be6edf41be9424cd172f5745e04059c7d38367410d6c5f0047",
   "admission": {
     "accepted_at": "2026-11-18T08:00:01Z",
     "contract": {
       "id": "https://contracts.example.net/capabilities/design.review",
       "version": "1.0.0",
-      "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce"
+      "digest": "sha256:269986e0e622b8b4d7c7528a5e4f66c5e0413e6a452fd762e8a9aafcab99a27c"
     },
-    "request_digest": "sha256:f1be4bd1d08d9cd7ea73fdec23ecd74aa6c71f265d52874d64e5ec45bed8bb45",
+    "request_digest": "sha256:e0a7e56cae1514be6edf41be9424cd172f5745e04059c7d38367410d6c5f0047",
     "effective_limits": {
       "budget": {
         "model_tokens": 8000,
@@ -41,15 +41,15 @@
       "max_hops": 0
     },
     "authorization_decision_id": "authz-child-001",
-    "plan_digest": "sha256:4f67a30a14d52e67df0a102768c2063a2d5f21a3ad0917d5ebb1abb2d4f9f1af"
+    "plan_digest": "sha256:8ded62bc67e32bca57db67c5cbe82e6a3fb3cf4e596e5afb4b859c0678b95b69"
   },
   "result": {
     "contract": {
       "id": "https://contracts.example.net/capabilities/design.review",
       "version": "1.0.0",
-      "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce"
+      "digest": "sha256:269986e0e622b8b4d7c7528a5e4f66c5e0413e6a452fd762e8a9aafcab99a27c"
     },
-    "request_digest": "sha256:f1be4bd1d08d9cd7ea73fdec23ecd74aa6c71f265d52874d64e5ec45bed8bb45",
+    "request_digest": "sha256:e0a7e56cae1514be6edf41be9424cd172f5745e04059c7d38367410d6c5f0047",
     "output": {
       "findings": [],
       "coverage": [

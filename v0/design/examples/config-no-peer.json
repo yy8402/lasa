@@ -1,5 +1,5 @@
 {
-  "config_version": "3.0",
+  "config_version": "1.0.0",
   "service": {
     "id": "https://identity.example.net/services/layer2",
     "base_url": "https://layer2.example.net/lasa/v1"

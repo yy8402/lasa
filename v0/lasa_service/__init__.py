@@ -1,5 +1,5 @@
 """LASA service using the target versioned outcome protocol."""
 
-__version__ = "1.6.0"
+__version__ = "1.0.0"
 
-PROTOCOL_VERSION = "lasa/1.2"
+PROTOCOL_VERSION = f"lasa/{__version__}"

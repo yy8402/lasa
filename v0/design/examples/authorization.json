@@ -3,11 +3,11 @@
   "authorization_ref": "receiver-policy:trusted-layer1-review",
   "principal_id": "https://identity.example.net/services/layer1",
   "receiver_service_id": "https://identity.example.net/services/layer2",
-  "request_digest": "sha256:f1be4bd1d08d9cd7ea73fdec23ecd74aa6c71f265d52874d64e5ec45bed8bb45",
+  "request_digest": "sha256:e0a7e56cae1514be6edf41be9424cd172f5745e04059c7d38367410d6c5f0047",
   "contract": {
     "id": "https://contracts.example.net/capabilities/design.review",
     "version": "1.0.0",
-    "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce"
+    "digest": "sha256:269986e0e622b8b4d7c7528a5e4f66c5e0413e6a452fd762e8a9aafcab99a27c"
   },
   "valid_until": "2026-11-18T08:01:00Z",
   "resources": [

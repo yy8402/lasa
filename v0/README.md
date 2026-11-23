@@ -1,4 +1,4 @@
-# LASA Service v0
+# LASA Service
 
 Python implementation of the outcome-contract architecture in [design](design/README.md), using Codex App Server as its local execution harness.
 
@@ -17,4 +17,4 @@ Useful entry points:
 - [Private development configuration generator](tools/create_development_config.py)
 - [Bounded actual-model evaluations](evaluations/run_evaluations.py)
 
-The managed local/air188 deployment, actual HTTPS evidence, final configuration, and operating commands are recorded in [the deployment report](deployment/DEPLOYMENT.md). Prototype data is preserved in its original directories; the target protocol replaces its interfaces and uses separate persistent stores.
+The [deployment report](deployment/DEPLOYMENT.md) records the service layout, operating commands, and live HTTPS verification.

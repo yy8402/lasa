@@ -153,12 +153,12 @@ def runtime_image():
     if not docker:
         pytest.fail("Docker required for runtime acceptance")
     result = subprocess.run(
-        [docker, "image", "inspect", "--format", "{{.Id}}", "lasa-codex:target-v1"],
+        [docker, "image", "inspect", "--format", "{{.Id}}", "lasa-codex-worker:1.0.0"],
         capture_output=True,
         text=True,
         timeout=10,
     )
-    assert result.returncode == 0, "Build lasa-codex:target-v1 before integration verification"
+    assert result.returncode == 0, "Build lasa-codex-worker:1.0.0 before integration verification"
     return result.stdout.strip()
 
 

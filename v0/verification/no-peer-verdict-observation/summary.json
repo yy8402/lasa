@@ -1,9 +1,0 @@
-{
-  "passed": true,
-  "cases": [
-    {
-      "case": "no_peer",
-      "passed": true
-    }
-  ]
-}

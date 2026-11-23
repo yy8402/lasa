@@ -7,7 +7,7 @@ from urllib.parse import urlsplit
 from fastapi import Request
 from fastapi.responses import JSONResponse, Response
 
-from . import PROTOCOL_VERSION
+from . import PROTOCOL_VERSION, __version__
 from .capabilities import epoch, instant, require
 from .contracts import digest
 
@@ -36,7 +36,7 @@ class Discovery:
                 "audience": self.config.service_id,
             }
         value = {
-            "descriptor_version": "1.0",
+            "descriptor_version": __version__,
             "service_id": self.config.service_id,
             "deployment_revision": config["service"]["deployment_revision"],
             "revision": "descriptor-"

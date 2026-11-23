@@ -74,7 +74,7 @@ def test_scaffold_defaults_and_secrets_are_checked_without_startup(tmp_path, dep
         "runtime",
         "storage",
     }
-    assert manifest["config_version"] == "3.0"
+    assert manifest["config_version"] == "1.0.0"
     assert manifest["storage"] == {"state_root": str(tmp_path / "state")}
     assert not key_file.exists()
 
@@ -84,6 +84,10 @@ def test_scaffold_defaults_and_secrets_are_checked_without_startup(tmp_path, dep
 
     secret = "private-model-credential-fixture"
     key_file.write_text(secret)
+    path.write_text(json.dumps({**manifest, "config_version": "3.0"}))
+    result = cli(tmp_path, "check", "--config", path, "--offline")
+    assert result.returncode == 2
+    path.write_text(json.dumps(manifest))
     result = cli(tmp_path, "check", "--config", path, "--offline")
     assert result.returncode == 0, result.stderr
     assert secret not in result.stdout + result.stderr + path.read_text() + policy.read_text()

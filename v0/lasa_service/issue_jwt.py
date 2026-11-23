@@ -1,4 +1,4 @@
-"""Refresh receiver-audience LASA JWT files without logging credentials.
+"""Refresh receiver-audience JWT files on the LASA administrator host.
 
 The private issuance configuration and signing keys remain on the administrator
 Mac. Receivers need only their configured public JWKS and authorization policy.

@@ -1,7 +1,0 @@
-{
-  "version": "1.1.0",
-  "wheel_sha256": "45e5f26c1b1ac59d015e5df2befa5446eed8b87e110c1bf0c1952389a84a12fd",
-  "deployment_revision": "connectors-20261119-45e5f26c1b1a-steady",
-  "backup": "/Users/yyang/Dev/CodeX/LASA/v0/.deploy/target/backups/connectors-20261119T021611Z",
-  "state": "deployed; HTTPS readiness and real integrations must be checked"
-}

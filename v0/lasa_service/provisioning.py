@@ -13,6 +13,7 @@ from pathlib import Path
 import httpx
 import jwt
 
+from . import __version__
 from .auth import (
     STATIC_TOKEN_REGISTRY_MAX_BYTES,
     Authentication,
@@ -51,7 +52,7 @@ def initial_manifest(
             validate_url(authentication[key])
     Configuration.check_secret_reference(credential_ref)
     manifest = {
-        "config_version": "3.0",
+        "config_version": __version__,
         "service": {"id": service_id, "base_url": base_url},
         "authentication": authentication,
         "executors": [

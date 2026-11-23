@@ -1,6 +1,6 @@
 # Multi-peer delegation
 
-Status **Implemented in `lasa/1.2`**
+Status **Implemented in `lasa/1.0.0`**
 
 In the first release, a LASA service can configure several immediate delegates in downstream layers and assign each delegated plan step to one of them. The parent executes steps in dependency order, reserves their aggregate budget, and verifies the results before release. Each peer uses the LASA descriptor, offer catalog, and task API. Peers keep their own sessions, workspaces, and receiver policy. [Current execution model](execution.md)
 
@@ -38,7 +38,7 @@ Descriptor, catalog, and availability requests answer from receiver-owned state.
 
 Configure authentication for each outgoing peer independently of the sender's incoming authentication mode. JWT peers use the signed token's issuer, subject, and audience as their workload pin. Static-token peers use the configured subject, caller service ID, and receiver service ID. Each static peer request includes the SHA-256 digest of that identity in `LASA-Workload-Identity`. The receiver recomputes it from the principal authenticated by the bearer token and its own service ID before processing the request. A replacement token that authenticates a different principal fails before mutation. Both modes use the same delegation grants and receiver policy.
 
-A sender may explicitly name the peer's historical JWT issuer when changing the link to static authentication. The transition applies to event reads for finished child tasks whose stored issuer, subject, caller, receiver, and endpoint match. The receiver also checks the authenticated peer against the original task owner. Durable child bindings continue to govern task operations and reconciliation.
+Trace requests use the child record's durable workload binding. The receiver checks the authenticated peer against the original task owner.
 
 ## Failure recovery
 

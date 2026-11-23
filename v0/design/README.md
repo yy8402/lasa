@@ -1,6 +1,6 @@
-# LASA capabilities, discovery, and routing: proposed architecture
+# LASA capabilities, discovery, and routing
 
-Status: **implemented target contracts**. The [acceptance matrix](../VERIFICATION.md) records earlier runtime evidence.
+The [verification guide](../VERIFICATION.md) lists the checks for this implementation.
 
 This package specifies the architecture implemented by the Python runtime. It derives its design from requirements and current standards. Isolated implementation evidence and separately authorized deployed-service verification are distinguished in [the deployment report](../deployment/DEPLOYMENT.md).
 
@@ -22,7 +22,7 @@ Machine-readable artifacts (also packaged for the runtime):
 - [Examples](examples/manifest.json), including five capability definitions, caller-visible discovery, local configuration, a task and delegation, admission, results, and diagnostics.
 - [Design validator](validate.py) and [validation evidence](VALIDATION.md).
 
-The protocol target is `lasa/1.2`. JSON examples use reserved example domains and contain no usable credentials. Normative MUST and SHALL statements are LASA requirements. Shapes and behavioral invariants both apply.
+The protocol version is `lasa/1.0.0`. JSON examples use reserved example domains and contain no usable credentials. Normative MUST and SHALL statements are LASA requirements. Shapes and behavioral invariants both apply.
 
 This design task has three finite acceptance milestones:
 

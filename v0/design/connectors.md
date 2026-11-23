@@ -1,14 +1,8 @@
 # Private connectors and approved outcome fulfillment
 
-Status: design settled before runtime changes, 2026-11-19. The finite acceptance record is `verification/connectors-20261119/ACCEPTANCE.md`.
-
-## Release identity
-
-This release is package 1.1.0 and protocol `lasa/1.1`, with schema identifiers under `/lasa/1.1/`. Both layers move together; there is no old-protocol alias or private-config compatibility parser. Existing immutable capability definitions and their versions remain unchanged. The HTTP major path stays `/lasa/v1`. The internal broker transport and pinned Codex carrier are unchanged.
-
 ## Ownership and supported profile
 
-One private `ConnectorPolicy.connectors` registry replaces the duplicated application/MCP arrays. Its closed variants are `mcp-stdio`, `mcp-http` (Streamable HTTP over verified HTTPS), and `json-get` (an application HTTPS JSON GET interface). Desktop GUI automation, arbitrary application CLI RPC, application writes, external-write MCP operations, legacy HTTP+SSE transport, arbitrary URL forwarding, and interactive OAuth onboarding are outside this v0 profile. Optional HTTP bearer credentials are provisioned by the administrator through explicit environment/file references; no automatic issuer discovery or token passthrough is performed.
+Each configured executor declares its private connectors. Supported variants are `mcp-stdio`, `mcp-http` (Streamable HTTP over verified HTTPS), and `json-get` (an application HTTPS JSON GET interface). The administrator configures HTTP bearer credentials through environment or file references.
 
 Connector IDs, endpoints, launch commands, secret references, upstream tool IDs, and schemas remain private. A connector is not a capability. Installing one or listing its tools creates neither publication nor authority. Approved public outcome definitions, exact verifier references, caller contract permission, and private bindings are required independently. The existing capability and task APIs remain the peer interface.
 

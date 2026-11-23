@@ -1,4 +1,4 @@
-name: LASA v0 CI
+name: LASA CI
 
 on:
   push:
@@ -33,7 +33,7 @@ jobs:
           uv run --locked ruff check lasa_service tests deployment tools evaluations design/*.py run_task.py
           uv run --locked ruff format --check lasa_service tests deployment tools evaluations design/*.py run_task.py
       - name: Build pinned Codex carrier for isolated runtime tests
-        run: docker build --platform linux/amd64 --tag lasa-codex:target-v1 .
+        run: docker build --platform linux/amd64 --tag lasa-codex-worker:1.0.0 .
       - name: Run tests without provider credentials
         run: uv run --locked pytest -q
       - name: Build distributions

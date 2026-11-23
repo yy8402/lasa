@@ -1,5 +1,5 @@
 {
-  "definition_format": "lasa-capability/1.0",
+  "definition_format": "lasa-capability/1.0.0",
   "id": "https://contracts.example.net/capabilities/design.review",
   "version": "1.0.0",
   "title": "Review supplied design against explicit criteria",

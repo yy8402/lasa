@@ -17,7 +17,7 @@ from jsonschema import Draft202012Validator, FormatChecker
 from referencing import Registry, Resource
 
 ROOT = Path(__file__).resolve().parent
-BASE = "https://schemas.example.net/lasa/1.2/"
+BASE = "https://schemas.example.net/lasa/1.0.0/"
 FORMAT = FormatChecker()
 
 
@@ -198,6 +198,11 @@ def validate() -> dict[str, int]:
                 semantics(offer, "CapabilityOffer")
         elif name == "ServiceDescriptor":
             for protocol in value["protocols"]:
+                require(
+                    protocol["wire_schema_digest"] == digest(bundle),
+                    "wire_schema_digest",
+                    "Descriptor does not identify the packaged wire schema",
+                )
                 require(
                     set(protocol["required_features"]) <= set(protocol["features"]),
                     "protocol_features",

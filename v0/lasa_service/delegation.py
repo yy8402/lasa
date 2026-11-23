@@ -6,7 +6,6 @@ import hashlib
 import time
 
 from . import PROTOCOL_VERSION
-from .auth import static_workload_identity
 from .capabilities import epoch, require
 from .contracts import canonical, digest, parse_json, request_digest
 from .errors import LasaError
@@ -39,21 +38,6 @@ class DelegationController:
         require("task_id" in child, "peer_unavailable", 503)
         peer = await self.peer_for(child)
         binding = child["peer_binding"]
-        authentication = peer.settings.get("authentication", {})
-        issuer = authentication.get("historical_jwt_issuer")
-        if issuer and child["state"] in TERMINAL - {"indeterminate"}:
-            sender, receiver = self.coordinator.config.service_id, peer.service_id
-            subject = authentication["subject"]
-            envelope = child["request"]["delegation"]
-            if (
-                binding["workload"] == {"iss": issuer, "sub": subject, "aud": receiver}
-                and envelope["parent_service_id"] == sender
-                and envelope["recipient_service_id"] == receiver
-            ):
-                binding = {
-                    **binding,
-                    "workload": static_workload_identity(subject, sender, receiver),
-                }
         url = binding["base_url"] + "/tasks/" + child["task_id"] + "/events"
         return await peer.request("GET", f"{url}?after_sequence={after}&limit=100", binding=binding)
 

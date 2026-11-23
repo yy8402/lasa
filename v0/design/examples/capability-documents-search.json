@@ -1,5 +1,5 @@
 {
-  "definition_format": "lasa-capability/1.0",
+  "definition_format": "lasa-capability/1.0.0",
   "id": "https://contracts.example.net/capabilities/documents.search",
   "version": "1.0.0",
   "title": "Search approved repository document names",

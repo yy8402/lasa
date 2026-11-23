@@ -1,1 +1,0 @@
-{"case": "unrelated-during-outage", "passed": true, "status": "completed", "routing": ["local"], "children": 0, "evidence": "verification/connectors-20261119/unrelated-during-outage.json"}

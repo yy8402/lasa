@@ -190,8 +190,6 @@ class Configuration:
             )
         ids = {service["id"]}
         for peer in document["peers"]:
-            if issuer := peer.get("authentication", {}).get("historical_jwt_issuer"):
-                validate_url(issuer)
             require(peer["expected_service_id"] not in ids, "Duplicate or self peer service ID")
             ids.add(peer["expected_service_id"])
             require(

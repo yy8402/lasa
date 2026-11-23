@@ -5,8 +5,8 @@
 Install the LASA wheel with its production dependencies. The supervisor needs a Docker daemon and the matching Codex worker image. From the source distribution or checkout, build the worker and get the immutable image ID from the daemon that will run the workers.
 
 ```sh
-docker build -t lasa-codex:target-v1 v0
-lasa_worker_image=$(docker image inspect --format '{{.Id}}' lasa-codex:target-v1)
+docker build -t lasa-codex-worker:1.0.0 v0
+lasa_worker_image=$(docker image inspect --format '{{.Id}}' lasa-codex-worker:1.0.0)
 ```
 
 Create one manifest and one receiver policy at a stable path for the service. This example uses a named instance, a TLS-terminating proxy, and an ES256 issuer. Choose the service identity once and use it as the JWT audience. Supply a public JWKS URL or use `--jwks-file` for a local public key set.
@@ -50,10 +50,6 @@ LASA reads `authorization.json` beside the manifest by default. Set `authorizati
 
 The manifest defaults to a loopback listener on port `8787`, local execution, and built-in review and task attempt capability definitions. It derives the descriptor URL and deployment revision. Manifest changes take effect on restart. Replace the receiver policy atomically to apply grant changes to subsequent checks. File-based credentials are reread on use. Environment secrets and issuer keys loaded at startup require a restart to refresh. [Managed deployment report](deployment/DEPLOYMENT.md)
 
-### Upgrading a v2 manifest
-
-Set `config_version` to `"3.0"` and replace `storage.data_root` and `service.workspace_root` with `storage.state_root`. If the existing directories are already named `private/` and `workspaces/` under a common parent, use that parent and preserve both directories. For a split layout, stop the service and back up the state before placing both directories at their derived paths. Keep the existing policy and credential references or place the policy and static-token registry at the default names beside the manifest. Run `lasa config check` with the updated file before starting the service.
-
 ### Static tokens
 
 JWT is the default. A service can opt into opaque bearer tokens with `authentication.mode: static_token`. The service’s incoming authentication mode and its outgoing peer choices are independent. An empty `peers` list enables local execution for capabilities with local bindings.
@@ -86,8 +82,6 @@ On the receiver, set up a `kind: peer` principal whose subject matches the sende
 
 LASA attaches a workload identity fingerprint to static peer requests. The receiver checks it against the authenticated token subject, the subject's configured service identity, and the receiver's own service ID. Keep those identities stable when rotating a token so child receipts and retries stay bound to the same workload. `lasa config check` validates the local credential against each peer's configured mode. Peer discovery checks the receiver's advertised mode and the exact wire-schema digest when the sender connects.
 
-When switching a peer from JWT to static credentials, set `authentication.historical_jwt_issuer` in that peer entry to the previous issuer if the same workload needs traces from finished child tasks. LASA checks the stored issuer, subject, caller service, and receiver against the configured transition and the receiver's original task owner. The historical binding still governs task operations, receipts, cancellation, and reconciliation.
-
 ### Isolated development
 
 For local experiments that need test JWTs, use [the development generator](tools/create_development_config.py) with Python dependencies installed in the checkout. It generates a development issuer, public JWKS, and 24-hour test tokens under an empty output directory. Use the normal issuer and receiver policy for an installed service.
@@ -106,7 +100,7 @@ uv run --project v0 python v0/tools/create_development_config.py \
 Build the supervisor image after building the Codex worker image above:
 
 ```sh
-docker build -f v0/Dockerfile.service -t lasa-service:local v0
+docker build -f v0/Dockerfile.service -t lasa-supervisor:1.0.0 v0
 ```
 
 The image installs LASA and its locked production dependencies. It runs `lasa --config /etc/lasa/config.json` by default. For a bridge-network listener, set `storage.listen_host` to `0.0.0.0` and set `storage.tls.certificate_file` and `storage.tls.key_file` to the absolute paths of your server certificate and key. The certificate must cover the hostname in `service.base_url`. A model provider with private TLS can set `executors[].provider_ca_file` to its CA bundle. Peers use their own `ca_file` setting.
@@ -120,14 +114,14 @@ lasa_secrets=/run/secrets/lasa/review
 lasa_socket=/var/run/docker.sock
 lasa_socket_group=$(docker run --rm --network none \
   --mount "type=bind,source=$lasa_socket,target=/var/run/docker.sock" \
-  --entrypoint stat lasa-service:local -c '%g' /var/run/docker.sock)
+  --entrypoint stat lasa-supervisor:1.0.0 -c '%g' /var/run/docker.sock)
 docker run --rm --user "$(id -u):$(id -g)" --group-add "$lasa_socket_group" \
   --mount "type=bind,source=$lasa_socket,target=/var/run/docker.sock" \
   --mount "type=bind,source=$lasa_config,target=$lasa_config,readonly" \
   --mount "type=bind,source=$lasa_state,target=$lasa_state" \
   --mount "type=bind,source=$lasa_secrets,target=$lasa_secrets,readonly" \
   --publish 127.0.0.1:8443:8787 \
-  lasa-service:local --config "$lasa_config/config.json"
+  lasa-supervisor:1.0.0 --config "$lasa_config/config.json"
 ```
 
 Create the mount directories first. This example assumes a manifest with `storage.state_root` set to `/var/lib/lasa/review`, an HTTPS base URL on `localhost:8443`, `storage.listen_host` set to `0.0.0.0`, and TLS and model credential files under the secret directory. A static-token registry mounted read-only in the supervisor can be updated from the host using the token issuance CLI.

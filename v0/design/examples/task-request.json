@@ -4,7 +4,7 @@
     "contract": {
       "id": "https://contracts.example.net/capabilities/task.attempt",
       "version": "1.0.0",
-      "digest": "sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23"
+      "digest": "sha256:ab18f43c25384940b0d00e9cbd09c0ae6bd42d2b361f6baffcdfeffafa4790e9"
     },
     "offer_id": "offer-root-attempt",
     "offer_revision": "offer-root-r1",
