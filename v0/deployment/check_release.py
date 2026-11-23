@@ -4,6 +4,7 @@ import argparse
 import asyncio
 import hashlib
 import json
+import os
 import subprocess
 import sys
 import tarfile
@@ -219,6 +220,43 @@ def check_provisioning():
 
         asyncio.run(authenticate())
 
+        cli = [sys.executable, "-I", "-m", "lasa_service.cli", "config"]
+        official = folder / "official"
+        subprocess.run(
+            [
+                *cli,
+                "init",
+                "--output",
+                str(official),
+                "--service-id",
+                config.service_id,
+                "--base-url",
+                config.document["service"]["base_url"],
+                "--issuer",
+                config.document["authentication"]["issuer"],
+                "--jwks-file",
+                str(folder / "jwks.json"),
+                "--image",
+                "sha256:" + "0" * 64,
+                "--model",
+                "release-check",
+                "--provider-url",
+                "https://model.example.net/v1",
+                "--state-root",
+                str(official / "state"),
+            ],
+            check=True,
+            capture_output=True,
+            timeout=10,
+        )
+        subprocess.run(
+            [*cli, "check", "--config", str(official / "config.json"), "--offline"],
+            env={**os.environ, "LASA_MODEL_API_KEY": "package-smoke-only"},
+            check=True,
+            capture_output=True,
+            timeout=10,
+        )
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -242,6 +280,7 @@ def main():
                 "source_files_matched": source_count,
                 "packaged_examples_validated": examples,
                 "development_config_and_signed_jwt": "passed",
+                "installed_config_commands": "passed",
             },
             indent=2,
         )

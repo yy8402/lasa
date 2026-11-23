@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 
+import httpx
 import pytest
 
 from lasa_service.contracts import canonical, digest, parse_json
@@ -11,7 +12,78 @@ from lasa_service.evidence import MAX_BYTES, append_evidence, verification_mater
 from lasa_service.planning import Planner
 from lasa_service.store import encode
 
-from .conftest import FakeRuntime, settled, submit, task_request
+from .conftest import FakeRuntime, configuration, documents, settled, submit, task_request
+
+
+@pytest.mark.parametrize("passed", [True, False])
+async def test_review_verification_separates_candidate_from_evidence(services, tmp_path, passed):
+    raw = documents(tmp_path)
+    custom = "Use the supplied review criterion to evaluate the candidate."
+    prompts = dict(configuration(raw).prompts, outcome_verification=custom)
+    prompt_path = tmp_path / "prompts.json"
+    prompt_path.write_text(json.dumps(prompts))
+    raw["prompts_file"] = str(prompt_path)
+    inputs = {
+        "design": "The operator checks each backup before marking it verified.",
+        "criteria": [{"id": "check-first", "description": "Does the check occur first?"}],
+    }
+    output = {
+        "coverage": [
+            {
+                "criterion_id": "check-first",
+                "disposition": "reviewed",
+                "evidence": inputs["design"],
+            }
+        ],
+        "findings": [],
+    }
+    requests = []
+
+    async def model(request):
+        body = json.loads(request.content)
+        assert body["text"]["format"]["name"] == "lasa_verification"
+        developer, context, candidate = body["input"]
+        assert [part["role"] for part in body["input"]] == ["developer", "user", "user"]
+        instruction = developer["content"][0]["text"]
+        assert custom in instruction
+        assert "The last user message is the complete candidate_output JSON value" in instruction
+        assert "already checked the candidate's output schema" in instruction
+        facts = json.loads(context["content"][0]["text"])
+        assert set(facts) == {
+            "contract",
+            "input",
+            "claimed_evidence",
+            "original_requirements",
+            "trusted_execution_evidence",
+        }
+        assert facts["input"] == inputs
+        assert "output_schema" not in facts["contract"]
+        assert facts["contract"]["ref"]["id"].endswith("/design.review")
+        assert json.loads(candidate["content"][0]["text"]) == output
+        verdict = {"passed": passed, "reason": "Independent semantic decision."}
+        requests.append(body)
+        return httpx.Response(
+            200,
+            json={
+                "output": [
+                    {
+                        "type": "message",
+                        "content": [{"type": "output_text", "text": json.dumps(verdict)}],
+                    }
+                ],
+                "usage": {"total_tokens": 100},
+            },
+        )
+
+    client, app = await services(raw=raw, model_transport=httpx.MockTransport(model))
+    app.state.coordinator.planner.verifier = None
+    body = await task_request(client, app, profile="design.review", inputs=inputs)
+    result = await settled(client, await submit(client, app, body))
+    assert len(requests) == 1
+    if passed:
+        assert result["status"] == "completed" and result["result"]["output"] == output
+    else:
+        assert result["status"] == "failed" and result["problem"]["code"] == "verification_failed"
 
 
 @pytest.mark.parametrize("performed,accept", [(False, True), (True, True), (True, False)])
@@ -42,7 +114,7 @@ async def test_verifier_gets_receiver_receipts_and_verified_artifact_without_for
             result["artifact_ids"] = [artifact["artifact_id"]]
         return result
 
-    async def assess(task_id, purpose, payload, schema):
+    async def assess(task_id, purpose, payload, schema, **_):
         assert purpose == "verification"
         material = payload["trusted_execution_evidence"]
         observed.append(material)
@@ -147,7 +219,7 @@ async def test_changed_execution_facts_invalidate_cached_semantic_verdict(servic
     c = app.state.coordinator
     calls = []
 
-    async def assess(task_id, purpose, payload, schema):
+    async def assess(task_id, purpose, payload, schema, **_):
         calls.append(payload["trusted_execution_evidence"])
         return {"passed": len(calls) == 1, "reason": "Each distinct durable fact set is assessed."}
 

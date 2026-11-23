@@ -1,4 +1,5 @@
 *
 !Dockerfile
 !lasa_service/
+!lasa_service/config_defaults.json
 !lasa_service/container_entry.py

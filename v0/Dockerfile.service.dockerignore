@@ -4,6 +4,7 @@
 !uv.lock
 !MANIFEST.in
 !lasa_service/
+!lasa_service/config_defaults.json
 !lasa_service/*.py
 !lasa_service/prompts.json
 !design/

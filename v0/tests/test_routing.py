@@ -63,7 +63,7 @@ async def test_parent_reports_confirmed_child_workspace_write(services, tmp_path
     c = app.state.coordinator
     observed = []
 
-    async def assess(task_id, purpose, payload, schema):
+    async def assess(task_id, purpose, payload, schema, **_):
         assert purpose == "verification"
         material = payload["trusted_execution_evidence"]
         assert material["operations"] == [] and material["artifacts"] == []

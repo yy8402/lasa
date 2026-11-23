@@ -125,14 +125,15 @@ class CodexRuntime:
         }
 
     async def probe(self, c):
-        verified_images = set()
+        settings = c.config.document["runtime"]
+        await self.verify_worker(settings)
         for executor in c.config.document["executors"]:
-            settings = c.config.read_private("RuntimeProfile", executor["runtime_profile_file"])
-            image = (settings["image"], settings["executable"], settings["expected_version"])
-            if image not in verified_images:
-                await self.enclosure.verify_image(*image)
-                verified_images.add(image)
             await self.probe_executor(c, executor, settings)
+
+    async def verify_worker(self, settings):
+        await self.enclosure.verify_image(
+            settings["image"], settings["executable"], settings["expected_version"]
+        )
 
     async def probe_executor(self, c, executor, settings):
         task_id = identity("probe")
@@ -163,7 +164,7 @@ class CodexRuntime:
         c = context.coordinator
         source_profile = c.registry.source_profile(context.prompt["contract"])
         executor = c.config.executor(context.binding)
-        settings = c.config.read_private("RuntimeProfile", executor["runtime_profile_file"])
+        settings = c.config.document["runtime"]
         root, home, protected = self.directories(c, context.task_id)
         (home / "config.toml").write_text(tomli_w.dumps(self.configuration(executor)))
         gateway = TaskGateway(context)

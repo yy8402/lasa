@@ -1,42 +1,29 @@
 {
-  "config_version": "1.0",
+  "config_version": "2.0",
   "service": {
     "id": "https://identity.example.net/services/layer1",
     "deployment_revision": "deploy-target-example",
     "base_url": "https://layer1.example.net/lasa/v1",
-    "descriptor_url": "https://layer1.example.net/lasa/v1/descriptor",
     "publish_api_catalog": true,
     "workspace_root": "/var/lib/lasa/workspaces",
     "session_retention_seconds": 604800
   },
   "authentication": {
     "issuer": "https://identity.example.net",
-    "audience": "https://identity.example.net/services/layer1",
     "jwks_url": "https://identity.example.net/.well-known/jwks.json",
     "allowed_algorithms": [
       "ES256"
     ]
   },
   "authorization": {
-    "resolver_id": "resolver-receiver-policy",
-    "policy_file": "/etc/lasa/authorization.json",
-    "trusted_delegator_service_ids": []
+    "policy_file": "authorization.json"
   },
-  "contract_publishers": [
-    {
-      "namespace": "https://contracts.example.net/capabilities/",
-      "trusted_registry_file": "/etc/lasa/contracts.json"
-    }
-  ],
   "executors": [
     {
       "id": "executor-codex-main",
-      "kind": "codex-app-server",
       "model": "gpt-5.5",
       "provider_base_url": "https://api.openai.com/v1/",
-      "credential_ref": "env:OPENAI_API_KEY",
-      "runtime_profile_file": "/etc/lasa/runtime.json",
-      "connector_policy_file": "/etc/lasa/tools.json"
+      "credential_ref": "env:OPENAI_API_KEY"
     }
   ],
   "bindings": [
@@ -151,32 +138,17 @@
     "listen_host": "127.0.0.1",
     "listen_port": 8787
   },
-  "verifiers": [
-    {
-      "contract": {
-        "id": "https://contracts.example.net/capabilities/design.review",
-        "version": "1.0.0",
-        "digest": "sha256:68950255694df09743fa0dc4664f155865040e0366c9cee235ad2072de9275ce"
-      },
-      "verifier_id": "design-review-v1"
-    },
-    {
-      "contract": {
-        "id": "https://contracts.example.net/capabilities/task.attempt",
-        "version": "1.0.0",
-        "digest": "sha256:f4fab80871223bb57520402bee7a525b6e2639c80a2169fc57a15bbfebc72c23"
-      },
-      "verifier_id": "task-attempt-v1"
-    }
-  ],
   "peers": [
     {
       "descriptor_url": "https://layer2.example.net/lasa/v1/descriptor",
       "expected_service_id": "https://identity.example.net/services/layer2",
       "allowed_base_url": "https://layer2.example.net/lasa/v1",
-      "credential_ref": "secret:lasa/peer-workload-token",
+      "credential_ref": "file:/run/secrets/lasa-layer2-token",
       "authorization_ref": "receiver-policy:trusted-layer1",
       "request_timeout_seconds": 15
     }
-  ]
+  ],
+  "runtime": {
+    "image": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+  }
 }

@@ -97,6 +97,7 @@ Diagnostics can establish that a particular call/dispatch/check happened and wha
 
 ## Implemented contract clarifications
 
+- LASA checks each candidate against its output schema before semantic assessment. The verifier receives the candidate as a separate message after the verification context and must assess the postconditions against the supplied evidence.
 - Approved semantic verifiers are bound to full contract ID/version/digest references in private `verifiers` configuration. A URI suffix never selects a verifier. Unregistered definitions cannot be offered or admitted.
 - A generic attempt is not a claim to a particular missing capacity. An insufficient local assessment cannot become a qualified peer match merely because a generic attempt is offered. Fresh generic-only forwarding uses the explicit fallback policy; unknown local assessment remains unresolved.
 - Semantic plan coverage is checked independently before acceptance. The check is tool-free and consumes assessment budget. Provisional allocations are recomputed from settled assessment usage before durable admission; reservation checks use that final plan. Offer preconditions disclose mandatory model allocation minimums.

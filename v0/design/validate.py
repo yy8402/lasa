@@ -327,33 +327,23 @@ def validate() -> dict[str, int]:
             )
         elif name == "Config":
             executors = {executor["id"] for executor in value["executors"]}
-            for binding in value["bindings"]:
+            for binding in value.get("bindings", []):
                 require(
                     binding["executor_id"] in executors, "executor_binding", binding["executor_id"]
                 )
                 semantics(binding, "FulfillmentBinding")
-            limits = value["limits"]
-            budget_fits(limits["assessment_budget"], limits["max_task_budget"])
-            budget_fits(limits["integration_reserve"], limits["max_task_budget"])
-            require(
-                limits["assessment_budget"]["tool_calls"]
-                == limits["assessment_budget"]["delegations"]
-                == 0,
-                "assessment_effect",
-                "Evaluation cannot dispatch tools/children",
-            )
-            require(
-                value["authentication"]["audience"] == value["service"]["id"],
-                "service_identity",
-                "Receiver audience",
-            )
-            require(
-                within_url(value["service"]["descriptor_url"], value["service"]["base_url"]),
-                "link_boundary",
-                "Own descriptor",
-            )
+            limits = value.get("limits", {})
+            for key in ("assessment_budget", "integration_reserve"):
+                if key in limits and "max_task_budget" in limits:
+                    budget_fits(limits[key], limits["max_task_budget"])
+            if assessment := limits.get("assessment_budget"):
+                require(
+                    assessment["tool_calls"] == assessment["delegations"] == 0,
+                    "assessment_effect",
+                    "Evaluation cannot dispatch tools/children",
+                )
             peer_ids = {value["service"]["id"]}
-            for peer in value["peers"]:
+            for peer in value.get("peers", []):
                 require(
                     peer["expected_service_id"] not in peer_ids, "service_identity", "Unique peer"
                 )

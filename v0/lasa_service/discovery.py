@@ -54,7 +54,7 @@ class Discovery:
             ],
             "authentication": {
                 "issuer": config["authentication"]["issuer"],
-                "audience": config["authentication"]["audience"],
+                "audience": self.config.service_id,
             },
             "catalog_url": base + "/capabilities",
             "contract_url_template": base + "/contracts/{digest}",
@@ -189,7 +189,7 @@ class Discovery:
                                 ],
                                 "service-meta": [
                                     {
-                                        "href": self.config.document["service"]["descriptor_url"],
+                                        "href": self.config.descriptor_url,
                                         "type": "application/json",
                                     }
                                 ],

@@ -31,10 +31,7 @@ CASES = ROUTE_CASES + ["assessment_" + x["id"] for x in CORPUS]
 
 def configure(directory, layer, case, key, runtime_image):
     raw = documents(directory, layer, peer=(layer == "layer1" and case != "no_peer"))
-    runtime_path = Path(raw["executors"][0]["runtime_profile_file"])
-    profile = json.loads(runtime_path.read_text())
-    profile["image"] = runtime_image
-    runtime_path.write_text(json.dumps(profile))
+    raw["runtime"]["image"] = runtime_image
     raw["service"]["deployment_revision"] = "evaluation-" + case
     raw["discovery_cache"]["catalog_max_age_seconds"] = 300
     budget = raw["limits"]["max_task_budget"]
@@ -110,9 +107,7 @@ async def run_case(directory, case, key, runtime_image):
         await stack.enter_async_context(child_app.router.lifespan_context(child_app))
         child_origin = await stack.enter_async_context(live_http(child_app, tls=tls))
         prefix = "/prefix/lasa/v1"
-        child_cfg.document["service"].update(
-            base_url=child_origin + prefix, descriptor_url=child_origin + prefix + "/descriptor"
-        )
+        child_cfg.document["service"].update(base_url=child_origin + prefix)
         raw, env = configure(directory / "parent", "layer1", case, key, runtime_image)
         if raw["peers"]:
             raw["peers"][0].update(
@@ -124,9 +119,7 @@ async def run_case(directory, case, key, runtime_image):
         app = create_app(cfg, runtime=CodexRuntime())
         await stack.enter_async_context(app.router.lifespan_context(app))
         origin = await stack.enter_async_context(live_http(app, tls=tls))
-        cfg.document["service"].update(
-            base_url=origin + prefix, descriptor_url=origin + prefix + "/descriptor"
-        )
+        cfg.document["service"].update(base_url=origin + prefix)
         client = await stack.enter_async_context(
             httpx.AsyncClient(
                 base_url=origin,

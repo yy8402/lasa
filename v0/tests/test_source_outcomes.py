@@ -28,9 +28,6 @@ from .test_connector_transports import LIMITS, operation
 def register_read(raw, *, local=True):
     definition = example("capability-documents-read")
     ref = reference(definition)
-    path = Path(raw["contract_publishers"][0]["trusted_registry_file"])
-    path.write_text(json.dumps([*json.loads(path.read_text()), definition]))
-    raw["verifiers"].append({"contract": ref, "verifier_id": "documents-read-v1"})
     raw["published_contracts"].append(ref)
     if local:
         op = operation("documents.read")
@@ -50,9 +47,7 @@ def register_read(raw, *, local=True):
             "limits": LIMITS,
             "operations": [op],
         }
-        Path(raw["executors"][0]["connector_policy_file"]).write_text(
-            json.dumps({"connectors": [resource]})
-        )
+        raw["executors"][0]["connectors"] = [resource]
         raw["bindings"].append(
             {
                 "binding_id": "binding-documents-read",
@@ -106,13 +101,12 @@ async def read_workflow(context, *, wrong_argument=False, no_operation=False):
     }
 
 
-def verified_document_receipt(payload):
+def verified_document_receipt(payload, output, instruction):
     evidence = payload["trusted_execution_evidence"]
     checked = evidence["source_validation"]
     assert checked["source"] == "receiver_deterministic_checks"
     assert checked["profile"] == "documents-read-v1"
     read = checked["document_read"]
-    output = payload["candidate_output"]
     artifact = read["operation_result_artifact"]
     verified_artifact = next(
         item
@@ -138,8 +132,7 @@ def verified_document_receipt(payload):
     assert artifact["operation_id"] == manifest["provenance"]["operation_id"] == "source-read"
     assert artifact["service_id"] == manifest["provenance"]["service_id"]
     assert (
-        "Compare candidate_output.content_digest with document_content_utf8_sha256"
-        in (payload["instruction"])
+        "Compare candidate_output.content_digest with document_content_utf8_sha256" in instruction
     )
     return read
 
@@ -161,9 +154,9 @@ async def test_source_receipts_exact_assembly_scope_and_independent_rejection(
     client, app = await services(raw=raw, runtime=FakeRuntime(handler))
     c = app.state.coordinator
 
-    async def assess(task_id, purpose, payload, schema):
+    async def assess(task_id, purpose, payload, schema, *, candidate_output, instruction):
         if purpose == "verification":
-            verified_document_receipt(payload)
+            verified_document_receipt(payload, candidate_output, instruction)
         return {"passed": mode != "semantic-rejection", "reason": "Controlled independent verdict."}
 
     c.planner.verifier = None
@@ -226,9 +219,11 @@ async def test_parent_verifies_actual_child_source_artifact_bytes(services, tmp_
     verified = {}
 
     def observe(coordinator):
-        async def assess(task_id, purpose, payload, schema):
+        async def assess(task_id, purpose, payload, schema, *, candidate_output, instruction):
             assert purpose == "verification"
-            verified[coordinator.config.service_id] = verified_document_receipt(payload)
+            verified[coordinator.config.service_id] = verified_document_receipt(
+                payload, candidate_output, instruction
+            )
             return {"passed": True, "reason": "Verified exact source fields."}
 
         coordinator.planner.verifier = None

@@ -55,36 +55,11 @@ class Coordinator:
         self.model_transport = model_transport
         self.root = Path(config.document["storage"]["data_root"])
         self.store = Store(self.root)
-        self.registry = CapabilityRegistry(
-            self.root,
-            [
-                {"namespace": p["namespace"], "file": Path(p["trusted_registry_file"])}
-                for p in config.document["contract_publishers"]
-            ],
-            config.document["verifiers"],
-        )
-        operations = {
-            operation["operation_id"]: operation
-            for connector in config.connectors.values()
-            for operation in connector["operations"]
-        }
-        for binding in config.document["bindings"]:
-            definition = self.registry.get(binding["contract"])
-            require(
-                set(binding["allowed_effects"]) <= set(definition["max_effects"]),
-                "authority_denied",
-                403,
-            )
-            for name in binding["required_operations"]:
-                require(
-                    all(
-                        match["input_field"] in definition["input_schema"].get("properties", {})
-                        for match in operations[name]["task_input_bindings"]
-                    ),
-                    "invalid_input",
-                )
-            if self.registry.source_profile(binding["contract"]):
-                require(bool(binding["required_operations"]), "invalid_input")
+        try:
+            self.registry = CapabilityRegistry.configured(config, self.root)
+        except BaseException:
+            self.store.close()
+            raise
         self.authentication = Authentication(config)
         self.authorization = Authorization(config)
         self.publication = Publication(

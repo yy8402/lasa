@@ -1,8 +1,72 @@
-# Managed two-layer target deployment
+# Managed LASA deployment
 
-Current deployment: **1.1.0 connector acceptance is complete**, with both managed services running. See [the current connector report](CONNECTORS.md) for actual source integrations, outage/recovery, final revisions and installed-package parity. The sections below retain the original 2026-11-18 base-deployment record and its historical wheel/revisions.
+## 1.3.1 rollout on 2026-11-23
 
-Deployment date: 2026-11-18. **Deployment acceptance is complete. Both managed services are running in the steady profile.** Final identity, configuration, installed-file parity, restart, and ownership evidence is in [final-deployment.json](../verification/deployed-20261118/final-deployment.json).
+The Mac parent and two air188 backends run LASA **1.3.1** with protocol `lasa/1.2` and deployment revision `docker-1.3.1-verifier-da669e167b96`. The supervisors run in Docker behind the existing HTTPS proxies. The Mac prefers an authorized peer. Air188 review handles delegated `design.review` work, and air188 primary handles delegated `task.attempt` work and the approved source capabilities.
+
+| Service | HTTPS API | Stable service ID | Active container |
+|---|---|---|---|
+| Mac parent | `https://localhost:8443/lasa/v1` | `https://localhost:8443/lasa` | `lasa-parent-131` |
+| air188 primary | `https://192.168.0.188/lasa/v1` | `https://192.168.0.188/lasa` | `lasa-primary-131` |
+| air188 review | `https://192.168.0.188/review/lasa/v1` | `https://192.168.0.188/review/lasa` | `lasa-review-131` |
+
+On each host, the role directories are under `v0/.deploy/target/docker-1.2.0` in the checkout. The active v2 manifest is `<role>/deployment-1.3.1/config.json`. Its `authorization.policy_file` points to the receiver's existing `<role>/deployment-1.3.0/authorization.json`. The manifest references credential files. The Mac continues to issue receiver-scoped tokens and hold the issuer signing keys. For syntax and preflight options, see the [installed service instructions](../RUNNING.md).
+
+All three manifests passed `lasa config check` in their target containers. On each host, 81 installed runtime and contract files matched the verified wheel. Its SHA-256 is `da669e167b96e30081177f3a981c4b0d0b1d285fe289955a8ade47ab373a7a33`. After startup, all three services passed authenticated HTTPS readiness and served the expected identity and revision. The before-and-after capability catalogs matched, both cross-audience token probes returned HTTP 401, and a previously completed parent result and its two child records remained readable.
+
+The active containers use the Docker restart policy `unless-stopped`. Check the Mac parent and both air188 containers from the Mac.
+
+```sh
+docker inspect --format '{{.Name}} {{.State.Status}}' lasa-parent-131
+ssh yang@192.168.0.188 \
+  "docker inspect --format '{{.Name}} {{.State.Status}}' lasa-primary-131 lasa-review-131"
+```
+
+## Dependent workflow verification
+
+The 1.3.0 attempt reached air188 review. Its candidate contained the two required fields, `coverage` and `findings`, but the semantic verifier treated fields from the surrounding evidence as extra candidate fields. LASA 1.3.1 checks the candidate schema before calling the verifier, then sends the candidate separately from the context and evidence. The verifier still makes an independent semantic decision.
+
+The same workflow input was submitted as a new task after the rollout. It completed with the live `gpt-5.5` model on all three services.
+
+| Step | Service | Task ID | Observed result |
+|---|---|---|---|
+| Review the design | air188 review | `task-e948641acf1247f58733ca44e6a9fa45` | `design.review` completed and passed semantic verification |
+| Derive the operator checklist | air188 primary | `task-11e0d7d5aabb44da9fac54130a4f7402` | `task.attempt` completed using the authenticated review result |
+| Verify both steps and release the result | Mac parent | `task-7ec95b790a834ca9ae1b89e77f4f4fb9` | Independently accepted both child outputs and the integrated outcome |
+
+The durable task records matched the review output exactly to the checklist's `dependency_results`. The review output digest `sha256:95593daf010a633db0d3264d5fef7f546a01cc68c2a404deab51ad97c15591c7` also matched in air188 primary's verification evidence and in the Mac's step and final verification evidence. The completed parent reported two delegations and ten model calls, including child usage.
+
+The release passed 200 tests, offline design validation, isolated package verification, and the Docker dependent-workflow smoke test. The Mac's local rollout and durable verification records are `v0/.deploy/target/docker-1.3.1/activation.json` and `v0/.deploy/target/docker-1.3.1/live-dependent-evidence.json`. The earlier rejected task is retained in the 1.3.0 run records.
+
+## Release upgrades and rollback
+
+From the checkout root, build both archives in a fresh directory and verify them with an isolated installation.
+
+```sh
+release_dir=$(mktemp -d)
+uv build --project v0 --out-dir "$release_dir"
+uv venv --project v0 "$release_dir/venv"
+uv export --project v0 --locked --no-dev --no-emit-project --no-hashes \
+  --output-file "$release_dir/requirements.txt"
+uv pip install --python "$release_dir/venv/bin/python" \
+  --requirement "$release_dir/requirements.txt" "$release_dir"/*.whl
+"$release_dir/venv/bin/python" -I v0/deployment/check_release.py \
+  --wheel "$release_dir"/*.whl --sdist "$release_dir"/*.tar.gz
+```
+
+For the live Docker rollout, build the supervisor for `linux/amd64`, load the same image on air188, and compare the installed runtime and contract files on both hosts with the verified wheel. Stage the v2 manifests and run `lasa config check` using each service's actual user, mounts, and daemon access before stopping any backend.
+
+Wait until all three task stores are idle. Stop the Mac parent first, then the air188 backends. Start air188 primary and review, checking each HTTPS readiness endpoint and descriptor against the expected revision. Start and check the Mac parent last. The rollout keeps each role's database, workspace, and HTTPS binding at its existing location.
+
+The 1.3.0 containers and manifests were retained for rollback. If candidate startup or verification of readiness fails, stop the candidate containers, restore the previous backends before the parent, and verify their prior revision over authenticated HTTPS. Restore the running containers' restart policies so that only the active release restarts on daemon startup.
+
+## Historical deployment records
+
+The following sections document the earlier launchd and systemd deployment. See the [1.1.0 connector report](CONNECTORS.md) for the source integration and outage/recovery observations from that deployment.
+
+### 2026-11-18 base deployment
+
+The 2026-11-18 deployment passed acceptance with both services in the steady profile. Final identity, configuration, installed-file parity, restart, and ownership evidence is in [final-deployment.json](../verification/deployed-20261118/final-deployment.json).
 
 | Layer | Canonical HTTPS API | Stable service identity | Managed backend |
 |---|---|---|---|
@@ -44,23 +108,9 @@ The original live file task is retained as a real counterexample: broker write/r
 
 Use `v0/deployment/verify_deployed.py` for explicitly named new observations and `v0/deployment/set_profile.py` for controlled profiles. Verification tools refuse to overwrite existing named observations and refuse profile changes while tasks are active.
 
-## Release upgrades and rollback
+### Historical wheel rollout and rollback
 
-From the checkout root, build both archives in a fresh directory and verify them with an isolated installation.
-
-```sh
-release_dir=$(mktemp -d)
-uv build --project v0 --out-dir "$release_dir"
-uv venv --project v0 "$release_dir/venv"
-uv export --project v0 --locked --no-dev --no-emit-project --no-hashes \
-  --output-file "$release_dir/requirements.txt"
-uv pip install --python "$release_dir/venv/bin/python" \
-  --requirement "$release_dir/requirements.txt" "$release_dir"/*.whl
-"$release_dir/venv/bin/python" -I v0/deployment/check_release.py \
-  --wheel "$release_dir"/*.whl --sdist "$release_dir"/*.tar.gz
-```
-
-Stage and deploy the verified wheel from the Mac, then check installed file hashes and HTTPS readiness on both layers.
+The launchd and systemd rollout staged and deployed the verified wheel from the Mac, then checked installed file hashes and HTTPS readiness on both layers.
 
 ```sh
 uv run --project v0 python v0/deployment/deploy_release.py \
@@ -73,7 +123,7 @@ The release tool verifies the wheel bytes and stages a separate Python environme
 
 Use `--rollback-drill` with the same command to exercise rollback after air188 passes its candidate readiness check. Both backends restart during the drill. The release slot on each host is under `.deploy/target/backups/<release>`. It holds the staged environment, original config copies and the previous environment once activated. If the controller is interrupted before reporting an outcome, keep the release slots for recovery.
 
-## Acceptance matrix
+### Acceptance matrix
 
 All work used the current checkout. No unrelated service was changed. The image was exported from the verified local build and loaded on air188; root filesystem layer digests match. Docker's two storage implementations expose different immutable image IDs, which are separately pinned in each runtime profile.
 

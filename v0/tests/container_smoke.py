@@ -93,7 +93,7 @@ def configure(root, name, namespace, runtime):
 
 def authorize(root, configs):
     parent = configs["parent"]
-    policy_path = Path(parent["authorization"]["policy_file"])
+    policy_path = root / "parent" / parent["authorization"]["policy_file"]
     policy = read(policy_path)
     rule = policy["principals"][0]["rules"][0]
     parent["routing"]["unclaimed_peer_fallback"] = "reject"
@@ -236,7 +236,27 @@ def serve_model(directory):
                 sse_final(json.dumps(execute_fixture(payload(body)))),
                 media_type="text/event-stream",
             )
-        schema = body["text"]["format"]["schema"]
+        message_format = body["text"]["format"]
+        if message_format["name"] == "lasa_verification":
+            developer, context, candidate = body["input"]
+            assert [developer["role"], context["role"], candidate["role"]] == [
+                "developer",
+                "user",
+                "user",
+            ]
+            assert (
+                "The last user message is the complete candidate_output"
+                in developer["content"][0]["text"]
+            )
+            context = json.loads(context["content"][0]["text"])
+            candidate = json.loads(candidate["content"][0]["text"])
+            assert "candidate_output" not in context and "output_schema" not in context["contract"]
+            if context["contract"]["ref"]["id"].endswith("/design.review"):
+                assert set(candidate) == {"coverage", "findings"}
+            else:
+                assert candidate["disposition"] == "fulfilled"
+                assert context["trusted_execution_evidence"]["dependencies"]
+        schema = message_format["schema"]
         answer = (
             propose_plan(payload(body))
             if "steps" in schema["properties"]
@@ -532,7 +552,7 @@ if __name__ == "__main__":
         verify(Path(sys.argv[2]))
     else:
         parser = argparse.ArgumentParser(description=__doc__)
-        parser.add_argument("--service-image", default="lasa-service:1.2.2")
+        parser.add_argument("--service-image", default="lasa-service:1.3.1")
         parser.add_argument("--runtime-image", default="lasa-codex:target-v1")
         parser.add_argument("--docker-socket", type=Path, default=Path("/var/run/docker.sock"))
         with tempfile.TemporaryDirectory(prefix="lasa-container-") as directory:

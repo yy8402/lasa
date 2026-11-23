@@ -1,6 +1,6 @@
 FROM node:22-bookworm-slim AS codex
-ARG CODEX_VERSION=0.169.0-alpha.11.1
-RUN npm install --global "@openai/codex@${CODEX_VERSION}"
+COPY lasa_service/config_defaults.json /tmp/lasa-config-defaults.json
+RUN npm install --global "@openai/codex@$(node -p 'require("/tmp/lasa-config-defaults.json").runtime.expected_version')"
 
 FROM python:3.12-slim-bookworm
 COPY --from=codex /usr/local/lib/node_modules/@openai /opt/openai

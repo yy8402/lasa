@@ -290,7 +290,7 @@ class PeerClient:
             and definition["version"] == ref["version"]
             and any(
                 definition["id"].startswith(publisher["namespace"])
-                for publisher in self.config.document["contract_publishers"]
+                for publisher in self.config.publishers
             )
             and set(offer["restrictions"]["allowed_effects"]) <= set(definition["max_effects"]),
             "unsupported_contract",

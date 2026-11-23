@@ -10,7 +10,16 @@ from lasa_service.errors import LasaError
 from lasa_service.planning import check_plan
 from lasa_service.store import zero
 
-from .conftest import FakeRuntime, documents, new_session, settled, submit, task_request, token
+from .conftest import (
+    FakeRuntime,
+    documents,
+    example,
+    new_session,
+    settled,
+    submit,
+    task_request,
+    token,
+)
 
 
 async def test_received_evaluating_then_admitted_and_verified(services):
@@ -109,8 +118,9 @@ async def test_permission_revocation_blocks_tool_before_effect(services):
 async def test_unknown_semantic_precondition_fails_closed_without_execution(services, tmp_path):
     raw = documents(tmp_path)
     path = Path(raw["contract_publishers"][0]["trusted_registry_file"])
-    defs = json.loads(path.read_text())
-    defs[1]["preconditions"].append(
+    definition = example("capability-attempt")
+    definition["version"] = "1.0.1"
+    definition["preconditions"].append(
         {
             "kind": "semantic_review",
             "description": "Unknown execution premise",
@@ -121,12 +131,13 @@ async def test_unknown_semantic_precondition_fails_closed_without_execution(serv
     from lasa_service.capabilities import reference
 
     old = raw["published_contracts"][1]
-    new = reference(defs[1])
-    path.write_text(json.dumps(defs))
+    new = reference(definition)
+    path.write_text(json.dumps([definition]))
     encoded = json.dumps(raw).replace(json.dumps(old), json.dumps(new))
     raw = json.loads(encoded)
+    raw["verifiers"].append({"contract": new, "verifier_id": "task-attempt-v1"})
     policy_path = Path(raw["authorization"]["policy_file"])
-    policy_path.write_text(policy_path.read_text().replace(old["digest"], new["digest"]))
+    policy_path.write_text(policy_path.read_text().replace(json.dumps(old), json.dumps(new)))
     runtime = FakeRuntime()
     client, app = await services(raw=raw, runtime=runtime)
     response = await submit(client, app, await task_request(client, app))

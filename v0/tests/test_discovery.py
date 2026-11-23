@@ -21,17 +21,7 @@ async def discovery_service(tmp_path, layer="layer2"):
     cfg = configuration(raw)
     root = tmp_path / "private"
     root.mkdir()
-    registry = CapabilityRegistry(
-        root,
-        [
-            {
-                "namespace": x["namespace"],
-                "file": __import__("pathlib").Path(x["trusted_registry_file"]),
-            }
-            for x in raw["contract_publishers"]
-        ],
-        raw["verifiers"],
-    )
+    registry = CapabilityRegistry.configured(cfg, root)
     auth = Authentication(cfg)
     await auth.start()
     authorization = Authorization(cfg)
@@ -64,14 +54,12 @@ async def test_authenticated_prefixed_discovery_etags_and_views(tmp_path):
                 and 'rel="api-catalog"' in head.headers["link"]
                 and head.content == b""
             )
-            assert (await client.get(cfg.document["service"]["descriptor_url"])).status_code == 401
+            assert (await client.get(cfg.descriptor_url)).status_code == 401
             headers = {"Authorization": "Bearer " + token(audience=cfg.service_id)}
-            descriptor = await client.get(
-                cfg.document["service"]["descriptor_url"], headers=headers
-            )
+            descriptor = await client.get(cfg.descriptor_url, headers=headers)
             assert descriptor.status_code == 200
             cached = await client.get(
-                cfg.document["service"]["descriptor_url"],
+                cfg.descriptor_url,
                 headers={**headers, "If-None-Match": descriptor.headers["etag"]},
             )
             assert cached.status_code == 304 and "private" in cached.headers["cache-control"]

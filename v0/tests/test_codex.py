@@ -22,14 +22,10 @@ from .protocol_helpers import sse_final, sse_tool
 
 async def test_readiness_validates_every_executor_and_propagates_secondary_failure(monkeypatch):
     profile = {"image": "test-image", "executable": "codex", "expected_version": "test-version"}
-    executors = [
-        {"runtime_profile_file": "shared-profile", "executor_id": name}
-        for name in ("primary", "secondary")
-    ]
+    executors = [{"executor_id": name} for name in ("primary", "secondary")]
     service = SimpleNamespace(
         config=SimpleNamespace(
-            document={"executors": executors},
-            read_private=lambda *_: profile,
+            document={"executors": executors, "runtime": profile},
         ),
     )
     runtime = CodexRuntime()
@@ -55,10 +51,7 @@ async def test_readiness_validates_every_executor_and_propagates_secondary_failu
 @pytest.mark.integration
 async def test_real_codex_can_write_and_read_back_without_tool_discovery(tmp_path, runtime_image):
     raw = documents(tmp_path)
-    runtime_path = Path(raw["executors"][0]["runtime_profile_file"])
-    runtime_data = json.loads(runtime_path.read_text())
-    runtime_data["image"] = runtime_image
-    runtime_path.write_text(json.dumps(runtime_data))
+    raw["runtime"]["image"] = runtime_image
     raw["limits"]["max_task_budget"]["model_tokens"] = 500000
     raw["limits"]["integration_reserve"]["model_tokens"] = 100000
     policy = Path(raw["authorization"]["policy_file"])

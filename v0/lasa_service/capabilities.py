@@ -73,7 +73,9 @@ def validate_definition(definition):
 
 class CapabilityRegistry:
     def __init__(self, root, publishers, verifiers=()):
-        self.db = sqlite3.connect(root / "contracts.sqlite3", isolation_level=None)
+        self.db = sqlite3.connect(
+            ":memory:" if root is None else root / "contracts.sqlite3", isolation_level=None
+        )
         self.db.execute(
             "CREATE TABLE IF NOT EXISTS definitions(id TEXT,version TEXT,digest TEXT UNIQUE,document BLOB,PRIMARY KEY(id,version))"
         )
@@ -87,7 +89,7 @@ class CapabilityRegistry:
         )
         try:
             for publisher in publishers:
-                for definition in parse_json(publisher["file"].read_bytes()):
+                for definition in publisher["definitions"]:
                     validate_definition(definition)
                     require(
                         definition["id"].startswith(publisher["namespace"]), "unsupported_contract"
@@ -110,6 +112,49 @@ class CapabilityRegistry:
         except BaseException:
             self.close()
             raise
+
+    @classmethod
+    def configured(cls, config, root=None):
+        registry = cls(root, config.publishers, config.document["verifiers"])
+        try:
+            registry.validate_configuration(config)
+        except BaseException:
+            registry.close()
+            raise
+        return registry
+
+    def validate_configuration(self, config):
+        for ref in config.document["published_contracts"]:
+            require(
+                ref["digest"] in self.current and self.supported(ref), "unsupported_contract", 422
+            )
+            self.get(ref)
+        for entry in config.document["verifiers"]:
+            ref = entry["contract"]
+            require(ref["digest"] in self.current, "unsupported_contract", 422)
+            self.get(ref)
+        operations = {
+            operation["operation_id"]: operation
+            for connector in config.connectors.values()
+            for operation in connector["operations"]
+        }
+        for binding in config.document["bindings"]:
+            definition = self.get(binding["contract"])
+            require(
+                set(binding["allowed_effects"]) <= set(definition["max_effects"]),
+                "authority_denied",
+                403,
+            )
+            for name in binding["required_operations"]:
+                require(
+                    all(
+                        match["input_field"] in definition["input_schema"].get("properties", {})
+                        for match in operations[name]["task_input_bindings"]
+                    ),
+                    "invalid_input",
+                )
+            if self.source_profile(binding["contract"]):
+                require(bool(binding["required_operations"]), "invalid_input")
 
     def close(self):
         self.db.close()

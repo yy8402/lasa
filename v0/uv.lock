@@ -353,7 +353,7 @@ wheels = [
 
 [[package]]
 name = "lasa-service-v0"
-version = "1.2.2"
+version = "1.3.1"
 source = { editable = "." }
 dependencies = [
     { name = "fastapi" },

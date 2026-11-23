@@ -174,39 +174,22 @@
             ]
           },
           "uniqueItems": true
+        },
+        "trusted_delegator_service_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uri",
+            "pattern": "^https://",
+            "maxLength": 2048
+          },
+          "uniqueItems": true
         }
       },
       "required": [
         "revision",
-        "principals"
-      ],
-      "additionalProperties": false
-    },
-    "RuntimeProfile": {
-      "type": "object",
-      "properties": {
-        "image": {
-          "type": "string",
-          "pattern": "^sha256:[a-f0-9]{64}$"
-        },
-        "executable": {
-          "const": "/usr/local/bin/codex"
-        },
-        "expected_version": {
-          "type": "string",
-          "minLength": 1
-        },
-        "startup_timeout_ms": {
-          "type": "integer",
-          "minimum": 1000,
-          "maximum": 60000
-        }
-      },
-      "required": [
-        "image",
-        "executable",
-        "expected_version",
-        "startup_timeout_ms"
+        "principals",
+        "trusted_delegator_service_ids"
       ],
       "additionalProperties": false
     },
@@ -435,174 +418,6 @@
       ],
       "additionalProperties": false
     },
-    "ConnectorPolicy": {
-      "type": "object",
-      "properties": {
-        "connectors": {
-          "type": "array",
-          "items": {
-            "oneOf": [
-              {
-                "type": "object",
-                "properties": {
-                  "id": {
-                    "type": "string",
-                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
-                  },
-                  "limits": {
-                    "$ref": "#/$defs/ConnectorLimits"
-                  },
-                  "operations": {
-                    "type": "array",
-                    "items": {
-                      "$ref": "#/$defs/McpOperation"
-                    },
-                    "minItems": 1,
-                    "maxItems": 128
-                  },
-                  "kind": {
-                    "const": "mcp-stdio"
-                  },
-                  "command": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 2048
-                  },
-                  "args": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "secret_env": {
-                    "type": "object",
-                    "additionalProperties": {
-                      "type": "string",
-                      "minLength": 1,
-                      "maxLength": 2048
-                    }
-                  }
-                },
-                "required": [
-                  "id",
-                  "limits",
-                  "operations",
-                  "kind",
-                  "command",
-                  "args",
-                  "secret_env"
-                ],
-                "additionalProperties": false
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "id": {
-                    "type": "string",
-                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
-                  },
-                  "limits": {
-                    "$ref": "#/$defs/ConnectorLimits"
-                  },
-                  "operations": {
-                    "type": "array",
-                    "items": {
-                      "$ref": "#/$defs/McpOperation"
-                    },
-                    "minItems": 1,
-                    "maxItems": 128
-                  },
-                  "kind": {
-                    "const": "mcp-http"
-                  },
-                  "url": {
-                    "type": "string",
-                    "format": "uri",
-                    "pattern": "^https://"
-                  },
-                  "credential_ref": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 2048
-                  },
-                  "ca_file": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 2048
-                  }
-                },
-                "required": [
-                  "id",
-                  "limits",
-                  "operations",
-                  "kind",
-                  "url"
-                ],
-                "additionalProperties": false
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "id": {
-                    "type": "string",
-                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
-                  },
-                  "limits": {
-                    "$ref": "#/$defs/ConnectorLimits"
-                  },
-                  "operations": {
-                    "type": "array",
-                    "items": {
-                      "$ref": "#/$defs/JsonGetOperation"
-                    },
-                    "minItems": 1,
-                    "maxItems": 128
-                  },
-                  "kind": {
-                    "const": "json-get"
-                  },
-                  "base_url": {
-                    "type": "string",
-                    "format": "uri",
-                    "pattern": "^https://"
-                  },
-                  "headers": {
-                    "type": "object",
-                    "additionalProperties": {
-                      "type": "string"
-                    }
-                  },
-                  "credential_ref": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 2048
-                  },
-                  "ca_file": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 2048
-                  }
-                },
-                "required": [
-                  "id",
-                  "limits",
-                  "operations",
-                  "kind",
-                  "base_url",
-                  "headers"
-                ],
-                "additionalProperties": false
-              }
-            ]
-          },
-          "maxItems": 32
-        }
-      },
-      "required": [
-        "connectors"
-      ],
-      "additionalProperties": false
-    },
     "FulfillmentBinding": {
       "type": "object",
       "properties": {
@@ -655,6 +470,165 @@
         "required_operations"
       ],
       "additionalProperties": false
+    },
+    "Connectors": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
+              },
+              "limits": {
+                "$ref": "#/$defs/ConnectorLimits"
+              },
+              "operations": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/McpOperation"
+                },
+                "minItems": 1,
+                "maxItems": 128
+              },
+              "kind": {
+                "const": "mcp-stdio"
+              },
+              "command": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2048
+              },
+              "args": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "secret_env": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 2048
+                }
+              }
+            },
+            "required": [
+              "id",
+              "limits",
+              "operations",
+              "kind",
+              "command",
+              "args",
+              "secret_env"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
+              },
+              "limits": {
+                "$ref": "#/$defs/ConnectorLimits"
+              },
+              "operations": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/McpOperation"
+                },
+                "minItems": 1,
+                "maxItems": 128
+              },
+              "kind": {
+                "const": "mcp-http"
+              },
+              "url": {
+                "type": "string",
+                "format": "uri",
+                "pattern": "^https://"
+              },
+              "credential_ref": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2048
+              },
+              "ca_file": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2048
+              }
+            },
+            "required": [
+              "id",
+              "limits",
+              "operations",
+              "kind",
+              "url"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
+              },
+              "limits": {
+                "$ref": "#/$defs/ConnectorLimits"
+              },
+              "operations": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/JsonGetOperation"
+                },
+                "minItems": 1,
+                "maxItems": 128
+              },
+              "kind": {
+                "const": "json-get"
+              },
+              "base_url": {
+                "type": "string",
+                "format": "uri",
+                "pattern": "^https://"
+              },
+              "headers": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "credential_ref": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2048
+              },
+              "ca_file": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2048
+              }
+            },
+            "required": [
+              "id",
+              "limits",
+              "operations",
+              "kind",
+              "base_url",
+              "headers"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "maxItems": 32
     }
   }
 }

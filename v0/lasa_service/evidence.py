@@ -168,8 +168,7 @@ def add_dependency_evidence(c, task_id, material, verified_steps):
             and principal["kind"] == "peer"
             and principal["subject"] == authority["principal_id"]
             and principal.get("service_id") == envelope["parent_service_id"]
-            and principal["service_id"]
-            in c.config.document["authorization"]["trusted_delegator_service_ids"]
+            and principal["service_id"] in c.config.policy()["trusted_delegator_service_ids"]
             and envelope["recipient_service_id"]
             == authority["receiver_service_id"]
             == c.config.service_id

@@ -415,11 +415,11 @@
     "expected": "assessment_effect"
   },
   {
-    "id": "config-audience-mismatch",
+    "id": "config-audience-is-derived",
     "file": "config.json",
     "mutations": [
       {
-        "op": "replace",
+        "op": "add",
         "path": [
           "authentication",
           "audience"
@@ -427,7 +427,7 @@
         "value": "https://identity.example.net/services/other"
       }
     ],
-    "expected": "service_identity"
+    "expected": "schema"
   },
   {
     "id": "config-old-routing-name",

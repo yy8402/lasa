@@ -23,9 +23,10 @@ def example(name):
 
 @pytest.fixture
 def registry(tmp_path):
-    source = tmp_path / "registry.json"
-    source.write_text(json.dumps([example("capability-review"), example("capability-attempt")]))
-    publisher = {"namespace": "https://contracts.example.net/capabilities/", "file": source}
+    publisher = {
+        "namespace": "https://contracts.example.net/capabilities/",
+        "definitions": [example("capability-review"), example("capability-attempt")],
+    }
     registry = CapabilityRegistry(
         tmp_path,
         [publisher],
@@ -40,7 +41,7 @@ def registry(tmp_path):
             },
         ],
     )
-    yield registry, source, publisher
+    yield registry, publisher
     registry.close()
 
 
@@ -67,15 +68,13 @@ def test_reject_noncanonical_json(raw):
 
 
 def test_immutable_version_and_publisher_namespace(registry, tmp_path):
-    existing, source, publisher = registry
+    existing, publisher = registry
     original = example("capability-review")
     assert existing.get(reference(original)) == original
     changed = copy.deepcopy(original)
     changed["outcome"] = "Changed semantics"
-    source.write_text(json.dumps([changed]))
     with pytest.raises(LasaError, match="unsupported_contract"):
-        CapabilityRegistry(tmp_path, [publisher])
-    source.write_text(json.dumps([original]))
+        CapabilityRegistry(tmp_path, [{**publisher, "definitions": [changed]}])
     with pytest.raises(LasaError):
         CapabilityRegistry(tmp_path, [{**publisher, "namespace": "https://other.example/"}])
 
@@ -232,11 +231,9 @@ def test_unregistered_contract_cannot_inherit_verifier_by_suffix(tmp_path):
     known = example("capability-review")
     arbitrary = copy.deepcopy(known)
     arbitrary["id"] = "https://contracts.example.net/other/design.review"
-    source = tmp_path / "definitions.json"
-    source.write_text(json.dumps([known, arbitrary]))
     registry = CapabilityRegistry(
         tmp_path,
-        [{"namespace": "https://contracts.example.net/", "file": source}],
+        [{"namespace": "https://contracts.example.net/", "definitions": [known, arbitrary]}],
         [{"contract": reference(known), "verifier_id": "design-review-v1"}],
     )
     try:

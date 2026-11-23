@@ -71,16 +71,19 @@ def documents(tmp_path, layer="layer1", *, peer=False):
         raw["peers"] = []
     raw["service"]["id"] = "https://identity.example.net/services/" + layer
     raw["service"]["base_url"] = "https://" + layer + ".example.net/prefix/lasa/v1"
-    raw["service"]["descriptor_url"] = raw["service"]["base_url"] + "/descriptor"
     raw["service"]["workspace_root"] = str(tmp_path / "workspaces")
     raw["storage"]["data_root"] = str(tmp_path / "private")
     raw["authentication"].pop("jwks_url")
     raw["authentication"]["jwks_file"] = str(tmp_path / "jwks.json")
-    raw["authentication"]["audience"] = raw["service"]["id"]
     (tmp_path / "jwks.json").write_text(json.dumps({"keys": [JWK]}))
-    definitions = [example("capability-review"), example("capability-attempt")]
-    (tmp_path / "contracts.json").write_text(json.dumps(definitions))
-    raw["contract_publishers"][0]["trusted_registry_file"] = str(tmp_path / "contracts.json")
+    (tmp_path / "contracts.json").write_text("[]")
+    raw["contract_publishers"] = [
+        {
+            "namespace": "https://contracts.example.net/capabilities/",
+            "trusted_registry_file": str(tmp_path / "contracts.json"),
+        }
+    ]
+    raw["verifiers"] = []
     raw["limits"]["max_task_budget"].update(
         model_calls=12, model_tokens=48000, delegations=3, wall_time_ms=180000
     )
@@ -100,6 +103,9 @@ def documents(tmp_path, layer="layer1", *, peer=False):
         add_delegation_grant(raw, rule, contract)
     policy = {
         "revision": "policy-1",
+        "trusted_delegator_service_ids": (
+            ["https://identity.example.net/services/layer1"] if layer != "layer1" else []
+        ),
         "principals": [
             {"subject": "alice", "kind": "user", "rules": [copy.deepcopy(rule)]},
             {"subject": "bob", "kind": "user", "rules": []},
@@ -113,20 +119,7 @@ def documents(tmp_path, layer="layer1", *, peer=False):
     }
     (tmp_path / "authorization.json").write_text(json.dumps(policy))
     raw["authorization"]["policy_file"] = str(tmp_path / "authorization.json")
-    raw["authorization"]["trusted_delegator_service_ids"] = (
-        ["https://identity.example.net/services/layer1"] if layer != "layer1" else []
-    )
-    runtime = {
-        "image": "sha256:9c31274cfb568f168c66a8d22d4ebee5737663cb0b36efa40cbf50ce18924d1e",
-        "executable": "/usr/local/bin/codex",
-        "expected_version": "0.169.0-alpha.11.1",
-        "startup_timeout_ms": 10000,
-    }
-    (tmp_path / "runtime.json").write_text(json.dumps(runtime))
-    (tmp_path / "connectors.json").write_text(json.dumps({"connectors": []}))
     for executor in raw["executors"]:
-        executor["runtime_profile_file"] = str(tmp_path / "runtime.json")
-        executor["connector_policy_file"] = str(tmp_path / "connectors.json")
         executor["credential_ref"] = "env:MODEL_KEY"
     raw["discovery_cache"]["page_size"] = 1
     if peer:

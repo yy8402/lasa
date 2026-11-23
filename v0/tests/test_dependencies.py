@@ -24,9 +24,7 @@ def with_reports(raw):
         "limits": {**LIMITS, "schema_refresh_seconds": 30},
         "operations": [operation()],
     }
-    Path(raw["executors"][0]["connector_policy_file"]).write_text(
-        json.dumps({"connectors": [resource]})
-    )
+    raw["executors"][0]["connectors"] = [resource]
     binding = next(
         item for item in raw["bindings"] if item["contract"]["id"].endswith("/task.attempt")
     )
@@ -137,9 +135,7 @@ def test_invalid_private_scope_or_schema_rejected_before_connector_start(tmp_pat
                 }
             ],
         }
-    Path(raw["executors"][0]["connector_policy_file"]).write_text(
-        json.dumps({"connectors": [resource]})
-    )
+    raw["executors"][0]["connectors"] = [resource]
     with pytest.raises((ValueError, LasaError)) as rejected:
         Configuration.from_document(raw, environ={"MODEL_KEY": "test-model-key"})
     if change == "remote-schema":

@@ -38,21 +38,24 @@ def installed(python, target, project, files, ssh=False):
         import hashlib,json,os,sqlite3,subprocess,sys
         from pathlib import Path
         import lasa_service
+        from lasa_service.config import effective_document,packaged_defaults
         target=Path(TARGET)
         actual=check_installed_files(PROJECT,FILES)
         layer='layer2' if os.uname().sysname=='Linux' else 'layer1'
         folder=target/layer
         config=json.loads((folder/'config.json').read_text())
         assert json.loads((folder/'steady-config.json').read_text())==config
+        config=effective_document(config,packaged_defaults())
         with sqlite3.connect('file:'+str(folder/'private/tasks.sqlite3')+'?mode=ro',uri=True) as db:
             states=dict(db.execute('select state,count(*) from tasks group by state'))
         assert all(state in {'completed','failed','rejected','cancelled','indeterminate'} for state in states)
-        hashes={name:hashlib.sha256((folder/name).read_bytes()).hexdigest() for name in ['config.json','authorization.json','contracts.json','connectors.json','runtime.json']}
+        policy=folder/config["authorization"]["policy_file"]
+        hashes={item.name:hashlib.sha256(item.read_bytes()).hexdigest() for item in [folder/"config.json", policy]}
         tokens={p.name:oct(p.stat().st_mode&0o777) for p in folder.glob('*-token.txt')}
-        runtime=json.loads((folder/'runtime.json').read_text())
+        runtime=config['runtime']
         containers=subprocess.check_output(['docker','ps','-aq','--filter','label=com.lasa.service_id='+config['service']['id']],text=True).split()
         assert not containers,'Owned task containers remain'
-        result={'package_version':lasa_service.__version__,'module_path':lasa_service.__file__,'installed_files':actual,'configuration_hashes':hashes,'deployment_revision':config['service']['deployment_revision'],'routing':config['routing'],'has_peer':'peer' in config,'task_states':states,'token_file_modes':tokens,'owned_task_containers':containers,'runtime_image':runtime['image']}
+        result={'package_version':lasa_service.__version__,'module_path':lasa_service.__file__,'installed_files':actual,'configuration_hashes':hashes,'deployment_revision':config['service']['deployment_revision'],'routing':config['routing'],'has_peer':bool(config.get('peers')),'task_states':states,'token_file_modes':tokens,'owned_task_containers':containers,'runtime_image':runtime['image']}
         if layer=='layer2':
             entry=target/'connectors/filesystem/node_modules/@modelcontextprotocol/server-filesystem/dist/index.js'
             assert entry.is_file() and not entry.with_suffix('.js.lasa-verification-offline').exists()

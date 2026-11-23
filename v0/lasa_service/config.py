@@ -4,17 +4,94 @@ import copy
 import os
 import ssl
 from dataclasses import dataclass, field
+from functools import cache
 from importlib.resources import files
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
+from . import __version__
+from .capabilities import reference
+from .connector_schema import check_schema, validate
 from .contracts import digest, parse_json, protocol_contracts
 from .grants import grant_key
 
 
+class ConfigurationError(ValueError):
+    pass
+
+
 def require(condition, message):
     if not condition:
-        raise ValueError(message)
+        raise ConfigurationError(message)
+
+
+@cache
+def packaged_defaults():
+    return parse_json(files("lasa_service").joinpath("config_defaults.json").read_bytes())
+
+
+@cache
+def builtin_capabilities():
+    root = files("lasa_contracts").joinpath("examples")
+    return {
+        name: (parse_json(root.joinpath(f"capability-{file}.json").read_bytes()), verifier)
+        for name, file, verifier in [
+            ("design.review", "review", "design-review-v1"),
+            ("task.attempt", "attempt", "task-attempt-v1"),
+            ("documents.read", "documents-read", "documents-read-v1"),
+            ("documents.search", "documents-search", "documents-search-v1"),
+            ("repository.inspect", "repository-inspect", "repository-inspect-v1"),
+        ]
+    }
+
+
+BUILTIN_NAMESPACE = "https://contracts.example.net/capabilities/"
+LOCAL_BUILTINS = {
+    "design.review": (["read"], ["workspace.read"]),
+    "task.attempt": (["read", "create", "update"], ["workspace.read", "workspace.write"]),
+}
+
+
+def local_bindings(published, executor_id):
+    return [
+        {
+            "binding_id": "binding-" + name,
+            "contract": ref,
+            "executor_id": executor_id,
+            "approved_resources": [{"resource": "workspace:self", "actions": list(actions)}],
+            "allowed_effects": list(effects),
+            "required_operations": [],
+        }
+        for name, (actions, effects) in LOCAL_BUILTINS.items()
+        if (ref := reference(builtin_capabilities()[name][0])) in published
+    ]
+
+
+def effective_document(manifest, defaults):
+    document = copy.deepcopy(manifest)
+    for section in ("service", "runtime", "limits", "discovery_cache", "storage", "routing"):
+        document[section] = copy.deepcopy(defaults[section]) | document.get(section, {})
+    document.setdefault("default_executor", document["executors"][0]["id"])
+    document.setdefault("peers", [])
+    document.setdefault("contract_publishers", [])
+    document["published_contracts"] = [
+        reference(builtin_capabilities()[entry][0]) if isinstance(entry, str) else entry
+        for entry in document.get("published_contracts", defaults["published_contracts"])
+    ]
+    require(
+        len({digest(ref) for ref in document["published_contracts"]})
+        == len(document["published_contracts"]),
+        "Duplicate published contract",
+    )
+    if "bindings" not in document:
+        document["bindings"] = local_bindings(
+            document["published_contracts"], document["default_executor"]
+        )
+    for executor in document["executors"]:
+        executor.setdefault("connectors", [])
+    for peer in document["peers"]:
+        peer.setdefault("request_timeout_seconds", defaults["peer_timeout_seconds"])
+    return document
 
 
 def validate_url(url):
@@ -52,24 +129,39 @@ class Configuration:
     document: dict
     environ: dict = field(repr=False)
     prompts: dict[str, str] = field(repr=False)
+    publishers: list = field(repr=False)
     secrets: dict = field(default_factory=dict, repr=False)
     connectors: dict = field(default_factory=dict, repr=False)
 
     @classmethod
     def load(cls, path, *, environ=None):
-        return cls.from_document(parse_json(Path(path).read_bytes()), environ=environ)
+        path = Path(path).absolute()
+        return cls.from_document(
+            parse_json(path.read_bytes()), environ=environ, base_dir=path.parent
+        )
 
     @classmethod
-    def from_document(cls, document, *, environ=None):
-        document = copy.deepcopy(document)
+    def from_document(cls, document, *, environ=None, base_dir=None):
         contracts = protocol_contracts()
         contracts.validate("Config", document)
-        validate_url(document["service"]["base_url"])
-        require(
-            document["service"]["descriptor_url"]
-            == document["service"]["base_url"].rstrip("/") + "/descriptor",
-            "Descriptor URL must be the protocol base URL followed by /descriptor",
-        )
+        document = effective_document(document, packaged_defaults())
+        base_dir = Path.cwd() if base_dir is None else Path(base_dir).absolute()
+
+        def artifact(value):
+            return str(base_dir / value)
+
+        service = document["service"]
+        validate_url(service["id"])
+        validate_url(service["base_url"])
+        service["base_url"] = service["base_url"].rstrip("/")
+        authn = document["authentication"]
+        validate_url(authn["issuer"])
+        if "jwks_file" in authn:
+            authn["jwks_file"] = artifact(authn["jwks_file"])
+        else:
+            validate_url(authn["jwks_url"])
+        authz = document["authorization"]
+        authz["policy_file"] = artifact(authz["policy_file"])
         require(
             Path(document["storage"]["data_root"]).is_absolute()
             and Path(document["service"]["workspace_root"]).is_absolute(),
@@ -81,18 +173,18 @@ class Configuration:
             data != workspace and data not in workspace.parents and workspace not in data.parents,
             "Private and workspace roots overlap",
         )
-        if tls := document["storage"].get("tls"):
+        tls = document["storage"].get("tls")
+        require(
+            document["storage"]["listen_host"] == "127.0.0.1" or tls,
+            "TLS certificate and key are required for a non-loopback listener",
+        )
+        if tls:
             require(
                 all(Path(path).is_absolute() for path in tls.values()), "TLS paths must be absolute"
             )
-        require(
-            document["authentication"]["audience"] == document["service"]["id"],
-            "Invalid receiver audience",
-        )
-        ids = {document["service"]["id"]}
+        ids = {service["id"]}
         for peer in document["peers"]:
-            require(peer["expected_service_id"] != document["service"]["id"], "Self peer")
-            require(peer["expected_service_id"] not in ids, "Duplicate peer service ID")
+            require(peer["expected_service_id"] not in ids, "Duplicate or self peer service ID")
             ids.add(peer["expected_service_id"])
             require(
                 within_url(peer["descriptor_url"], peer["allowed_base_url"]),
@@ -104,23 +196,44 @@ class Configuration:
         else:
             prompt_path = files("lasa_service").joinpath("prompts.json")
         prompts = contracts.validate("Prompts", parse_json(prompt_path.read_bytes()))
-        config = cls(document, dict(os.environ if environ is None else environ), prompts)
+
+        builtins = builtin_capabilities()
+        publishers = [
+            {
+                "namespace": BUILTIN_NAMESPACE,
+                "definitions": [value[0] for value in builtins.values()],
+            }
+        ]
+        for publisher in document["contract_publishers"]:
+            path = Path(artifact(publisher["trusted_registry_file"]))
+            publisher["trusted_registry_file"] = str(path)
+            definitions = parse_json(path.read_bytes())
+            require(isinstance(definitions, list), "Contract registry must contain a JSON array")
+            publishers.append({"namespace": publisher["namespace"], "definitions": definitions})
+        document["verifiers"] = [
+            {"contract": reference(definition), "verifier_id": verifier}
+            for definition, verifier in builtins.values()
+        ] + document.get("verifiers", [])
+
+        config = cls(
+            document, dict(os.environ if environ is None else environ), prompts, publishers
+        )
+        if "deployment_revision" not in service:
+            service["deployment_revision"] = f"{__version__}-{config.revision[7:23]}"
         executor_ids = [x["id"] for x in document["executors"]]
         require(len(executor_ids) == len(set(executor_ids)), "Duplicate executor IDs")
+        require(document["default_executor"] in executor_ids, "Unknown default_executor")
         operation_owners = {}
         executor_operations = {}
-        from .connector_schema import check_schema
 
         for executor in document["executors"]:
             validate_url(executor["provider_base_url"])
             if ca_file := executor.get("provider_ca_file"):
                 require(Path(ca_file).is_absolute(), "Provider CA path must be absolute")
-            config.secret(executor["credential_ref"])
-            config.read_private("RuntimeProfile", executor["runtime_profile_file"])
-            policy = config.read_private("ConnectorPolicy", executor["connector_policy_file"])
+            config.secret(executor["credential_ref"], label=f"Executor {executor['id']}")
             operations = set()
             connector_ids = set()
-            for resource in policy["connectors"]:
+            for resource in executor["connectors"]:
                 require(resource["id"] not in connector_ids, "Duplicate connector ID")
                 connector_ids.add(resource["id"])
                 old = config.connectors.get(resource["id"])
@@ -171,8 +284,6 @@ class Configuration:
                         )
                         validate_url(operation["url"])
                         schemas.append(operation["response_schema"])
-                        from .connector_schema import validate
-
                         validate(operation["input_schema"], operation["probe_arguments"])
                         validate(operation["argument_constraints"], operation["probe_arguments"])
                     elif operation["upstream_output_schema"] is not None:
@@ -206,7 +317,7 @@ class Configuration:
                     "Binding cannot authorize its required operation",
                 )
         for peer in config.peers:
-            config.secret(peer["credential_ref"])
+            config.secret(peer["credential_ref"], label="Peer credential")
         config.policy()
         return config
 
@@ -216,22 +327,42 @@ class Configuration:
 
     @property
     def revision(self):
-        return digest(self.document)
+        service = {
+            key: value
+            for key, value in self.document["service"].items()
+            if key != "deployment_revision"
+        }
+        return digest(
+            {
+                "manifest": {**self.document, "service": service},
+                "publishers": self.publishers,
+                "prompts": self.prompts,
+            }
+        )
 
     @property
     def service_id(self):
         return self.document["service"]["id"]
 
     @property
+    def descriptor_url(self):
+        return self.document["service"]["base_url"] + "/descriptor"
+
+    @property
     def peers(self):
         return self.document["peers"]
 
-    def secret(self, reference):
+    def secret(self, reference, *, label="Credential"):
         self.check_secret_reference(reference)
         kind, _, name = reference.partition(":")
         if kind == "file" or reference not in self.secrets:
-            value = self.environ.get(name) if kind == "env" else Path(name).read_text().strip()
-            require(isinstance(value, str) and bool(value), "Missing secret")
+            try:
+                value = self.environ.get(name) if kind == "env" else Path(name).read_text().strip()
+            except (OSError, UnicodeError):
+                raise ConfigurationError(f"{label}: cannot read secret file {name}") from None
+            require(
+                isinstance(value, str) and bool(value.strip()), f"{label}: missing secret {name}"
+            )
             self.secrets[reference] = value
         return self.secrets[reference]
 
@@ -241,13 +372,9 @@ class Configuration:
         require(separator and name and kind in {"env", "file"}, "Unsupported secret reference")
         require(kind != "file" or Path(name).is_absolute(), "Secret file path must be absolute")
 
-    def read_private(self, name, path):
-        return self.contracts.validate(name, parse_json(Path(path).read_bytes()))
-
     def policy(self):
-        policy = self.read_private(
-            "AuthorizationPolicy", self.document["authorization"]["policy_file"]
-        )
+        path = Path(self.document["authorization"]["policy_file"])
+        policy = self.contracts.validate("AuthorizationPolicy", parse_json(path.read_bytes()))
         subjects = [x["subject"] for x in policy["principals"]]
         require(len(subjects) == len(set(subjects)), "Duplicate policy subjects")
         for principal in policy["principals"]:
@@ -259,7 +386,7 @@ class Configuration:
         return policy
 
     def executor(self, binding=None):
-        executor_id = binding["executor_id"] if binding else self.document["executors"][0]["id"]
+        executor_id = binding["executor_id"] if binding else self.document["default_executor"]
         return next(x for x in self.document["executors"] if x["id"] == executor_id)
 
     def provider_verify(self, executor):

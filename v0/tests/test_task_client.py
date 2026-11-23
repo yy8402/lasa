@@ -17,9 +17,7 @@ async def test_runnable_client_uses_target_api_over_real_https(services, tmp_pat
     async with live_http(app, tls=tls) as origin:
         c = app.state.coordinator
         prefix = "/prefix/lasa/v1"
-        c.config.document["service"].update(
-            base_url=origin + prefix, descriptor_url=origin + prefix + "/descriptor"
-        )
+        c.config.document["service"].update(base_url=origin + prefix)
         env = {**os.environ, "LASA_ACCESS_TOKEN": token(audience=c.config.service_id)}
         process = await asyncio.create_subprocess_exec(
             sys.executable,

@@ -33,9 +33,14 @@ class Authentication:
                         raise ValueError("JWKS too large")
                     content.extend(chunk)
                 document = parse_json(content)
+        if not isinstance(document, dict) or not isinstance(document.get("keys"), list):
+            raise ValueError("Expected a JWKS object with a keys array")
         for key in document["keys"]:
             if (
-                key.get("alg") not in settings["allowed_algorithms"]
+                not isinstance(key, dict)
+                or not isinstance(key.get("kid"), str)
+                or not key["kid"]
+                or key.get("alg") not in settings["allowed_algorithms"]
                 or key.get("use", "sig") != "sig"
                 or key["kid"] in self.keys
             ):
@@ -62,7 +67,7 @@ class Authentication:
                 token,
                 key,
                 algorithms=settings["allowed_algorithms"],
-                audience=settings["audience"],
+                audience=self.config.service_id,
                 issuer=settings["issuer"],
                 options={"require": ["iss", "sub", "aud", "exp", "iat", "jti"], "strict_aud": True},
             )
@@ -146,7 +151,7 @@ class Authorization:
                 and principal.get("service_id") == envelope["parent_service_id"]
                 and envelope["recipient_service_id"] == self.config.service_id
                 and principal["service_id"]
-                in self.config.document["authorization"]["trusted_delegator_service_ids"],
+                in self.config.policy()["trusted_delegator_service_ids"],
                 "authority_denied",
                 403,
             )

@@ -44,9 +44,7 @@ async def test_registered_mcp_tool_runs_through_actual_stdio_and_authority(servi
             }
         ],
     }
-    Path(raw["executors"][0]["connector_policy_file"]).write_text(
-        json.dumps({"connectors": [resource]})
-    )
+    raw["executors"][0]["connectors"] = [resource]
     binding = next(x for x in raw["bindings"] if x["contract"]["id"].endswith("/task.attempt"))
     binding["allowed_effects"].append("external.read")
     binding["required_operations"] = ["reports.inspect"]

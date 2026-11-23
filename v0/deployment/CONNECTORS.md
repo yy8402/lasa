@@ -1,6 +1,6 @@
 # Managed application and MCP integration release
 
-Release 1.1.0 uses protocol `lasa/1.1`. Both layers use Codex App Server with gpt-5.5 at `https://api.openai.com/v1/`. Deployment acceptance is complete. Both managed services are running in their intended steady profile. The finite checklist and retained observations are in [ACCEPTANCE.md](../verification/connectors-20261119/ACCEPTANCE.md).
+This report records the 1.1.0 connector rollout with protocol `lasa/1.1`. Both layers ran Codex App Server with gpt-5.5 at `https://api.openai.com/v1/` and passed acceptance in the intended steady profile. The checklist and retained observations are in [ACCEPTANCE.md](../verification/connectors-20261119/ACCEPTANCE.md). See the [managed deployment report](DEPLOYMENT.md) for the active Docker services.
 
 ## Public outcomes and private fulfillment
 
@@ -36,7 +36,7 @@ v0/.venv/bin/python v0/run_task.py \
 
 Use `architecture.md` or `capabilities.md` for the other approved LASA documents. For the public integrations, select `documents.search` with `{"collection":"python-sdk-root","query":"read","limit":5}`, or `repository.inspect` with `{"repository":"modelcontextprotocol/python-sdk"}`. Content diagnostics require separate receiver permission; metadata diagnostics remain available without that content permission.
 
-`prepare_connectors.py` staged the initial connector policies and approved document corpus. Use the [managed release tool](DEPLOYMENT.md#release-upgrades-and-rollback) to update both installed backends. `run_service.py` imports the installed package in isolated Python mode. `verify_deployed.py` creates a session, submits a typed task, and records actual model/tool/child traces. Use a distinct case name for each observation.
+`prepare_connectors.py` staged the initial connector policies and approved document corpus. The [historical wheel rollout](DEPLOYMENT.md#historical-wheel-rollout-and-rollback) used the launchd and systemd services. `run_service.py` imports the installed package in isolated Python mode. `verify_deployed.py` creates a session, submits a typed task, and records actual model/tool/child traces. Use a distinct case name for each observation.
 
 ## Acceptance evidence
 
@@ -55,7 +55,7 @@ Use `architecture.md` or `capabilities.md` for the other approved LASA documents
 
 Final wheel SHA-256: `45e5f26c1b1ac59d015e5df2befa5446eed8b87e110c1bf0c1952389a84a12fd`. Both service revisions are `connectors-20261119-45e5f26c1b1a-steady`. The pinned Codex carrier/root filesystem, private CA, workspace stores and signing keys were retained. Layer 2 runs the isolated Node 24.22.3 runtime and filesystem server 2.4.0. Final per-host configuration/policy/runtime hashes and task dispositions are recorded in the inventory.
 
-Layer 1's three delegation-only offers report availability `unknown` until a task evaluates the peer path; availability reads do not recursively query neighboring services. Their claims remain visible. Layer 2 currently reports all five outcomes `available`.
+Layer 1's three delegation-only offers report availability `unknown` until a task evaluates the peer path; availability reads do not recursively query neighboring services. Their claims remain visible. At 1.1.0 acceptance, layer 2 reported all five outcomes `available`.
 
 Finished operations from actual traces:
 

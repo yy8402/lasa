@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 
 from lasa_service.capabilities import reference
-from lasa_service.config import Configuration
+from lasa_service.config import Configuration, effective_document, packaged_defaults
 
 ROOT = Path(__file__).resolve().parents[1]
 TARGET = ROOT / ".deploy/target"
@@ -231,59 +231,20 @@ def main():
         directory = TARGET / layer
         stage = STAGE / layer
         config = read(directory / "config.json")
-        config["executors"] = [
-            {
-                **{
-                    key: value
-                    for key, value in executor.items()
-                    if key
-                    in {
-                        "id",
-                        "kind",
-                        "model",
-                        "provider_base_url",
-                        "credential_ref",
-                        "runtime_profile_file",
-                    }
-                },
-                "connector_policy_file": str(directory / "connectors.json"),
-            }
-            for executor in config["executors"]
-        ]
-        config["bindings"] = [
-            {
-                **{
-                    key: value
-                    for key, value in binding.items()
-                    if key
-                    in {
-                        "binding_id",
-                        "contract",
-                        "executor_id",
-                        "approved_resources",
-                        "allowed_effects",
-                    }
-                },
-                "required_operations": [],
-            }
-            for binding in config["bindings"]
-            if binding["contract"]["id"].endswith(("/design.review", "/task.attempt"))
-        ]
-        config["published_contracts"] = [*config["published_contracts"][:2], *refs]
-        config["verifiers"] = [
-            *config["verifiers"][:2],
-            *[
-                {"contract": ref, "verifier_id": profile[1]}
-                for ref, profile in zip(refs, profiles, strict=True)
-            ],
-        ]
+        executor_id = config.get("default_executor", config["executors"][0]["id"])
+        if layer == "layer2":
+            executor = next(x for x in config["executors"] if x["id"] == executor_id)
+            executor["connectors"] = policy["connectors"]
+        effective = effective_document(config, packaged_defaults())
+        config["bindings"] = effective["bindings"]
+        config["published_contracts"] = [*effective["published_contracts"], *refs]
         if layer == "layer2":
             for ref, (_, _, operations, resources) in zip(refs, profiles, strict=True):
                 config["bindings"].append(
                     {
                         "binding_id": "binding-" + ref["id"].rsplit("/", 1)[1],
                         "contract": ref,
-                        "executor_id": config["executors"][0]["id"],
+                        "executor_id": executor_id,
                         "approved_resources": [
                             {"resource": item, "actions": ["read"]} for item in resources
                         ],
@@ -291,7 +252,7 @@ def main():
                         "required_operations": operations,
                     }
                 )
-        authorization = read(directory / "authorization.json")
+        authorization = read(directory / config["authorization"]["policy_file"])
         authorization["revision"] = "readonly-connectors-20261119"
         for principal in authorization["principals"]:
             for rule in principal["rules"]:
@@ -322,18 +283,14 @@ def main():
                     for peer in config["peers"]
                     for contract in config["published_contracts"]
                 ]
-        registry = read(directory / "contracts.json")
-        registry = [
-            value for value in registry if value["id"].endswith(("/design.review", "/task.attempt"))
-        ] + definitions
-        write(stage / "connectors.json", policy if layer == "layer2" else {"connectors": []})
-        write(stage / "contracts.json", registry)
+        config["authorization"]["policy_file"] = "authorization.json"
         write(stage / "authorization.json", authorization)
         write(stage / "config.json", config)
-        # Validate staged private policy and bindings against the runtime schemas.
         checked = copy.deepcopy(config)
-        checked["executors"][0]["connector_policy_file"] = str(stage / "connectors.json")
-        Configuration.from_document(checked, environ={"LASA_MODEL_API_KEY": "offline-validation"})
+        checked["authorization"]["policy_file"] = str(stage / "authorization.json")
+        Configuration.from_document(
+            checked, base_dir=directory, environ={"LASA_MODEL_API_KEY": "offline-validation"}
+        )
     write(ROOT / "verification/connectors-20261119/documents.json", hashes)
     print(
         json.dumps(

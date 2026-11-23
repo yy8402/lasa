@@ -4,7 +4,6 @@ from pathlib import Path
 import httpx
 import pytest
 
-from lasa_service.capabilities import reference
 from lasa_service.contracts import digest
 
 from .conftest import (
@@ -50,7 +49,7 @@ class DownstreamTransport(httpx.AsyncBaseTransport):
 def peer_settings(service, credential_ref):
     return {
         "expected_service_id": service["id"],
-        "descriptor_url": service["descriptor_url"],
+        "descriptor_url": service["base_url"].rstrip("/") + "/descriptor",
         "allowed_base_url": service["base_url"],
         "credential_ref": credential_ref,
         "authorization_ref": "default",
@@ -141,12 +140,12 @@ async def test_two_peers_scope_each_step_and_recover_lost_responses(
     downstream = workers[second].state.coordinator
     reviews, checklists, checks = [], [], []
 
-    async def assess_parent(task_id, purpose, payload, schema):
+    async def assess_parent(task_id, purpose, payload, schema, *, candidate_output, **_):
         material = payload["trusted_execution_evidence"]
         dependencies = material.get("dependencies", [])
-        if payload["contract"]["id"].endswith("/design.review"):
+        if payload["contract"]["ref"]["id"].endswith("/design.review"):
             assert dependencies == []
-            reviews.append((reference(payload["contract"]), payload["candidate_output"]))
+            reviews.append((payload["contract"]["ref"], candidate_output))
         else:
             contract, review_output = reviews[0]
             expected = [
@@ -169,7 +168,7 @@ async def test_two_peers_scope_each_step_and_recover_lost_responses(
                         "service_id": parent.config.service_id,
                         "task_id": task_id,
                         "step_id": "step-main",
-                        "contract": reference(payload["contract"]),
+                        "contract": payload["contract"]["ref"],
                         "executor": "peer",
                         "depends_on": ["step-review"],
                         "output_digest": digest(checklists[0]),
@@ -177,12 +176,12 @@ async def test_two_peers_scope_each_step_and_recover_lost_responses(
                     }
                 )
             else:
-                checklists.append(payload["candidate_output"])
+                checklists.append(candidate_output)
             assert dependencies == expected
             checks.append(("parent", material["step_id"]))
         return {"passed": True, "reason": "Verified against the recorded workflow evidence."}
 
-    async def assess_downstream(task_id, purpose, payload, schema):
+    async def assess_downstream(task_id, purpose, payload, schema, **_):
         request = downstream.request(task_id)
         envelope = request["delegation"]
         (dependency,) = payload["trusted_execution_evidence"]["dependencies"]
@@ -269,9 +268,9 @@ async def test_onward_grants_preserve_ancestry_and_decrement_hops(services, tmp_
         ref for ref in root["published_contracts"] if ref["id"].endswith("/task.attempt")
     )
     middle_id = middle["service"]["id"]
-    leaf["authorization"]["trusted_delegator_service_ids"] = [middle_id]
     leaf_policy_path = Path(leaf["authorization"]["policy_file"])
     leaf_policy = json.loads(leaf_policy_path.read_text())
+    leaf_policy["trusted_delegator_service_ids"] = [middle_id]
     leaf_policy["principals"][2].update(subject="peer-layer2", service_id=middle_id)
     leaf_policy_path.write_text(json.dumps(leaf_policy))
     _, leaf_app = await services(raw=leaf)

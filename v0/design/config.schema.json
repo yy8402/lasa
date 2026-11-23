@@ -2,7 +2,7 @@
   "type": "object",
   "properties": {
     "config_version": {
-      "const": "1.0"
+      "const": "2.0"
     },
     "prompts_file": {
       "description": "Optional absolute path to the administrator's complete prompt file.",
@@ -29,12 +29,6 @@
           "pattern": "^https://",
           "maxLength": 2048
         },
-        "descriptor_url": {
-          "type": "string",
-          "format": "uri",
-          "pattern": "^https://",
-          "maxLength": 2048
-        },
         "publish_api_catalog": {
           "type": "boolean"
         },
@@ -51,12 +45,7 @@
       },
       "required": [
         "id",
-        "deployment_revision",
-        "base_url",
-        "descriptor_url",
-        "publish_api_catalog",
-        "workspace_root",
-        "session_retention_seconds"
+        "base_url"
       ],
       "additionalProperties": false
     },
@@ -64,12 +53,6 @@
       "type": "object",
       "properties": {
         "issuer": {
-          "type": "string",
-          "format": "uri",
-          "pattern": "^https://",
-          "maxLength": 2048
-        },
-        "audience": {
           "type": "string",
           "format": "uri",
           "pattern": "^https://",
@@ -96,12 +79,12 @@
         },
         "jwks_file": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Public issuer keys. Relative paths resolve beside config.json."
         }
       },
       "required": [
         "issuer",
-        "audience",
         "allowed_algorithms"
       ],
       "additionalProperties": false,
@@ -131,30 +114,15 @@
     "authorization": {
       "type": "object",
       "properties": {
-        "resolver_id": {
-          "type": "string",
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
-        },
         "policy_file": {
           "type": "string",
           "minLength": 1,
-          "maxLength": 2048
-        },
-        "trusted_delegator_service_ids": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "format": "uri",
-            "pattern": "^https://",
-            "maxLength": 2048
-          },
-          "uniqueItems": true
+          "maxLength": 2048,
+          "description": "Receiver-owned policy. Relative paths resolve beside config.json."
         }
       },
       "required": [
-        "resolver_id",
-        "policy_file",
-        "trusted_delegator_service_ids"
+        "policy_file"
       ],
       "additionalProperties": false
     },
@@ -180,8 +148,7 @@
           "trusted_registry_file"
         ],
         "additionalProperties": false
-      },
-      "minItems": 1
+      }
     },
     "executors": {
       "type": "array",
@@ -191,9 +158,6 @@
           "id": {
             "type": "string",
             "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
-          },
-          "kind": {
-            "const": "codex-app-server"
           },
           "model": {
             "type": "string",
@@ -215,25 +179,15 @@
             "minLength": 1,
             "maxLength": 2048
           },
-          "runtime_profile_file": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 2048
-          },
-          "connector_policy_file": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 2048
+          "connectors": {
+            "$ref": "private.schema.json#/$defs/Connectors"
           }
         },
         "required": [
           "id",
-          "kind",
           "model",
           "provider_base_url",
-          "credential_ref",
-          "connector_policy_file",
-          "runtime_profile_file"
+          "credential_ref"
         ],
         "additionalProperties": false
       },
@@ -248,7 +202,20 @@
     "published_contracts": {
       "type": "array",
       "items": {
-        "$ref": "contracts.schema.json#/$defs/CapabilityRef"
+        "anyOf": [
+          {
+            "enum": [
+              "design.review",
+              "task.attempt",
+              "documents.read",
+              "documents.search",
+              "repository.inspect"
+            ]
+          },
+          {
+            "$ref": "contracts.schema.json#/$defs/CapabilityRef"
+          }
+        ]
       },
       "uniqueItems": true
     },
@@ -295,21 +262,26 @@
           "maximum": 300
         }
       },
-      "required": [
-        "max_task_budget",
-        "assessment_budget",
-        "integration_reserve",
-        "max_hops",
-        "max_children",
-        "max_plan_steps",
-        "max_active_tasks",
-        "max_clock_skew_seconds",
-        "reconciliation_timeout_seconds"
-      ],
+      "required": [],
       "additionalProperties": false
     },
     "routing": {
-      "$ref": "contracts.schema.json#/$defs/RoutingPolicy"
+      "type": "object",
+      "properties": {
+        "preferred_executor": {
+          "enum": [
+            "local",
+            "peer"
+          ]
+        },
+        "unclaimed_peer_fallback": {
+          "enum": [
+            "reject",
+            "attempt"
+          ]
+        }
+      },
+      "additionalProperties": false
     },
     "discovery_cache": {
       "type": "object",
@@ -335,12 +307,7 @@
           "maximum": 100
         }
       },
-      "required": [
-        "descriptor_max_age_seconds",
-        "catalog_max_age_seconds",
-        "availability_max_age_seconds",
-        "page_size"
-      ],
+      "required": [],
       "additionalProperties": false
     },
     "storage": {
@@ -351,7 +318,10 @@
           "minLength": 1
         },
         "listen_host": {
-          "enum": ["127.0.0.1", "0.0.0.0"]
+          "enum": [
+            "127.0.0.1",
+            "0.0.0.0"
+          ]
         },
         "listen_port": {
           "type": "integer",
@@ -361,21 +331,24 @@
         "tls": {
           "type": "object",
           "properties": {
-            "certificate_file": {"type": "string", "minLength": 1},
-            "key_file": {"type": "string", "minLength": 1}
+            "certificate_file": {
+              "type": "string",
+              "minLength": 1
+            },
+            "key_file": {
+              "type": "string",
+              "minLength": 1
+            }
           },
-          "required": ["certificate_file", "key_file"],
+          "required": [
+            "certificate_file",
+            "key_file"
+          ],
           "additionalProperties": false
         }
       },
-      "required": [
-        "data_root",
-        "listen_host",
-        "listen_port"
-      ],
-      "additionalProperties": false,
-      "if": {"properties": {"listen_host": {"const": "0.0.0.0"}}},
-      "then": {"required": ["tls"]}
+      "required": [],
+      "additionalProperties": false
     },
     "verifiers": {
       "type": "array",
@@ -452,11 +425,32 @@
           "expected_service_id",
           "allowed_base_url",
           "credential_ref",
-          "authorization_ref",
-          "request_timeout_seconds"
+          "authorization_ref"
         ],
         "additionalProperties": false
       }
+    },
+    "default_executor": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
+    },
+    "runtime": {
+      "type": "object",
+      "properties": {
+        "image": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "startup_timeout_ms": {
+          "type": "integer",
+          "minimum": 1000,
+          "maximum": 60000
+        }
+      },
+      "required": [
+        "image"
+      ],
+      "additionalProperties": false
     }
   },
   "required": [
@@ -464,19 +458,27 @@
     "service",
     "authentication",
     "authorization",
-    "contract_publishers",
     "executors",
-    "bindings",
-    "published_contracts",
-    "limits",
-    "routing",
-    "discovery_cache",
-    "storage",
-    "verifiers",
-    "peers"
+    "runtime"
   ],
   "additionalProperties": false,
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.example.net/lasa/1.2/config.schema.json",
-  "title": "Private LASA target configuration; not prototype configuration"
+  "title": "LASA service deployment manifest",
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "executors": {
+            "minItems": 2
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "default_executor"
+        ]
+      }
+    }
+  ]
 }

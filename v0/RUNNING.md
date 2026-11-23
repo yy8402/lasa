@@ -1,62 +1,78 @@
 # Running the target service
 
-For the installed local Mac/air188 system, use [the managed deployment instructions](deployment/DEPLOYMENT.md), including the private token-file reference, trusted CA, and launchd/systemd commands. The instructions below provision an independent configuration.
+## Provision an installed service
 
-Use Python 3.11+ and Docker. All source and tests are in `v0`; commands below start at the checkout root.
+Install the LASA wheel with its production dependencies. The supervisor needs a Docker daemon and the matching Codex worker image. From the source distribution or checkout, build the worker and get the immutable image ID from the daemon that will run the workers.
+
+```sh
+docker build -t lasa-codex:target-v1 v0
+lasa_worker_image=$(docker image inspect --format '{{.Id}}' lasa-codex:target-v1)
+```
+
+Create one manifest and one receiver policy. This example assumes TLS terminates at a proxy and the issuer uses ES256. Choose the service identity once and use it as the JWT audience. Supply a public JWKS URL or use `--jwks-file` for a local public key set.
+
+```sh
+lasa config init --output /etc/lasa \
+  --service-id https://identity.example.net/services/review \
+  --base-url https://review.example.net/lasa/v1 \
+  --issuer https://identity.example.net \
+  --jwks-url https://identity.example.net/.well-known/jwks.json \
+  --image "$lasa_worker_image" \
+  --model YOUR_MODEL_ID --provider-url https://provider.example.net/v1 \
+  --credential-ref file:/run/secrets/lasa-model-key
+```
+
+The initial policy denies access until the administrator adds issuer subjects and grants. Pass `--operator-subject SUBJECT` to generate a read-only `design.review` grant for one subject. `--jwt-algorithm` can be repeated for an issuer with multiple allowed algorithms. Keep signing keys at the issuer. Mount the model key at the referenced path or inject it via an `env:NAME` reference. The scaffold creates the two JSON files exclusively with owner-only permissions.
+
+Before startup, run the check as the service user with the same mounts, credentials, and Docker access. It validates the effective manifest, bindings, policy, secret references, TLS files, JWKS, and installed worker image and version. It leaves the service store untouched and sends no model or peer requests. `--offline` skips Docker and remote JWKS access and still checks local artifacts.
+
+```sh
+lasa config check --config /etc/lasa/config.json
+lasa --config /etc/lasa/config.json
+```
+
+[Compact example](design/examples/config-no-peer.json) · [Manifest schema](design/config.schema.json) · [Packaged defaults](lasa_service/config_defaults.json)
+
+The manifest defaults to a loopback listener on port `8787`, local execution, and built-in review and task attempt capability definitions. It derives the descriptor URL and deployment revision. The state directories default to `/var/lib/lasa/private` and `/var/lib/lasa/workspaces`. Create writable locations for the service user or set `--state-root` during init. Use one service process per private store. Policy and local JWKS paths can be relative to the manifest. Use absolute paths for state roots and secret files.
+
+Manifest v2 takes effect on restart. Replace the receiver policy atomically to apply grant changes to subsequent authorization checks. File-based credentials are reread on use. Environment secrets and issuer keys loaded at startup require a restart to refresh. The [managed deployment report](deployment/DEPLOYMENT.md) records the Docker rollout on the Mac and air188 and its live dependent-workflow verification.
+
+### Isolated development
+
+For local experiments that need test JWTs, use [the development generator](tools/create_development_config.py) with Python dependencies installed in the checkout. It generates a development issuer, public JWKS, and 24-hour test tokens under an empty output directory. Use the normal issuer and receiver policy for an installed service.
 
 ```sh
 uv sync --project v0 --frozen
-docker build --build-arg CODEX_VERSION=0.169.0-alpha.11.1 -t lasa-codex:target-v1 v0
-docker image inspect --format '{{.Id}}' lasa-codex:target-v1
-```
-
-Use the resulting immutable `sha256:...` ID when generating configuration. Runtime startup verifies the image and exact Codex version. The container has no network and a read-only workspace mount; authorized workspace writes pass through the durable LASA broker. An execution binding without workspace-read permission receives an empty mounted workspace.
-
-Generate an isolated development configuration in an empty directory:
-
-```sh
 uv run --project v0 python v0/tools/create_development_config.py \
-  --output /absolute/path/to/LASA/v0/.local-target \
+  --output /absolute/path/to/lasa-dev \
   --base-url https://localhost:8443/lasa/v1 \
   --service-id https://identity.example.net/services/development \
-  --image sha256:REPLACE_WITH_IMAGE_ID
+  --image "$lasa_worker_image"
 ```
-
-The generator writes an administrator-controlled development signing key, public JWKS, private operator token, authority policy, immutable definition registry, runtime/tool profiles, and service configuration. Private files use mode `0600`. Its tokens expire after 24 hours. For normal operation configure your pretrusted issuer/JWKS and receiver policy instead of relying on development signing keys. No token or API key is printed.
-
-Supply the model key using the configured environment reference, or use the existing private credential loader:
-
-```sh
-uv run --project v0 python v0/deployment/run_service.py \
-  --config /absolute/path/to/LASA/v0/.local-target/config.json \
-  --credentials /absolute/private/credentials.json
-```
-
-The credential JSON contains environment-variable names mapped to secret values. Its owner and mode are checked. The default generated model reference is `env:LASA_MODEL_API_KEY`. The generator binds the backend to `127.0.0.1` for use with a TLS proxy. The service can also terminate TLS directly.
 
 ## Running LASA in Docker
 
 Build the supervisor image after building the Codex worker image above:
 
 ```sh
-docker build -f v0/Dockerfile.service -t lasa-service:1.2.2 v0
+docker build -f v0/Dockerfile.service -t lasa-service:1.3.1 v0
 ```
 
 The image installs LASA and its locked production dependencies. It runs `lasa --config /etc/lasa/config.json` by default. For a bridge-network listener, set `storage.listen_host` to `0.0.0.0` and set `storage.tls.certificate_file` and `storage.tls.key_file` to the absolute paths of your server certificate and key. The certificate must cover the hostname in `service.base_url`. A model provider with private TLS can set `executors[].provider_ca_file` to its CA bundle. Peers use their own `ca_file` setting.
 
-Mount the generated configuration and writable state at the same absolute paths inside the supervisor and on the Docker host. The daemon resolves those paths when creating sibling Codex containers. Run the supervisor as the state directory owner and give it access to the daemon socket. The task containers receive their scoped workspace and runtime mounts.
+Mount the manifest and receiver policy read-only where practical. Mount writable state and workspace directories at the same absolute paths inside the supervisor and on the Docker host. The daemon resolves those paths when creating sibling Codex containers. Run the supervisor as the state directory owner and give it access to the daemon socket. The task containers receive their scoped workspace and runtime mounts.
 
 ```sh
 lasa_directory=/absolute/path/to/lasa-config
 lasa_socket=/var/run/docker.sock
 lasa_socket_group=$(docker run --rm --network none \
   --mount "type=bind,source=$lasa_socket,target=/var/run/docker.sock" \
-  --entrypoint stat lasa-service:1.2.2 -c '%g' /var/run/docker.sock)
+  --entrypoint stat lasa-service:1.3.1 -c '%g' /var/run/docker.sock)
 docker run --rm --user "$(id -u):$(id -g)" --group-add "$lasa_socket_group" \
   --mount "type=bind,source=$lasa_socket,target=/var/run/docker.sock" \
   --mount "type=bind,source=$lasa_directory,target=$lasa_directory" \
   --publish 127.0.0.1:8443:8787 \
-  lasa-service:1.2.2 --config "$lasa_directory/config.json"
+  lasa-service:1.3.1 --config "$lasa_directory/config.json"
 ```
 
 This example assumes the generated port `8787`, an HTTPS base URL on `localhost:8443`, and a model `credential_ref` pointing to a private file under the mounted directory.
@@ -71,7 +87,7 @@ The check creates a private Docker network with one parent, two downstream LASA 
 
 ## Model service and prompts
 
-In `config.json`, set `executors[].model` to the model ID, `provider_base_url` to the provider's HTTPS API base URL, and `credential_ref` to `env:NAME` or `file:/absolute/private/key.txt`. LASA appends `/responses`, so use a provider that supports the OpenAI Responses API, including structured outputs and streamed tool calls for Codex execution. Local task steps use the executor selected by their binding. Planning, verification, and unbound integration use the first executor. Each LASA peer has its own configuration.
+In `config.json`, set `executors[].model` to the model ID, `provider_base_url` to the provider's HTTPS API base URL, and `credential_ref` to `env:NAME` or `file:/absolute/private/key.txt`. LASA appends `/responses`, so use a provider that supports the OpenAI Responses API, including structured outputs and streamed tool calls for Codex execution. Local task steps use the executor selected by their binding. Set `default_executor` explicitly when configuring multiple executors. Planning, verification, and unbound integration use that executor. Each LASA peer has its own configuration.
 
 The bundled [prompts.json](lasa_service/prompts.json) contains all eight LASA-authored instruction templates used for planning, verification, execution, source retrieval, result integration, and fallback conversion. To customize them, copy that file to a private location and set the top-level `"prompts_file": "/absolute/path/to/prompts.json"` in `config.json`. LASA validates and loads the entire file when it starts. Keep all eight keys and the `{purpose}` placeholder in `assessment_developer`, then restart the service to apply edits. LASA supplies task inputs, contracts, and evidence at runtime. Codex App Server supplies its own built-in instructions.
 
@@ -92,9 +108,9 @@ The script discovers caller-visible offers, creates a session, submits typed inp
 
 `--diagnostics content` additionally requires receiver policy permission. Metadata is always recorded. Content traces exclude service keys, private developer/system prompts, and hidden reasoning; truncation retains operation headers and digests. Child traces are retrieved by the parent using its own credentials, which are never returned to the caller.
 
-To configure two layers, generate layer 2 with `--trusted-parent-id` and `--trusted-parent-subject`. Give layer 1 the descriptor URL, expected service ID, and a private reference to a JWT issued for that layer-2 peer subject using `--peer-descriptor`, `--peer-service-id`, and `--peer-credential-ref`. For additional delegates, add entries in downstream preference order to `peers` and authorize each exact sender, receiver, and contract in `delegation_grants`. Configure and authorize the parent workload separately on each receiver. An empty `peers` list enables local-only execution. [Multi-peer delegation](design/multi-peer-delegation.md)
+To delegate, add `peers` entries in preference order. Each entry names the downstream descriptor URL, expected service ID, allowed base URL, receiver-scoped credential reference and authorization reference. Use its `ca_file` for private TLS. The sender’s receiver policy grants the exact sender, receiver and contract in `delegation_grants`. The downstream policy names the sender in `trusted_delegator_service_ids` and maps the workload subject to that service ID with its own grants. [Multi-peer delegation](design/multi-peer-delegation.md)
 
-The private files have closed schemas in `design/private.schema.json`. One private `ConnectorPolicy.connectors` registry supports stdio MCP, Streamable HTTP MCP, and fixed HTTPS JSON GET application operations. Operations pin schemas and approved read-only resource effects. Binding `required_operations` defines both dependency readiness and the operation allowlist. The three source profiles assemble exact output fields from immutable operation-result artifacts before independent semantic verification. See [the connector design](design/connectors.md) and [managed connector verification](deployment/CONNECTORS.md). External-write bindings are rejected. Offer minimum budgets include required assessment/verification allocations; use smaller integration reserves for a leaf that only needs local verification. A generic attempt can report inability and does not claim expertise or missing access.
+List additional built-in capabilities by name in `published_contracts`. LASA accepts exact contract references for custom registry entries and validates those against the configured publisher and verifier. Define connector operations in `executors[].connectors`, and use explicit `bindings` with `required_operations` for source-backed capabilities. An explicit bindings list selects all local bindings for that service. See the [connector design](design/connectors.md) and the [advanced manifest example](design/examples/config.json) for the policy and binding structure.
 
 After a lost acknowledgment, reuse the same operation ID and idempotency key. `GET /operations/{operation_id}` reconciles the original receipt without creating work. An uncertain terminal task remains immutable; `POST /tasks/{task_id}/reconcile` can append a resolution event. Do not resubmit uncertain effectful work as a new task automatically.
 The task client prints each operation ID before sending its request so you can look up either receipt after a lost acknowledgment.

@@ -5,13 +5,16 @@ import argparse
 import json
 import os
 import time
-from importlib.resources import files
 from pathlib import Path
 from uuid import uuid4
 
 import jwt
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
+
+from lasa_service.capabilities import reference
+from lasa_service.config import builtin_capabilities, packaged_defaults
+from lasa_service.provisioning import initial_manifest, write_scaffold
 
 
 def main():
@@ -41,33 +44,6 @@ def main():
     peer = any([args.peer_descriptor, args.peer_service_id, args.peer_credential_ref])
     if peer and not all([args.peer_descriptor, args.peer_service_id, args.peer_credential_ref]):
         parser.error("Configure all three peer arguments together")
-    examples = files("lasa_contracts").joinpath("examples")
-    config = json.loads(examples.joinpath("config.json").read_text())
-
-    def save(name, value):
-        path = root / name
-        with path.open("x") as out:
-            json.dump(value, out, indent=2)
-            out.write("\n")
-        path.chmod(0o600)
-        return str(path)
-
-    contracts = [
-        json.loads(examples.joinpath("capability-" + name + ".json").read_text())
-        for name in ["review", "attempt"]
-    ]
-    config["service"].update(
-        id=args.service_id,
-        base_url=args.base_url.rstrip("/"),
-        descriptor_url=args.base_url.rstrip("/") + "/descriptor",
-        workspace_root=str(root / "workspaces"),
-        deployment_revision="development-" + uuid4().hex,
-    )
-    config["storage"] = {
-        "data_root": str(root / "private"),
-        "listen_host": "127.0.0.1",
-        "listen_port": args.listen_port,
-    }
     key = ec.generate_private_key(ec.SECP256R1())
     public = json.loads(jwt.algorithms.ECAlgorithm.to_jwk(key.public_key())) | {
         "kid": "development-key",
@@ -75,12 +51,30 @@ def main():
         "alg": "ES256",
     }
     issuer = args.service_id.rstrip("/") + "/development-issuer"
-    config["authentication"] = {
-        "issuer": issuer,
-        "audience": args.service_id,
-        "jwks_file": save("jwks.json", {"keys": [public]}),
-        "allowed_algorithms": ["ES256"],
+    (root / "jwks.json").write_text(json.dumps({"keys": [public]}) + "\n")
+    config = initial_manifest(
+        service_id=args.service_id,
+        base_url=args.base_url,
+        issuer=issuer,
+        jwks={"jwks_file": "jwks.json"},
+        algorithms=["ES256"],
+        image=args.image,
+        model="gpt-5.5",
+        provider_url="https://api.openai.com/v1/",
+        credential_ref="env:" + args.model_key_env,
+    )
+    config["service"]["workspace_root"] = str(root / "workspaces")
+    config["storage"] = {"data_root": str(root / "private"), "listen_port": args.listen_port}
+    config["routing"] = {"preferred_executor": "peer", "unclaimed_peer_fallback": "attempt"}
+    config["peers"] = []
+    defaults = packaged_defaults()
+    config["limits"] = {
+        name: dict(defaults["limits"][name])
+        for name in ("max_task_budget", "assessment_budget", "integration_reserve")
     }
+    contracts = [
+        reference(builtin_capabilities()[name][0]) for name in defaults["published_contracts"]
+    ]
     keypath = root / "signing-key.pem"
     keypath.write_bytes(
         key.private_bytes(
@@ -122,12 +116,12 @@ def main():
     )
     rule = {
         "authorization_ref": "default",
-        "contracts": config["published_contracts"],
+        "contracts": contracts,
         "resources": [{"resource": "workspace:self", "actions": ["read", "create", "update"]}],
         "effects": ["workspace.read", "workspace.write"],
         "delegation_grants": [],
         "budget": budget,
-        "max_hops": config["limits"]["max_hops"],
+        "max_hops": defaults["limits"]["max_hops"],
         "content_diagnostics": False,
     }
     if peer:
@@ -140,7 +134,7 @@ def main():
                 "resources": rule["resources"],
                 "disclosure_resources": [resource["resource"] for resource in rule["resources"]],
             }
-            for contract in config["published_contracts"]
+            for contract in contracts
         ]
     principals = [{"subject": "operator", "kind": "user", "rules": [rule]}]
     if args.trusted_parent_id:
@@ -153,30 +147,11 @@ def main():
             }
         )
         issue(args.trusted_parent_subject, "peer-token.txt")
-    config["authorization"] = {
-        "resolver_id": "receiver-policy",
-        "policy_file": save(
-            "authorization.json", {"revision": "policy-1", "principals": principals}
-        ),
+    authorization = {
+        "revision": "policy-1",
+        "principals": principals,
         "trusted_delegator_service_ids": [args.trusted_parent_id] if args.trusted_parent_id else [],
     }
-    config["contract_publishers"][0]["trusted_registry_file"] = save("contracts.json", contracts)
-    runtime = save(
-        "runtime.json",
-        {
-            "image": args.image,
-            "executable": "/usr/local/bin/codex",
-            "expected_version": "0.169.0-alpha.11.1",
-            "startup_timeout_ms": 10000,
-        },
-    )
-    tools = save("connectors.json", {"connectors": []})
-    for executor in config["executors"]:
-        executor.update(
-            runtime_profile_file=runtime,
-            connector_policy_file=tools,
-            credential_ref="env:" + args.model_key_env,
-        )
     if peer:
         settings = {
             "descriptor_url": args.peer_descriptor,
@@ -189,12 +164,7 @@ def main():
         if args.peer_ca_file:
             settings["ca_file"] = str(Path(args.peer_ca_file).resolve())
         config["peers"] = [settings]
-    else:
-        config["peers"] = []
-    from lasa_service.contracts import Contracts
-
-    Contracts().validate("Config", config)
-    save("config.json", config)
+    write_scaffold(root, config, authorization)
     print("Configuration: " + str(root / "config.json"))
     print(
         "Development token files are private and expire after 24 hours; use a configured issuer for normal operation."

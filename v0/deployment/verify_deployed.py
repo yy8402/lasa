@@ -32,20 +32,21 @@ async def run(args):
     source = json.loads((target / "layer1/config.json").read_text())
     # Reuse the pinned client trust settings without configuring a service self-peer.
     source["service"]["id"] += "/verification-client"
-    source["authentication"]["audience"] = source["service"]["id"]
     layer = "layer" + str(args.layer)
     receiver = json.loads((target / layer / "steady-config.json").read_text())
     token_file = (
         target / layer / ("metadata-token.txt" if args.deny_content else "operator-token.txt")
     )
     source["peers"][0].update(
-        descriptor_url=receiver["service"]["descriptor_url"],
+        descriptor_url=receiver["service"]["base_url"].rstrip("/") + "/descriptor",
         expected_service_id=receiver["service"]["id"],
         allowed_base_url=receiver["service"]["base_url"],
         credential_ref="file:" + str(token_file),
     )
     cfg = Configuration.from_document(
-        source, environ={"LASA_MODEL_API_KEY": "client-does-not-query-provider"}
+        source,
+        base_dir=target / "layer1",
+        environ={"LASA_MODEL_API_KEY": "client-does-not-query-provider"},
     )
     peer = PeerClient(cfg, cfg.peers[0])
     await peer.start()

@@ -19,6 +19,7 @@ from pathlib import Path
 import httpx
 
 from lasa_service import __version__
+from lasa_service.config import effective_document, packaged_defaults
 
 ROOT = Path(__file__).resolve().parents[1]
 TARGET = ROOT / ".deploy/target"
@@ -74,11 +75,14 @@ def main():
         else "reject",
     }
     if args.profile.startswith("fallback"):
+        defaults = packaged_defaults()
+        first_bindings = effective_document(first, defaults)["bindings"]
+        second_contracts = effective_document(second, defaults)["published_contracts"]
         first["bindings"] = [
-            x for x in first["bindings"] if x["contract"]["id"].endswith("/task.attempt")
+            x for x in first_bindings if x["contract"]["id"].endswith("/task.attempt")
         ]
         second["published_contracts"] = [
-            x for x in second["published_contracts"] if x["id"].endswith("/task.attempt")
+            x for x in second_contracts if x["id"].endswith("/task.attempt")
         ]
     package = sha(
         (ROOT / f"verification/dist/lasa_service_v0-{__version__}-py3-none-any.whl").read_bytes()
@@ -120,15 +124,16 @@ def main():
                 timeout=50,
             )
             data = remote_data
+        effective = effective_document(config, packaged_defaults())
         changes.append(
             {
                 "layer": layer,
                 "before_staging_sha256": before,
                 "deployed_config_sha256": sha(data.encode()),
                 "deployment_revision": config["service"]["deployment_revision"],
-                "routing": config["routing"],
-                "published_contracts": copy.deepcopy(config["published_contracts"]),
-                "local_binding_contracts": [x["contract"] for x in config["bindings"]],
+                "routing": effective["routing"],
+                "published_contracts": copy.deepcopy(effective["published_contracts"]),
+                "local_binding_contracts": [x["contract"] for x in effective["bindings"]],
             }
         )
     subprocess.run(
