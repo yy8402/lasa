@@ -34,6 +34,10 @@ For `A → B → C`, C inherits `[A, B]`. Its outbound path is `[A, B, C]`, so i
 
 Descriptor, catalog, and availability requests answer from receiver-owned state. An offer that depends on a downstream peer can report `unknown` without triggering another peer lookup. When independently submitted tasks compete for peer capacity, return a capacity rejection within the admission deadline. [Existing ancestry and hop rules](execution.md#delegation-envelope-and-budgets)
 
+## Workload authentication
+
+Configure authentication for each outgoing peer independently of the sender's incoming authentication mode. JWT peers use the signed token's issuer, subject, and audience as their workload pin. Static-token peers use the configured subject, caller service ID, and receiver service ID. Each static peer request includes the SHA-256 digest of that identity in `LASA-Workload-Identity`. The receiver recomputes it from the principal authenticated by the bearer token and its own service ID before processing the request. A replacement token that authenticates a different principal fails before mutation. Both modes use the same delegation grants and receiver policy.
+
 ## Failure recovery
 
 Persist the selected service ID, negotiated protocol and endpoint, expected authenticated workload identity, and session and task operation identities in the private child record. Keep credential material in private configuration. Persist the exact task request and a submission-started marker before the first task POST. The envelope links the canonical request core. Receipt and idempotency checks use the digest of the full request, including the envelope. This ordering covers a crash between sending a request and saving its response. Credential rotation can preserve the original receiver and caller identities.

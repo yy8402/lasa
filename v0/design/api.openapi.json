@@ -1306,8 +1306,7 @@
       "workloadBearer": {
         "type": "http",
         "scheme": "bearer",
-        "bearerFormat": "JWT",
-        "description": "Receiver validates preconfigured issuer, audience, subject, expiry and algorithm. Discovery does not grant task authority."
+        "description": "JWT is the default. Services can also accept opaque bearer tokens. An opaque peer credential must accompany a LASA-Workload-Identity header matching the authenticated caller and receiver. Both modes resolve callers through receiver-owned policy."
       }
     },
     "schemas": {

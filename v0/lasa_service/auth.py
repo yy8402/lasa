@@ -1,14 +1,79 @@
-"""Pretrusted workload JWT verification and receiver-owned policy resolution."""
+"""Bearer credential verification and receiver-owned policy resolution."""
 
 import asyncio
+import hmac
+import re
+import time
 from pathlib import Path
 
 import httpx
 import jwt
 
-from .contracts import digest, parse_json
+from .contracts import digest, parse_json, protocol_contracts
 from .errors import LasaError
 from .grants import grant_key, intersect_grants
+
+
+def jwt_workload_identity(token, expected_service_id):
+    """Read the outbound identity pin. Only the receiver verifies the signature."""
+    header = jwt.get_unverified_header(token)
+    claims = jwt.decode(token, options={"verify_signature": False})
+    identity = {key: claims.get(key) for key in ("iss", "sub", "aud")}
+    if (
+        header.get("alg") not in ("ES256", "EdDSA", "RS256")
+        or not token.rsplit(".", 1)[-1]
+        or not all(isinstance(value, str) and value for value in identity.values())
+        or identity["aud"] != expected_service_id
+    ):
+        raise ValueError("Invalid peer JWT identity")
+    return identity
+
+
+WORKLOAD_IDENTITY_HEADER = "LASA-Workload-Identity"
+
+
+def validate_static_token(token):
+    if not re.fullmatch(r"[A-Za-z0-9_-]{43,128}", token):
+        raise ValueError("Invalid static token")
+
+
+def static_workload_identity(subject, caller_service_id, receiver_service_id):
+    return {
+        "mode": "static_token",
+        "sub": subject,
+        "service_id": caller_service_id,
+        "aud": receiver_service_id,
+    }
+
+
+def peer_workload_identity(token, peer, sender_service_id):
+    authentication = peer.get("authentication", {"mode": "jwt"})
+    receiver_service_id = peer["expected_service_id"]
+    if authentication["mode"] == "jwt":
+        return jwt_workload_identity(token, receiver_service_id)
+    validate_static_token(token)
+    return static_workload_identity(
+        authentication["subject"], sender_service_id, receiver_service_id
+    )
+
+
+def static_token_digest(service_id, token):
+    return digest([service_id, token])
+
+
+STATIC_TOKEN_REGISTRY_MAX_BYTES = 131072
+
+
+def read_static_tokens(path):
+    with Path(path).open("rb") as source:
+        data = source.read(STATIC_TOKEN_REGISTRY_MAX_BYTES + 1)
+    if len(data) > STATIC_TOKEN_REGISTRY_MAX_BYTES:
+        raise ValueError("Static token registry is too large")
+    registry = protocol_contracts().validate("StaticTokenRegistry", parse_json(data))
+    tokens = registry["tokens"]
+    if len({entry["digest"] for entry in tokens}) != len(tokens):
+        raise ValueError("Duplicate static token digest")
+    return registry
 
 
 class Authentication:
@@ -18,6 +83,9 @@ class Authentication:
 
     async def start(self):
         settings = self.config.document["authentication"]
+        if self.config.auth_mode == "static_token":
+            await asyncio.to_thread(read_static_tokens, settings["tokens_file"])
+            return
         if "jwks_file" in settings:
             document = parse_json(await asyncio.to_thread(Path(settings["jwks_file"]).read_bytes))
         else:
@@ -49,39 +117,68 @@ class Authentication:
         if not self.keys:
             raise ValueError("No signing keys")
 
-    def authenticate(self, authorization):
+    def authenticate_headers(self, headers):
+        return self.authenticate(
+            headers.get("Authorization"), workload_pin=headers.get(WORKLOAD_IDENTITY_HEADER)
+        )
+
+    def authenticate(self, authorization, *, workload_pin=None):
         try:
             if not authorization or not authorization.startswith("Bearer "):
                 raise ValueError("missing token")
             token = authorization[7:]
-            header = jwt.get_unverified_header(token)
-            settings = self.config.document["authentication"]
-            if header.get("alg") not in settings["allowed_algorithms"] or any(
-                k in header for k in ["jku", "x5u", "crit"]
-            ):
-                raise ValueError("untrusted token header")
-            key = self.keys[header["kid"]]
-            if key.algorithm_name != header["alg"]:
-                raise ValueError("algorithm mismatch")
-            claims = jwt.decode(
-                token,
-                key,
-                algorithms=settings["allowed_algorithms"],
-                audience=self.config.service_id,
-                issuer=settings["issuer"],
-                options={"require": ["iss", "sub", "aud", "exp", "iat", "jti"], "strict_aud": True},
-            )
+            if self.config.auth_mode == "static_token":
+                subject, expiry = self.static_identity(token)
+            else:
+                subject, expiry = self.jwt_identity(token)
             principal = next(
-                p for p in self.config.policy()["principals"] if p["subject"] == claims["sub"]
+                p for p in self.config.policy()["principals"] if p["subject"] == subject
             )
+            if self.config.auth_mode == "static_token" and principal["kind"] == "peer":
+                identity = static_workload_identity(
+                    subject, principal["service_id"], self.config.service_id
+                )
+                if not hmac.compare_digest(workload_pin or "", digest(identity)):
+                    raise ValueError("Static peer credential does not match the workload pin")
+            elif workload_pin is not None:
+                raise ValueError("Unexpected static peer workload pin")
             return {
                 "subject": principal["subject"],
                 "kind": principal["kind"],
                 **({"service_id": principal["service_id"]} if "service_id" in principal else {}),
-                "token_expiry": claims["exp"],
+                "token_expiry": expiry,
             }
-        except (jwt.PyJWTError, ValueError, KeyError, StopIteration, TypeError):
+        except (jwt.PyJWTError, LasaError, OSError, ValueError, KeyError, StopIteration, TypeError):
             raise LasaError("authority_denied", 401) from None
+
+    def jwt_identity(self, token):
+        header = jwt.get_unverified_header(token)
+        settings = self.config.document["authentication"]
+        if header.get("alg") not in settings["allowed_algorithms"] or any(
+            k in header for k in ["jku", "x5u", "crit"]
+        ):
+            raise ValueError("untrusted token header")
+        key = self.keys[header["kid"]]
+        if key.algorithm_name != header["alg"]:
+            raise ValueError("algorithm mismatch")
+        claims = jwt.decode(
+            token,
+            key,
+            algorithms=settings["allowed_algorithms"],
+            audience=self.config.service_id,
+            issuer=settings["issuer"],
+            options={"require": ["iss", "sub", "aud", "exp", "iat", "jti"], "strict_aud": True},
+        )
+        return claims["sub"], claims["exp"]
+
+    def static_identity(self, token):
+        validate_static_token(token)
+        candidate = static_token_digest(self.config.service_id, token)
+        registry = read_static_tokens(self.config.document["authentication"]["tokens_file"])
+        entry = next(e for e in registry["tokens"] if hmac.compare_digest(e["digest"], candidate))
+        if entry["expires_at"] <= time.time():
+            raise ValueError("Expired static token")
+        return entry["subject"], entry["expires_at"]
 
 
 class Authorization:
@@ -105,8 +202,6 @@ class Authorization:
         return digest({"policy": self.config.policy()["revision"], "rules": self.rules(principal)})
 
     def resolve(self, principal, request, offer, registry, *, deadline_ceiling=None):
-        import time
-
         from .capabilities import epoch, instant, require
         from .contracts import request_digest
 

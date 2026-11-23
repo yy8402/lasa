@@ -50,64 +50,91 @@
       "additionalProperties": false
     },
     "authentication": {
-      "type": "object",
-      "properties": {
-        "issuer": {
-          "type": "string",
-          "format": "uri",
-          "pattern": "^https://",
-          "maxLength": 2048
-        },
-        "jwks_url": {
-          "type": "string",
-          "format": "uri",
-          "pattern": "^https://",
-          "maxLength": 2048
-        },
-        "allowed_algorithms": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "enum": [
-              "ES256",
-              "EdDSA",
-              "RS256"
-            ]
-          },
-          "minItems": 1,
-          "uniqueItems": true
-        },
-        "jwks_file": {
-          "type": "string",
-          "minLength": 1,
-          "description": "Public issuer keys. Relative paths resolve beside config.json."
-        }
-      },
-      "required": [
-        "issuer",
-        "allowed_algorithms"
-      ],
-      "additionalProperties": false,
       "oneOf": [
         {
+          "type": "object",
+          "properties": {
+            "mode": {
+              "const": "jwt",
+              "default": "jwt"
+            },
+            "issuer": {
+              "type": "string",
+              "format": "uri",
+              "pattern": "^https://",
+              "maxLength": 2048
+            },
+            "jwks_url": {
+              "type": "string",
+              "format": "uri",
+              "pattern": "^https://",
+              "maxLength": 2048
+            },
+            "allowed_algorithms": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "ES256",
+                  "EdDSA",
+                  "RS256"
+                ]
+              },
+              "minItems": 1,
+              "uniqueItems": true
+            },
+            "jwks_file": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Public issuer keys. Relative paths resolve beside config.json."
+            }
+          },
           "required": [
-            "jwks_url"
+            "issuer",
+            "allowed_algorithms"
           ],
-          "not": {
-            "required": [
-              "jwks_file"
-            ]
-          }
+          "additionalProperties": false,
+          "oneOf": [
+            {
+              "required": [
+                "jwks_url"
+              ],
+              "not": {
+                "required": [
+                  "jwks_file"
+                ]
+              }
+            },
+            {
+              "required": [
+                "jwks_file"
+              ],
+              "not": {
+                "required": [
+                  "jwks_url"
+                ]
+              }
+            }
+          ]
         },
         {
+          "type": "object",
+          "properties": {
+            "mode": {
+              "const": "static_token"
+            },
+            "tokens_file": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2048,
+              "description": "Standalone credential registry. Relative paths resolve beside config.json."
+            }
+          },
           "required": [
-            "jwks_file"
+            "mode",
+            "tokens_file"
           ],
-          "not": {
-            "required": [
-              "jwks_url"
-            ]
-          }
+          "additionalProperties": false
         }
       ]
     },
@@ -404,6 +431,25 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 2048
+          },
+          "authentication": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {"mode": {"const": "jwt"}},
+                "required": ["mode"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "mode": {"const": "static_token"},
+                  "subject": {"type": "string", "minLength": 1}
+                },
+                "required": ["mode", "subject"],
+                "additionalProperties": false
+              }
+            ]
           },
           "authorization_ref": {
             "type": "string",

@@ -216,46 +216,67 @@ def check_provisioning():
             auth = Authentication(config)
             await auth.start()
             if auth.authenticate("Bearer " + token)["subject"] != "operator":
-                raise ValueError("Installed package did not authenticate the development token")
+                raise ValueError("Installed package did not authenticate the expected operator")
 
         asyncio.run(authenticate())
 
         cli = [sys.executable, "-I", "-m", "lasa_service.cli", "config"]
+        smoke_env = {**os.environ, "LASA_MODEL_API_KEY": "package-smoke-only"}
+        common = [
+            "--service-id",
+            config.service_id,
+            "--base-url",
+            config.document["service"]["base_url"],
+            "--image",
+            "sha256:" + "0" * 64,
+            "--model",
+            "release-check",
+            "--provider-url",
+            "https://model.example.net/v1",
+            "--state-root",
+            str(folder / "state"),
+            "--operator-subject",
+            "operator",
+        ]
+
+        def config_command(*args):
+            subprocess.run(
+                [*cli, *args],
+                env=smoke_env,
+                check=True,
+                capture_output=True,
+                timeout=10,
+            )
+
         official = folder / "official"
-        subprocess.run(
-            [
-                *cli,
-                "init",
-                "--output",
-                str(official),
-                "--service-id",
-                config.service_id,
-                "--base-url",
-                config.document["service"]["base_url"],
-                "--issuer",
-                config.document["authentication"]["issuer"],
-                "--jwks-file",
-                str(folder / "jwks.json"),
-                "--image",
-                "sha256:" + "0" * 64,
-                "--model",
-                "release-check",
-                "--provider-url",
-                "https://model.example.net/v1",
-                "--state-root",
-                str(official / "state"),
-            ],
-            check=True,
-            capture_output=True,
-            timeout=10,
+        config_command(
+            "init",
+            "--output",
+            str(official),
+            *common,
+            "--issuer",
+            config.document["authentication"]["issuer"],
+            "--jwks-file",
+            str(folder / "jwks.json"),
         )
-        subprocess.run(
-            [*cli, "check", "--config", str(official / "config.json"), "--offline"],
-            env={**os.environ, "LASA_MODEL_API_KEY": "package-smoke-only"},
-            check=True,
-            capture_output=True,
-            timeout=10,
+        config_command("check", "--config", str(official / "config.json"), "--offline")
+        static = folder / "static"
+        static_config = str(static / "config.json")
+        caller_token = folder / "caller-token.txt"
+        config_command("init", "--output", str(static), *common, "--auth-mode", "static_token")
+        config_command(
+            "issue-token",
+            "--config",
+            static_config,
+            "--subject",
+            "operator",
+            "--output",
+            str(caller_token),
         )
+        config_command("check", "--config", static_config, "--offline")
+        config = Configuration.load(static_config, environ=smoke_env)
+        token = caller_token.read_text().strip()
+        asyncio.run(authenticate())
 
 
 def main():

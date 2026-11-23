@@ -9,7 +9,10 @@ from importlib.resources import files
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
+import jwt
+
 from . import __version__
+from .auth import peer_workload_identity
 from .capabilities import reference
 from .connector_schema import check_schema, validate
 from .contracts import digest, parse_json, protocol_contracts
@@ -71,6 +74,7 @@ def effective_document(manifest, defaults):
     document = copy.deepcopy(manifest)
     for section in ("service", "runtime", "limits", "discovery_cache", "storage", "routing"):
         document[section] = copy.deepcopy(defaults[section]) | document.get(section, {})
+    document["authentication"].setdefault("mode", "jwt")
     document.setdefault("default_executor", document["executors"][0]["id"])
     document.setdefault("peers", [])
     document.setdefault("contract_publishers", [])
@@ -155,11 +159,14 @@ class Configuration:
         validate_url(service["base_url"])
         service["base_url"] = service["base_url"].rstrip("/")
         authn = document["authentication"]
-        validate_url(authn["issuer"])
-        if "jwks_file" in authn:
-            authn["jwks_file"] = artifact(authn["jwks_file"])
+        if authn["mode"] == "static_token":
+            authn["tokens_file"] = artifact(authn["tokens_file"])
         else:
-            validate_url(authn["jwks_url"])
+            validate_url(authn["issuer"])
+            if "jwks_file" in authn:
+                authn["jwks_file"] = artifact(authn["jwks_file"])
+            else:
+                validate_url(authn["jwks_url"])
         authz = document["authorization"]
         authz["policy_file"] = artifact(authz["policy_file"])
         require(
@@ -317,7 +324,13 @@ class Configuration:
                     "Binding cannot authorize its required operation",
                 )
         for peer in config.peers:
-            config.secret(peer["credential_ref"], label="Peer credential")
+            token = config.secret(peer["credential_ref"], label="Peer credential")
+            try:
+                peer_workload_identity(token, peer, config.service_id)
+            except (jwt.PyJWTError, ValueError):
+                raise ConfigurationError(
+                    "Peer credential does not match its configured authentication mode or service ID"
+                ) from None
         config.policy()
         return config
 
@@ -347,6 +360,10 @@ class Configuration:
     @property
     def descriptor_url(self):
         return self.document["service"]["base_url"] + "/descriptor"
+
+    @property
+    def auth_mode(self):
+        return self.document["authentication"]["mode"]
 
     @property
     def peers(self):

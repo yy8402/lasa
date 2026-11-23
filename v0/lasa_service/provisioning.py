@@ -1,15 +1,24 @@
 """Scaffold and check an operator-managed LASA deployment."""
 
 import asyncio
+import fcntl
 import json
 import os
+import secrets
 import ssl
+import tempfile
+import time
 from pathlib import Path
 
 import httpx
 import jwt
 
-from .auth import Authentication
+from .auth import (
+    STATIC_TOKEN_REGISTRY_MAX_BYTES,
+    Authentication,
+    read_static_tokens,
+    static_token_digest,
+)
 from .capabilities import CapabilityRegistry, reference
 from .config import (
     Configuration,
@@ -25,17 +34,18 @@ from .runtime import CodexRuntime
 
 
 def initial_manifest(
-    *, service_id, base_url, issuer, jwks, algorithms, image, model, provider_url, credential_ref
+    *, service_id, base_url, authentication, image, model, provider_url, credential_ref
 ):
-    for url in (service_id, base_url, issuer, provider_url):
+    for url in (service_id, base_url, provider_url):
         validate_url(url)
-    if "jwks_url" in jwks:
-        validate_url(jwks["jwks_url"])
+    for key in ("issuer", "jwks_url"):
+        if key in authentication:
+            validate_url(authentication[key])
     Configuration.check_secret_reference(credential_ref)
     manifest = {
         "config_version": "2.0",
         "service": {"id": service_id, "base_url": base_url},
-        "authentication": {"issuer": issuer, "allowed_algorithms": algorithms, **jwks},
+        "authentication": authentication,
         "authorization": {"policy_file": "authorization.json"},
         "executors": [
             {
@@ -78,9 +88,14 @@ def initial_policy(operator_subject):
 
 def write_scaffold(directory, manifest, policy):
     directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+    documents = {"authorization.json": policy}
+    authentication = manifest["authentication"]
+    if authentication.get("mode") == "static_token":
+        documents[authentication["tokens_file"]] = {"tokens": []}
+    documents["config.json"] = manifest
     created = []
     try:
-        for name, document in (("authorization.json", policy), ("config.json", manifest)):
+        for name, document in documents.items():
             path = directory / name
             try:
                 with path.open("x", encoding="utf-8") as target:
@@ -93,6 +108,58 @@ def write_scaffold(directory, manifest, policy):
         for path in created:
             path.unlink()
         raise
+
+
+def issue_static_token(config, config_directory, subject, output, ttl_hours):
+    require(config.auth_mode == "static_token", "Static tokens require static_token authentication")
+    require(ttl_hours > 0, "Token lifetime must be positive")
+    require(
+        any(principal["subject"] == subject for principal in config.policy()["principals"]),
+        "The token subject needs a principal in the receiver policy",
+    )
+    output = output.resolve()
+    require(
+        not output.is_relative_to(config_directory.resolve()),
+        "Write the caller token outside the server configuration directory",
+    )
+    registry_path = Path(config.document["authentication"]["tokens_file"]).resolve()
+    token = secrets.token_urlsafe(32)
+    now = int(time.time())
+    entry = {
+        "subject": subject,
+        "digest": static_token_digest(config.service_id, token),
+        "expires_at": now + ttl_hours * 3600,
+    }
+    with registry_path.with_name(registry_path.name + ".lock").open("a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        registry = read_static_tokens(registry_path)
+        registry["tokens"] = [
+            record for record in registry["tokens"] if record["expires_at"] > now
+        ] + [entry]
+        protocol_contracts().validate("StaticTokenRegistry", registry)
+        data = (json.dumps(registry, indent=2) + "\n").encode()
+        require(len(data) <= STATIC_TOKEN_REGISTRY_MAX_BYTES, "Static token registry is too large")
+        with output.open("x", encoding="utf-8") as secret_file:
+            try:
+                secret_file.write(token + "\n")
+                secret_file.flush()
+                os.fsync(secret_file.fileno())
+                replace_token_registry(registry_path, data)
+            except BaseException:
+                output.unlink()
+                raise
+
+
+def replace_token_registry(path, data):
+    fd, temporary = tempfile.mkstemp(prefix=".tokens-", dir=path.parent)
+    try:
+        with os.fdopen(fd, "wb") as target:
+            target.write(data)
+            target.flush()
+            os.fsync(target.fileno())
+        os.replace(temporary, path)
+    finally:
+        Path(temporary).unlink(missing_ok=True)
 
 
 def check_storage(settings, service):
@@ -152,11 +219,12 @@ def check_deployment(config, *, offline):
         if "credential_ref" in connector:
             config.secret(connector["credential_ref"], label=label)
 
-    asyncio.run(check_jwks_and_worker(config, offline=offline))
+    asyncio.run(check_authentication_and_worker(config, offline=offline))
 
 
-async def check_jwks_and_worker(config, *, offline):
-    if "jwks_file" in config.document["authentication"] or not offline:
+async def check_authentication_and_worker(config, *, offline):
+    settings = config.document["authentication"]
+    if config.auth_mode == "static_token" or "jwks_file" in settings or not offline:
         try:
             await Authentication(config).start()
         except (
@@ -168,6 +236,8 @@ async def check_jwks_and_worker(config, *, offline):
             httpx.HTTPError,
             jwt.PyJWTError,
         ):
+            if config.auth_mode == "static_token":
+                raise ConfigurationError("Cannot load a valid static token registry") from None
             raise ConfigurationError(
                 "Cannot load valid signing keys from the configured JWKS"
             ) from None

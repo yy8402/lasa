@@ -3,6 +3,7 @@
 import argparse
 import json
 import os
+import secrets
 import ssl
 import subprocess
 import sys
@@ -16,6 +17,8 @@ import httpx
 import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.responses import Response
+
+from lasa_service.auth import static_token_digest
 
 from .http_helpers import certificate
 from .protocol_helpers import sse_final
@@ -81,6 +84,23 @@ def configure(root, name, namespace, runtime):
     subprocess.run(command, check=True, timeout=10)
     cert, key = certificate(directory, dns_name=f"lasa-{name}")
     config = read(directory / "config.json")
+    if name == "review":
+        registry = {"tokens": []}
+        for subject, filename in (
+            ("operator", "operator-token.txt"),
+            ("peer-parent", "peer-token.txt"),
+        ):
+            token = secrets.token_urlsafe(32)
+            (directory / filename).write_text(token + "\n")
+            registry["tokens"].append(
+                {
+                    "subject": subject,
+                    "digest": static_token_digest(config["service"]["id"], token),
+                    "expires_at": int(time.time()) + 3600,
+                }
+            )
+        save(directory / "static-tokens.json", registry)
+        config["authentication"] = {"mode": "static_token", "tokens_file": "static-tokens.json"}
     config["storage"].update(
         listen_host="0.0.0.0", tls={"certificate_file": str(cert), "key_file": str(key)}
     )
@@ -113,6 +133,11 @@ def authorize(root, configs):
                 "ca_file": str(root / "ca.pem"),
             }
         )
+        if name == "review":
+            parent["peers"][-1]["authentication"] = {
+                "mode": "static_token",
+                "subject": "peer-parent",
+            }
         rule["delegation_grants"].append(
             {
                 "sender_service_id": parent["service"]["id"],
@@ -304,6 +329,17 @@ def verify(root):
                 if time.monotonic() >= deadline:
                     raise RuntimeError(f"{name} did not become ready")
                 time.sleep(0.2)
+        review_operator = (root / "review/operator-token.txt").read_text().strip()
+        review = (
+            client.get(
+                base("review") + "/descriptor",
+                headers={"Authorization": "Bearer " + review_operator},
+            )
+            .raise_for_status()
+            .json()
+        )
+        assert review["authentication"]["mode"] == "static_token"
+        assert "bounded-delegation" in review["protocols"][0]["features"]
         descriptor = client.get(base("parent") + "/descriptor").raise_for_status().json()
         protocol = descriptor["protocols"][0]["version"]
         assert protocol == "lasa/1.2", descriptor
@@ -552,7 +588,7 @@ if __name__ == "__main__":
         verify(Path(sys.argv[2]))
     else:
         parser = argparse.ArgumentParser(description=__doc__)
-        parser.add_argument("--service-image", default="lasa-service:1.3.1")
+        parser.add_argument("--service-image", default="lasa-service:1.5.0")
         parser.add_argument("--runtime-image", default="lasa-codex:target-v1")
         parser.add_argument("--docker-socket", type=Path, default=Path("/var/run/docker.sock"))
         with tempfile.TemporaryDirectory(prefix="lasa-container-") as directory:

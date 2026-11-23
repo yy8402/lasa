@@ -29,6 +29,12 @@ class Discovery:
         expiry = instant(
             time.time() + max(1, config["discovery_cache"]["descriptor_max_age_seconds"])
         )
+        authentication = {"mode": "static_token"}
+        if self.config.auth_mode == "jwt":
+            authentication = {
+                "issuer": config["authentication"]["issuer"],
+                "audience": self.config.service_id,
+            }
         value = {
             "descriptor_version": "1.0",
             "service_id": self.config.service_id,
@@ -52,10 +58,7 @@ class Discovery:
                     "required_features": ["metadata-diagnostics", "bounded-delegation"],
                 }
             ],
-            "authentication": {
-                "issuer": config["authentication"]["issuer"],
-                "audience": self.config.service_id,
-            },
+            "authentication": authentication,
             "catalog_url": base + "/capabilities",
             "contract_url_template": base + "/contracts/{digest}",
             "idempotency_retention_seconds": config["service"]["session_retention_seconds"],
@@ -73,7 +76,7 @@ class Discovery:
         headers = {
             "ETag": etag,
             "Cache-Control": f"private, max-age={max_age}, must-revalidate",
-            "Vary": "Authorization, Accept",
+            "Vary": "Authorization, LASA-Workload-Identity, Accept",
         }
         if request.headers.get("If-None-Match") == etag:
             return Response(status_code=304, headers=headers)
@@ -83,7 +86,7 @@ class Discovery:
         base = urlsplit(self.config.document["service"]["base_url"]).path.rstrip("/")
 
         def principal(request):
-            return self.authentication.authenticate(request.headers.get("Authorization"))
+            return self.authentication.authenticate_headers(request.headers)
 
         @app.get(base + "/descriptor")
         async def descriptor(request: Request):

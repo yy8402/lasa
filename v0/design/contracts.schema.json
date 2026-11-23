@@ -771,26 +771,46 @@
           "minItems": 1
         },
         "authentication": {
-          "type": "object",
-          "properties": {
-            "issuer": {
-              "type": "string",
-              "format": "uri",
-              "pattern": "^https://",
-              "maxLength": 2048
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "mode": {
+                  "const": "jwt",
+                  "default": "jwt"
+                },
+                "issuer": {
+                  "type": "string",
+                  "format": "uri",
+                  "pattern": "^https://",
+                  "maxLength": 2048
+                },
+                "audience": {
+                  "type": "string",
+                  "format": "uri",
+                  "pattern": "^https://",
+                  "maxLength": 2048
+                }
+              },
+              "required": [
+                "issuer",
+                "audience"
+              ],
+              "additionalProperties": false
             },
-            "audience": {
-              "type": "string",
-              "format": "uri",
-              "pattern": "^https://",
-              "maxLength": 2048
+            {
+              "type": "object",
+              "properties": {
+                "mode": {
+                  "const": "static_token"
+                }
+              },
+              "required": [
+                "mode"
+              ],
+              "additionalProperties": false
             }
-          },
-          "required": [
-            "issuer",
-            "audience"
-          ],
-          "additionalProperties": false
+          ]
         },
         "catalog_url": {
           "type": "string",

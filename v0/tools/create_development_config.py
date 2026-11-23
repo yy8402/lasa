@@ -55,9 +55,11 @@ def main():
     config = initial_manifest(
         service_id=args.service_id,
         base_url=args.base_url,
-        issuer=issuer,
-        jwks={"jwks_file": "jwks.json"},
-        algorithms=["ES256"],
+        authentication={
+            "issuer": issuer,
+            "jwks_file": "jwks.json",
+            "allowed_algorithms": ["ES256"],
+        },
         image=args.image,
         model="gpt-5.5",
         provider_url="https://api.openai.com/v1/",

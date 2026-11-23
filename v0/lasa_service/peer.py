@@ -12,6 +12,7 @@ import httpx
 import jwt
 
 from . import PROTOCOL_VERSION
+from .auth import WORKLOAD_IDENTITY_HEADER, peer_workload_identity
 from .capabilities import epoch, offer_terms, require, validate_definition
 from .config import within_url
 from .contracts import digest, parse_json
@@ -48,33 +49,33 @@ class PeerClient:
     def service_id(self):
         return self.settings["expected_service_id"]
 
+    @property
+    def auth_mode(self):
+        return self.settings.get("authentication", {}).get("mode", "jwt")
+
     async def close(self):
         if self.client:
             await self.client.aclose()
 
-    @staticmethod
-    def workload_identity(token):
-        try:
-            claims = jwt.decode(token, options={"verify_signature": False})
-            return {key: claims[key] for key in ("iss", "sub", "aud")}
-        except (jwt.InvalidTokenError, KeyError) as exc:
-            raise LasaError("peer_unavailable", 503) from exc
-
     def binding(self):
-        return {
-            "base_url": self.base,
-            "protocol": PROTOCOL_VERSION,
-            "workload": self.workload_identity(self.authentication_headers()["Authorization"][7:]),
-        }
+        _, identity = self.credential()
+        return {"base_url": self.base, "protocol": PROTOCOL_VERSION, "workload": identity}
 
-    def authentication_headers(self, binding=None):
+    def credential(self):
         try:
             token = self.config.secret(self.settings["credential_ref"])
-        except (OSError, ValueError):
+            return token, peer_workload_identity(token, self.settings, self.config.service_id)
+        except (OSError, ValueError, jwt.PyJWTError):
             raise LasaError("peer_unavailable", 503, retry="readmission") from None
+
+    def authentication_headers(self, binding=None):
+        token, identity = self.credential()
         if binding is not None:
-            require(self.workload_identity(token) == binding["workload"], "authority_denied", 403)
-        return {"Authorization": "Bearer " + token}
+            require(identity == binding["workload"], "authority_denied", 403)
+        headers = {"Authorization": "Bearer " + token}
+        if self.auth_mode == "static_token":
+            headers[WORKLOAD_IDENTITY_HEADER] = digest(identity)
+        return headers
 
     async def request(self, method, url, body=None, key=None, etag=None, *, binding=None):
         require(
@@ -171,14 +172,19 @@ class PeerClient:
         descriptor = await self.get(self.settings["descriptor_url"])
         self.contracts.validate("ServiceDescriptor", descriptor, "incompatible_protocol", 502)
         require(
-            descriptor["service_id"] == self.settings["expected_service_id"],
+            descriptor["service_id"] == self.service_id
+            and descriptor["authentication"].get("mode", "jwt") == self.auth_mode,
             "incompatible_protocol",
             502,
         )
         protocol = next(
             (p for p in descriptor["protocols"] if p["version"] == PROTOCOL_VERSION), None
         )
-        require(protocol is not None, "incompatible_protocol", 502)
+        require(
+            protocol is not None and "bounded-delegation" in protocol["features"],
+            "incompatible_protocol",
+            502,
+        )
         require(
             within_url(protocol["base_url"], self.settings["allowed_base_url"]),
             "incompatible_protocol",

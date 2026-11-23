@@ -1,42 +1,42 @@
 # Managed LASA deployment
 
-## 1.3.1 rollout on 2026-11-23
+## 1.5.0 mixed-auth rollout on 2026-11-23
 
-The Mac parent and two air188 backends run LASA **1.3.1** with protocol `lasa/1.2` and deployment revision `docker-1.3.1-verifier-da669e167b96`. The supervisors run in Docker behind the existing HTTPS proxies. The Mac prefers an authorized peer. Air188 review handles delegated `design.review` work, and air188 primary handles delegated `task.attempt` work and the approved source capabilities.
+The Mac parent and both air188 backends run LASA **1.5.0**, protocol `lasa/1.2`, and deployment revision `docker-1.5.0-mixed-965ca60c0a9d`. All three supervisors run in Docker behind the managed HTTPS proxies.
 
-| Service | HTTPS API | Stable service ID | Active container |
-|---|---|---|---|
-| Mac parent | `https://localhost:8443/lasa/v1` | `https://localhost:8443/lasa` | `lasa-parent-131` |
-| air188 primary | `https://192.168.0.188/lasa/v1` | `https://192.168.0.188/lasa` | `lasa-primary-131` |
-| air188 review | `https://192.168.0.188/review/lasa/v1` | `https://192.168.0.188/review/lasa` | `lasa-review-131` |
+| Service | HTTPS API | Stable service ID | Active container | Incoming authentication |
+|---|---|---|---|---|
+| Mac parent | `https://localhost:8443/lasa/v1` | `https://localhost:8443/lasa` | `lasa-parent-150` | JWT |
+| air188 primary | `https://192.168.0.188/lasa/v1` | `https://192.168.0.188/lasa` | `lasa-primary-150` | JWT |
+| air188 review | `https://192.168.0.188/review/lasa/v1` | `https://192.168.0.188/review/lasa` | `lasa-review-150` | Static token |
 
-On each host, the role directories are under `v0/.deploy/target/docker-1.2.0` in the checkout. The active v2 manifest is `<role>/deployment-1.3.1/config.json`. Its `authorization.policy_file` points to the receiver's existing `<role>/deployment-1.3.0/authorization.json`. The manifest references credential files. The Mac continues to issue receiver-scoped tokens and hold the issuer signing keys. For syntax and preflight options, see the [installed service instructions](../RUNNING.md).
+On each host, the active v2 manifests are under `v0/.deploy/target/docker-1.2.0/<role>/deployment-1.5.0/config.json`. They reference the separate receiver policies under `<role>/deployment-1.3.0/authorization.json`. The Mac uses a receiver-scoped JWT for primary. Its review peer entry selects `static_token`, pins the `peer-layer1` subject, and references a private caller token file. Air188 review reads subject mappings, token digests, and expirations from its private `deployment-1.5.0/static-tokens.json` registry. The review tokens issued during this rollout expire on 2026-12-23 in Asia/Shanghai. See the [issuance and rotation instructions](../RUNNING.md#static-tokens).
 
-All three manifests passed `lasa config check` in their target containers. On each host, 81 installed runtime and contract files matched the verified wheel. Its SHA-256 is `da669e167b96e30081177f3a981c4b0d0b1d285fe289955a8ade47ab373a7a33`. After startup, all three services passed authenticated HTTPS readiness and served the expected identity and revision. The before-and-after capability catalogs matched, both cross-audience token probes returned HTTP 401, and a previously completed parent result and its two child records remained readable.
+All three manifests passed `lasa config check` inside their target containers. The images on the Mac and air188 each matched 81 files from the verified wheel, whose SHA-256 is `965ca60c0a9df34507cf8253a341afe03f40566e31b933443d04e040a0c3428e`. All three services passed authenticated HTTPS readiness and advertised the same wire-schema digest. After rollout, the capability catalogs matched the previous release. The review backend accepted the correctly pinned static workload and returned HTTP 401 for a missing or incorrect pin. Both cross-receiver credential probes also returned HTTP 401.
 
-The active containers use the Docker restart policy `unless-stopped`. Check the Mac parent and both air188 containers from the Mac.
+The 1.4.0 parent result and child states remained readable after rollout. For its JWT-pinned review child, the Mac's delegation report records `authority_denied` (403) for the trace lookup. The trace remains readable directly on air188 review using the current static workload credential and its matching identity pin.
+
+The active containers use the Docker restart policy `unless-stopped`. Check them from the Mac.
 
 ```sh
-docker inspect --format '{{.Name}} {{.State.Status}}' lasa-parent-131
+docker inspect --format '{{.Name}} {{.State.Status}}' lasa-parent-150
 ssh yang@192.168.0.188 \
-  "docker inspect --format '{{.Name}} {{.State.Status}}' lasa-primary-131 lasa-review-131"
+  "docker inspect --format '{{.Name}} {{.State.Status}}' lasa-primary-150 lasa-review-150"
 ```
 
 ## Dependent workflow verification
 
-The 1.3.0 attempt reached air188 review. Its candidate contained the two required fields, `coverage` and `findings`, but the semantic verifier treated fields from the surrounding evidence as extra candidate fields. LASA 1.3.1 checks the candidate schema before calling the verifier, then sends the candidate separately from the context and evidence. The verifier still makes an independent semantic decision.
+The Mac replayed the dependent workflow as a new task after rollout. It completed with the live `gpt-5.5` model across the mixed-auth topology.
 
-The same workflow input was submitted as a new task after the rollout. It completed with the live `gpt-5.5` model on all three services.
-
-| Step | Service | Task ID | Observed result |
+| Step | Service | Task ID | Verified result |
 |---|---|---|---|
-| Review the design | air188 review | `task-e948641acf1247f58733ca44e6a9fa45` | `design.review` completed and passed semantic verification |
-| Derive the operator checklist | air188 primary | `task-11e0d7d5aabb44da9fac54130a4f7402` | `task.attempt` completed using the authenticated review result |
-| Verify both steps and release the result | Mac parent | `task-7ec95b790a834ca9ae1b89e77f4f4fb9` | Independently accepted both child outputs and the integrated outcome |
+| Review the design | air188 review | `task-67c6d6ad6ff44237b3b063aab4d305bd` | `design.review` completed over static-token auth |
+| Derive the operator checklist | air188 primary | `task-d9d5b298de37487abbc97b639828ee55` | `task.attempt` completed over JWT and consumed the authenticated review result |
+| Verify and release the integrated result | Mac parent | `task-0ff8535964ee49b09046b9cac31b812b` | The Mac independently accepted both child outputs and the final result |
 
-The durable task records matched the review output exactly to the checklist's `dependency_results`. The review output digest `sha256:95593daf010a633db0d3264d5fef7f546a01cc68c2a404deab51ad97c15591c7` also matched in air188 primary's verification evidence and in the Mac's step and final verification evidence. The completed parent reported two delegations and ten model calls, including child usage.
+The audit matched the review output to the checklist's stored `dependency_results` and matched its digest in the checklist and Mac verification records. The review output digest was `sha256:66ee7e98fffe66987c62cb66f2eecc35c6e7438a19dae2efc64b5b383ad3ff3b`. The parent reported two delegations and ten model calls, including child usage.
 
-The release passed 200 tests, offline design validation, isolated package verification, and the Docker dependent-workflow smoke test. The Mac's local rollout and durable verification records are `v0/.deploy/target/docker-1.3.1/activation.json` and `v0/.deploy/target/docker-1.3.1/live-dependent-evidence.json`. The earlier rejected task is retained in the 1.3.0 run records.
+The release passed 206 tests, offline design validation, isolated package verification, and the mixed-auth Docker workflow test. The Mac's local evidence is under `v0/.deploy/target/docker-1.5.0` in `activation.json` and `live-dependent-evidence.json`.
 
 ## Release upgrades and rollback
 
@@ -58,11 +58,49 @@ For the live Docker rollout, build the supervisor for `linux/amd64`, load the sa
 
 Wait until all three task stores are idle. Stop the Mac parent first, then the air188 backends. Start air188 primary and review, checking each HTTPS readiness endpoint and descriptor against the expected revision. Start and check the Mac parent last. The rollout keeps each role's database, workspace, and HTTPS binding at its existing location.
 
-The 1.3.0 containers and manifests were retained for rollback. If candidate startup or verification of readiness fails, stop the candidate containers, restore the previous backends before the parent, and verify their prior revision over authenticated HTTPS. Restore the running containers' restart policies so that only the active release restarts on daemon startup.
+The 1.4.0 containers and manifests were retained for rollback from 1.5.0. If candidate startup or verification of readiness fails, stop the candidate containers, restore the previous backends before the parent, and verify their prior revision over authenticated HTTPS. Restore the running containers' restart policies so that only the active release restarts on daemon startup.
 
 ## Historical deployment records
 
-The following sections document the earlier launchd and systemd deployment. See the [1.1.0 connector report](CONNECTORS.md) for the source integration and outage/recovery observations from that deployment.
+These sections document the 1.3.1 Docker rollout and the earlier launchd and systemd deployment. See the [1.1.0 connector report](CONNECTORS.md) for the source integration and outage/recovery observations from that deployment.
+
+### 1.3.1 rollout on 2026-11-23
+
+The Mac parent and two air188 backends ran LASA **1.3.1** with protocol `lasa/1.2` and deployment revision `docker-1.3.1-verifier-da669e167b96`. The supervisors run in Docker behind the existing HTTPS proxies. The Mac prefers an authorized peer. Air188 review handles delegated `design.review` work, and air188 primary handles delegated `task.attempt` work and the approved source capabilities.
+
+| Service | HTTPS API | Stable service ID | Active container |
+|---|---|---|---|
+| Mac parent | `https://localhost:8443/lasa/v1` | `https://localhost:8443/lasa` | `lasa-parent-131` |
+| air188 primary | `https://192.168.0.188/lasa/v1` | `https://192.168.0.188/lasa` | `lasa-primary-131` |
+| air188 review | `https://192.168.0.188/review/lasa/v1` | `https://192.168.0.188/review/lasa` | `lasa-review-131` |
+
+On each host, the role directories are under `v0/.deploy/target/docker-1.2.0` in the checkout. The active v2 manifest at that rollout was `<role>/deployment-1.3.1/config.json`. Its `authorization.policy_file` points to the receiver's existing `<role>/deployment-1.3.0/authorization.json`. The manifest references credential files. The Mac continues to issue receiver-scoped tokens and hold the issuer signing keys. For syntax and preflight options, see the [installed service instructions](../RUNNING.md).
+
+All three manifests passed `lasa config check` in their target containers. On each host, 81 installed runtime and contract files matched the verified wheel. Its SHA-256 is `da669e167b96e30081177f3a981c4b0d0b1d285fe289955a8ade47ab373a7a33`. After startup, all three services passed authenticated HTTPS readiness and served the expected identity and revision. The before-and-after capability catalogs matched, both cross-audience token probes returned HTTP 401, and a previously completed parent result and its two child records remained readable.
+
+The 1.3.1 containers used the Docker restart policy `unless-stopped`. The following commands inspected that release.
+
+```sh
+docker inspect --format '{{.Name}} {{.State.Status}}' lasa-parent-131
+ssh yang@192.168.0.188 \
+  "docker inspect --format '{{.Name}} {{.State.Status}}' lasa-primary-131 lasa-review-131"
+```
+
+#### 1.3.1 dependent workflow verification
+
+The 1.3.0 attempt reached air188 review. Its candidate contained the two required fields, `coverage` and `findings`, but the semantic verifier treated fields from the surrounding evidence as extra candidate fields. LASA 1.3.1 checks the candidate schema before calling the verifier, then sends the candidate separately from the context and evidence. The verifier still makes an independent semantic decision.
+
+The same workflow input was submitted as a new task after the rollout. It completed with the live `gpt-5.5` model on all three services.
+
+| Step | Service | Task ID | Observed result |
+|---|---|---|---|
+| Review the design | air188 review | `task-e948641acf1247f58733ca44e6a9fa45` | `design.review` completed and passed semantic verification |
+| Derive the operator checklist | air188 primary | `task-11e0d7d5aabb44da9fac54130a4f7402` | `task.attempt` completed using the authenticated review result |
+| Verify both steps and release the result | Mac parent | `task-7ec95b790a834ca9ae1b89e77f4f4fb9` | Independently accepted both child outputs and the integrated outcome |
+
+The durable task records matched the review output exactly to the checklist's `dependency_results`. The review output digest `sha256:95593daf010a633db0d3264d5fef7f546a01cc68c2a404deab51ad97c15591c7` also matched in air188 primary's verification evidence and in the Mac's step and final verification evidence. The completed parent reported two delegations and ten model calls, including child usage.
+
+The release passed 200 tests, offline design validation, isolated package verification, and the Docker dependent-workflow smoke test. The Mac's local rollout and durable verification records are `v0/.deploy/target/docker-1.3.1/activation.json` and `v0/.deploy/target/docker-1.3.1/live-dependent-evidence.json`. The earlier rejected task is retained in the 1.3.0 run records.
 
 ### 2026-11-18 base deployment
 

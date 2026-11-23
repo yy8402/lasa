@@ -82,7 +82,7 @@ def create_app(
     prefix = urlsplit(config.document["service"]["base_url"]).path.rstrip("/")
 
     def principal(request):
-        return c.authentication.authenticate(request.headers.get("Authorization"))
+        return c.authentication.authenticate_headers(request.headers)
 
     def query_integer(request, name, default, minimum, maximum):
         try:

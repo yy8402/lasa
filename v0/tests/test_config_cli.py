@@ -1,14 +1,16 @@
 import json
 import os
+import secrets
 import subprocess
 import sys
+import time
 
 import pytest
 
 from lasa_service.config import Configuration
 from lasa_service.errors import LasaError
 
-from .conftest import ISSUER, JWK
+from .conftest import ISSUER, JWK, delegation_grant, token
 
 
 def cli(tmp_path, *arguments):
@@ -86,6 +88,7 @@ def test_scaffold_defaults_and_secrets_are_checked_without_startup(tmp_path, dep
     assert secret not in result.stdout + result.stderr + path.read_text() + policy.read_text()
     assert not (tmp_path / "state").exists()
     cfg = Configuration.load(path)
+    assert cfg.auth_mode == "jwt"
     assert cfg.descriptor_url == "https://lasa.example.net/prefix/descriptor"
     assert cfg.executor()["model"] == "review-model"
     assert cfg.peers == [] and cfg.document["storage"]["listen_host"] == "127.0.0.1"
@@ -139,3 +142,83 @@ def test_check_reports_invalid_local_jwks(tmp_path, deployment):
     result = cli(tmp_path, "check", "--config", manifest_dir / "config.json", "--offline")
     assert result.returncode == 2 and "signing keys" in result.stderr
     assert "invalid key material" not in result.stdout + result.stderr
+
+
+@pytest.fixture
+def static_deployment(tmp_path, deployment):
+    folder, key, jwt_args = deployment
+    args = list(jwt_args)
+    for flag in ("--issuer", "--jwks-file"):
+        index = args.index(flag)
+        del args[index : index + 2]
+    result = cli(tmp_path, *args, "--auth-mode", "static_token", "--operator-subject", "alice")
+    assert result.returncode == 0, result.stderr
+    key.write_text("fixture-key")
+    return folder / "config.json", folder / "authorization.json", folder / "static-tokens.json"
+
+
+def test_static_config_check_and_safe_token_issuance(tmp_path, static_deployment):
+    config, policy, registry = static_deployment
+    assert json.loads(config.read_text())["authentication"] == {
+        "mode": "static_token",
+        "tokens_file": registry.name,
+    }
+    token = tmp_path / "caller-token.txt"
+    issue = ("issue-token", "--config", config, "--subject", "alice")
+    refused = cli(tmp_path, *issue, "--output", config.parent / "leak.txt")
+    assert refused.returncode == 2 and "outside" in refused.stderr
+    result = cli(tmp_path, *issue, "--output", token, "--ttl-hours", 1)
+    assert result.returncode == 0, result.stderr
+    assert token.stat().st_mode & 0o777 == 0o600
+    secret = token.read_text().strip()
+    assert secret not in result.stdout + result.stderr + config.read_text() + policy.read_text()
+    assert secret not in registry.read_text()
+    (record,) = json.loads(registry.read_text())["tokens"]
+    assert record["subject"] == "alice" and 0 < record["expires_at"] - time.time() <= 3600
+    assert cli(tmp_path, *issue, "--output", token).returncode == 2
+    assert token.read_text().strip() == secret
+
+    check = ("check", "--config", config, "--offline")
+    result = cli(tmp_path, *check)
+    assert result.returncode == 0, result.stderr
+    registry.write_text(json.dumps({"tokens": [record, record]}))
+    result = cli(tmp_path, *check)
+    assert result.returncode == 2 and "static token registry" in result.stderr
+
+
+@pytest.mark.parametrize("mode", ["jwt", "static_token"])
+def test_config_check_validates_each_outbound_credential(tmp_path, static_deployment, mode):
+    config, policy, _ = static_deployment
+    manifest = json.loads(config.read_text())
+    authority = json.loads(policy.read_text())
+    receiver = "https://peer.example.net/lasa"
+    credential = tmp_path / "peer-token.txt"
+    opaque = secrets.token_urlsafe(32)
+    signed = token("workload", receiver)
+    peer = {
+        "descriptor_url": receiver + "/v1/descriptor",
+        "allowed_base_url": receiver + "/v1",
+        "expected_service_id": receiver,
+        "credential_ref": f"file:{credential}",
+        "authorization_ref": "default",
+        "authentication": {"mode": mode},
+    }
+    if mode == "static_token":
+        peer["authentication"]["subject"] = "workload"
+    manifest["peers"] = [peer]
+    authority["trusted_delegator_service_ids"] = [receiver]
+    authority["principals"].append(
+        {"subject": "workload", "kind": "peer", "service_id": receiver, "rules": []}
+    )
+    (rule,) = authority["principals"][0]["rules"]
+    rule["delegation_grants"] = [
+        delegation_grant(manifest["service"]["id"], receiver, rule["contracts"][0], rule)
+    ]
+    config.write_text(json.dumps(manifest))
+    policy.write_text(json.dumps(authority))
+    credential.write_text(signed if mode == "jwt" else opaque)
+    result = cli(tmp_path, "check", "--config", config, "--offline")
+    assert result.returncode == 0, result.stderr
+    credential.write_text(opaque if mode == "jwt" else signed)
+    result = cli(tmp_path, "check", "--config", config, "--offline")
+    assert result.returncode == 2 and "configured authentication mode" in result.stderr

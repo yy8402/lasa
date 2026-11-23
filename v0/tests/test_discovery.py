@@ -133,6 +133,8 @@ async def test_real_http_peer_contract_discovery_and_boundary(tmp_path):
     paths = []
 
     class RecordDiscovery(httpx.ASGITransport):
+        mismatched_descriptor = False
+
         async def handle_async_request(self, request):
             paths.append(request.url.path.removeprefix("/prefix/lasa/v1"))
             response = await super().handle_async_request(request)
@@ -141,9 +143,19 @@ async def test_real_http_peer_contract_discovery_and_boundary(tmp_path):
                 document = response.json()
                 document["info"]["version"] = "9.8.7"
                 return httpx.Response(200, json=document, headers={"cache-control": "max-age=60"})
+            if (
+                paths[-1] == "/descriptor"
+                and response.status_code == 200
+                and self.mismatched_descriptor
+            ):
+                await response.aread()
+                document = response.json()
+                document["service_id"] = "https://identity.example.net/services/other"
+                return httpx.Response(200, json=document)
             return response
 
-    peer = PeerClient(parent, parent.peers[0], transport=RecordDiscovery(app=app))
+    transport = RecordDiscovery(app=app)
+    peer = PeerClient(parent, parent.peers[0], transport=transport)
     await peer.start()
     try:
         catalog = await peer.discover()
@@ -160,7 +172,8 @@ async def test_real_http_peer_contract_discovery_and_boundary(tmp_path):
         assert paths == [detail, detail + "/availability"]
         with pytest.raises(LasaError):
             await peer.get("https://attacker.example/keys")
-        peer.settings["expected_service_id"] = "https://identity.example.net/services/other"
+        transport.mismatched_descriptor = True
+        peer.cache.clear()
         with pytest.raises(LasaError, match="incompatible_protocol"):
             await peer.discover(refresh=True)
     finally:
