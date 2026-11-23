@@ -17,6 +17,7 @@ In the tables, **Required** means the field must appear in the supplied object. 
 | `executors` | Yes | None | One or more executor objects with distinct IDs | Selects the model provider and any private connectors. Start with one executor. |
 | `runtime` | Yes | See below | Object with `image` | Pins the Codex worker and controls its startup timeout. |
 | `default_executor` | With multiple executors | The sole executor's ID | An ID in `executors` | Selects the executor for planning, verification, integration, and generated local bindings. Set it explicitly with multiple executors. |
+| `verification` | No | The default executor's model and the provider's reasoning defaults | Object with `model` and optional `reasoning_effort` | Selects the model for outcome verification using the default executor's provider and credentials. Set it after evaluating the model on correct and incorrect outcomes. |
 | `peers` | No | `[]` | Ordered list of 0–16 peer objects with distinct, non-self service IDs | Supplies downstream routes. Order breaks ties among suitable peers. Leave it empty for standalone operation. |
 | `routing` | No | Local preference and reject fallback | Object | Changes how eligible local and peer routes are selected. |
 | `storage` | No | See below | Object | Overrides private state paths or listener settings. |
@@ -29,6 +30,8 @@ In the tables, **Required** means the field must appear in the supplied object. 
 | `prompts_file` | No | Bundled `prompts.json` | Absolute path, 1–2,048 characters, to a complete valid prompts JSON object | Replaces the full LASA prompt set. Copy the bundled file before customizing it. Keep all eight keys and the `{purpose}` placeholder in `assessment_developer`. |
 
 An **identifier** in the tables below is 3–128 characters. Its first character must be an ASCII letter or digit. The remaining characters may also include `.`, `_`, and `-`. A **credential reference** names a non-empty secret using `env:NAME` or `file:/absolute/path`. Put only the reference in the manifest.
+
+`verification.model` is a non-empty provider model ID up to 256 characters. If set, `verification.reasoning_effort` must be one of `none`, `minimal`, `low`, `medium`, `high`, `xhigh`, or `max` and supported by that model. `lasa config check` prints the verifier revision to use in peer trust rules. [Typed workflow configuration](design/execution.md#typed-workflows)
 
 ## Service, state, and worker
 

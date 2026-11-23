@@ -20,7 +20,7 @@
         "metadata-diagnostics",
         "bounded-delegation"
       ],
-      "wire_schema_digest": "sha256:0edf6c83bc73824633bc1831d4c846d0e64446163934ae2b8b2252a32896a77a"
+      "wire_schema_digest": "sha256:c6324e1b7dde3b11f6ea7757a0a89f979b5553a587cfdf064a9847f108de674d"
     }
   ],
   "authentication": {

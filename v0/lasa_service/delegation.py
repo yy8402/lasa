@@ -14,6 +14,7 @@ from .grants import find_grant, intersect_grants
 from .preconditions import check_inputs, request_input_size, restrict
 from .routing import fallback_input
 from .store import TERMINAL, encode, identity, zero
+from .verification import receipt_for
 
 
 class DelegationController:
@@ -22,6 +23,46 @@ class DelegationController:
 
     def save(self, child):
         self.coordinator.store.save_child(child)
+
+    def trust_receipt(self, task_id, child, result):
+        c = self.coordinator
+        request = c.request(task_id)
+        if not c.registry.is_workflow(request["selection"]["contract"]):
+            return False
+        receipt = result.get("verification_receipt")
+        require(
+            result["effect_disposition"] == "none"
+            and not result["artifacts"]
+            and not result.get("workspace_readbacks"),
+            "verification_failed",
+            502,
+        )
+        if not receipt:
+            return False
+        pin = {
+            "service_id": child["service_id"],
+            "contract": result["contract"],
+            "verifier_revision": receipt["verifier_revision"],
+        }
+        rule = c.authorization.rule(c.principal(task_id), request["authorization_ref"])
+        if pin not in c.authority(task_id).get("verifier_trust", []) or pin not in rule.get(
+            "verifier_trust", []
+        ):
+            return False
+        require(
+            receipt
+            == receipt_for(
+                child["service_id"],
+                child["task_id"],
+                child["request"],
+                result,
+                pin["verifier_revision"],
+            ),
+            "verification_failed",
+            502,
+        )
+        c.store.event(task_id, "trusted_verification_receipt", receipt)
+        return True
 
     async def peer_for(self, child):
         peer = self.coordinator.peers.get(child["service_id"])
@@ -465,6 +506,7 @@ class DelegationController:
             )
             c.finish_delegated_execution(task_id)
             c.check_active(task_id)
+            trusted = not selected["fallback"] and self.trust_receipt(task_id, child, result)
             result = copy.deepcopy(result)
             for evidence in result["evidence"]:
                 require(
@@ -521,7 +563,8 @@ class DelegationController:
                     "artifact_ids": artifact_ids,
                 }
             require(
-                await c.planner.verify(
+                trusted
+                or await c.planner.verify(
                     task_id,
                     c.registry.get(step["contract"]),
                     inputs,

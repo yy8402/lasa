@@ -129,6 +129,14 @@
                       "items": {
                         "$ref": "contracts.schema.json#/$defs/DelegationGrant"
                       }
+                    },
+                    "verifier_trust": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "contracts.schema.json#/$defs/VerifierTrust"
+                      },
+                      "uniqueItems": true,
+                      "maxItems": 32
                     }
                   },
                   "required": [

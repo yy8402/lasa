@@ -159,6 +159,7 @@ def main():
             print(
                 f"Configuration valid{mode}. Deployment revision {config.document['service']['deployment_revision']}."
             )
+            print(f"Verifier revision {config.verifier_revision}.")
         else:
             run_service(config)
     except (OSError, ValueError, LasaError) as exc:

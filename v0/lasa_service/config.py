@@ -16,7 +16,8 @@ from .auth import peer_workload_identity
 from .capabilities import reference
 from .connector_schema import check_schema, validate
 from .contracts import digest, parse_json, protocol_contracts
-from .grants import grant_key
+from .grants import find_grant, grant_key
+from .workflows import REVIEW_CHECKLIST
 
 
 class ConfigurationError(ValueError):
@@ -40,6 +41,7 @@ def builtin_capabilities():
         name: (parse_json(root.joinpath(f"capability-{file}.json").read_bytes()), verifier)
         for name, file, verifier in [
             ("design.review", "review", "design-review-v1"),
+            ("design.review-checklist", "review-checklist", REVIEW_CHECKLIST),
             ("task.attempt", "attempt", "task-attempt-v1"),
             ("documents.read", "documents-read", "documents-read-v1"),
             ("documents.search", "documents-search", "documents-search-v1"),
@@ -416,7 +418,36 @@ class Configuration:
             for rule in principal["rules"]:
                 keys = [grant_key(grant) for grant in rule["delegation_grants"]]
                 require(len(keys) == len(set(keys)), "Duplicate delegation grant")
+                for trust in rule.get("verifier_trust", []):
+                    require(
+                        any(
+                            peer["expected_service_id"] == trust["service_id"]
+                            for peer in self.peers
+                        )
+                        and find_grant(
+                            rule["delegation_grants"],
+                            self.service_id,
+                            trust["service_id"],
+                            trust["contract"],
+                        )
+                        is not None,
+                        "Verifier trust must match a configured peer and an outbound delegation grant",
+                    )
         return policy
+
+    def verification_settings(self):
+        return self.document.get("verification", {"model": self.executor()["model"]})
+
+    @property
+    def verifier_revision(self):
+        return digest(
+            {
+                "deployment": self.document["service"]["deployment_revision"],
+                "provider": self.executor()["provider_base_url"],
+                "settings": self.verification_settings(),
+                "prompts": self.prompts,
+            }
+        )
 
     def executor(self, binding=None):
         executor_id = binding["executor_id"] if binding else self.document["default_executor"]

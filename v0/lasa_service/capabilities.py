@@ -14,6 +14,7 @@ from jsonschema import Draft202012Validator
 from .contracts import canonical, digest, parse_json, protocol_contracts, validate_data
 from .errors import LasaError
 from .outcomes import SOURCE_PROFILES
+from .workflows import REVIEW_CHECKLIST, child_contracts
 
 
 def require(condition, code="precondition_failed", status=400):
@@ -84,7 +85,7 @@ class CapabilityRegistry:
         require(len(self.verifiers) == len(verifiers), "invalid_input")
         require(
             set(self.verifiers.values())
-            <= {"design-review-v1", "task-attempt-v1"} | SOURCE_PROFILES,
+            <= {"design-review-v1", "task-attempt-v1", REVIEW_CHECKLIST} | SOURCE_PROFILES,
             "unsupported_contract",
         )
         try:
@@ -129,6 +130,8 @@ class CapabilityRegistry:
                 ref["digest"] in self.current and self.supported(ref), "unsupported_contract", 422
             )
             self.get(ref)
+            if self.is_workflow(ref):
+                require(bool(config.peers), "unsupported_contract", 422)
         for entry in config.document["verifiers"]:
             ref = entry["contract"]
             require(ref["digest"] in self.current, "unsupported_contract", 422)
@@ -139,6 +142,7 @@ class CapabilityRegistry:
             for operation in connector["operations"]
         }
         for binding in config.document["bindings"]:
+            require(not self.is_workflow(binding["contract"]), "unsupported_contract", 422)
             definition = self.get(binding["contract"])
             require(
                 set(binding["allowed_effects"]) <= set(definition["max_effects"]),
@@ -180,6 +184,9 @@ class CapabilityRegistry:
     def source_profile(self, ref):
         profile = self.verifiers.get(digest(ref))
         return profile if profile in SOURCE_PROFILES else None
+
+    def is_workflow(self, ref):
+        return self.verifiers.get(digest(ref)) == REVIEW_CHECKLIST
 
     def input(self, ref, value):
         require(self.supported(ref), "unsupported_contract", 422)
@@ -280,6 +287,9 @@ class Publication:
                 definition = self.registry.get(ref)
                 can_local = any(x["contract"] == ref for x in self.config.document["bindings"])
                 can_delegate = ref in delegated
+                workflow = self.registry.is_workflow(ref)
+                if workflow:
+                    can_delegate = all(child in delegated for child in child_contracts().values())
                 if not (can_local or can_delegate):
                     continue
                 allowed = sorted(set(rule["effects"]) & set(definition["max_effects"]))
@@ -318,7 +328,7 @@ class Publication:
                 }
                 for resource in ("model_calls", "model_tokens"):
                     minimum = self.config.document["limits"]["integration_reserve"][resource]
-                    if self.config.peers:
+                    if self.config.peers and not workflow:
                         minimum += self.config.document["limits"]["assessment_budget"][resource]
                     if resource == "model_calls":
                         minimum += 1

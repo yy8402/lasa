@@ -164,7 +164,11 @@ List additional built-in capabilities by name in `published_contracts`. LASA acc
 After a lost acknowledgment, reuse the same operation ID and idempotency key. `GET /operations/{operation_id}` reconciles the original receipt without creating work. An uncertain terminal task remains immutable; `POST /tasks/{task_id}/reconcile` can append a resolution event. Do not resubmit uncertain effectful work as a new task automatically.
 The task client prints each operation ID before sending its request so you can look up either receipt after a lost acknowledgment.
 
-Verification commands:
+## Typed workflows
+
+Publish `design.review-checklist` to run an inline review and dependent checklist using approved delegates. Configure verifier trust in the parent policy and select an outcome verification model in each service manifest. [Workflow registration and trust checks](design/execution.md#typed-workflows)
+
+## Verification
 
 ```sh
 v0/.venv/bin/python v0/design/validate.py

@@ -29,3 +29,17 @@ The clean-slate cutover archived 16 previous Mac tasks, 13 air188 primary tasks,
 Live task `task-b37a936281b54a498dd5aaf6a510305e` finished with disposition `fulfilled`. Air188 review ran `design.review` with a pinned static-token workload identity, and air188 primary ran the dependent `task.attempt` using JWT. The primary verifier received the review output, and the Mac verified the original inputs from both steps. Both child traces remained readable after the predecessor containers were retired.
 
 Air188 primary also completed `documents.read` in task `task-204474f7c39243e1a51b587f02053170`. The returned `README.md` digest matched the approved file. Run receipts and diagnostics are in the Mac's private `~/.local/state/lasa/releases/1.0.0/unified-formats/` directory.
+
+## Typed workflow rollout and live benchmark
+
+All three supervisors run revision `docker-1.0.0-typed-982347ae1b54` with their existing service identities, task stores, and workspaces. The Mac publishes `design.review-checklist` to the operator under `review-checklist`. The authorization rule pins the static-token review peer for `design.review` and the JWT primary peer for `task.attempt`, with a separate verifier revision pin for each grant. Both receivers use `gpt-6-luna` with low reasoning effort for outcome verification and `gpt-5.5` for execution. The Mac keeps its own verifier for independent checks when policy calls for them.
+
+The typed benchmark used the cutover and rollback design from the earlier open-ended task. Elapsed time is measured from receipt to completion on the Mac. The first attempt reached both peers and failed verification because the checklist added conditions beyond the review evidence. The three timed runs specified readiness, rollback, and retirement as explicit review criteria and asked the checklist to preserve exactly those gates.
+
+| Parent task | Elapsed | Model calls |
+| --- | ---: | ---: |
+| `task-ff7d8d424eb2445d95682079f7fee623` | 52.5 s | 4 |
+| `task-b44087e4386e4c42a2ac6170ac0f362d` | 47.6 s | 4 |
+| `task-c20b697350694366a5a1ec080d36c253` | 43.9 s | 4 |
+
+Each air188 backend made one execution call and one verification call. The Mac accepted both exact, policy-pinned receipts, confirmed the review output matched primary's dependency, and assembled the result without asking a model. Earlier comparable open-ended tasks took 149–162 seconds and ten model calls. The Mac keeps benchmark inputs, traces, the initial rejection, and rollout evidence under `~/.local/state/lasa/releases/1.0.0/typed-workflows/`.

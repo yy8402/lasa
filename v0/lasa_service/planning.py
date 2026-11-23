@@ -8,6 +8,7 @@ import httpx
 from .capabilities import reference, require
 from .contracts import canonical, digest, parse_json, validate_data
 from .errors import LasaError
+from .workflows import review_checklist_steps
 
 
 def object_schema(properties, required=None):
@@ -117,6 +118,11 @@ class ModelService:
                 }
             },
         }
+        if purpose == "verification":
+            settings = c.config.verification_settings()
+            body["model"] = settings["model"]
+            if effort := settings.get("reasoning_effort"):
+                body["reasoning"] = {"effort": effort}
         operation = c.begin_model(task_id, body, purpose)
         started = time.monotonic()
         try:
@@ -200,7 +206,9 @@ class Planner:
     async def propose(self, task_id, request, peer_catalog):
         c = self.coordinator
         requirements = self.requirements(request)
-        if self.proposal:
+        if c.registry.is_workflow(request["selection"]["contract"]):
+            value = {"steps": review_checklist_steps(request["input"])}
+        elif self.proposal:
             value = await self.proposal(c, task_id, request, peer_catalog, requirements)
         elif not c.config.peers:
             # A leaf has one executor path. A named contract's approved binding is the admission fact.
@@ -259,9 +267,13 @@ class Planner:
         return requirements, value["steps"]
 
     async def verify_plan(self, task_id, request, private_plan):
-        if self.proposal is not None or not self.coordinator.config.peers:
-            return True
         c = self.coordinator
+        if (
+            self.proposal is not None
+            or not c.config.peers
+            or c.registry.is_workflow(request["selection"]["contract"])
+        ):
+            return True
         plan = private_plan["document"]
         verdict = await c.models.ask(
             task_id,

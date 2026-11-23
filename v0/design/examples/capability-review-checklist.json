@@ -1,0 +1,293 @@
+{
+  "definition_format": "lasa-capability/1.0.0",
+  "id": "https://contracts.example.net/capabilities/design.review-checklist",
+  "version": "1.0.0",
+  "title": "Review a design and derive a checklist",
+  "outcome": "Return the verified review and the checklist derived from it.",
+  "non_guarantees": [
+    "The workflow uses only supplied text and performs no workspace or external operations."
+  ],
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "review": {
+        "type": "object",
+        "properties": {
+          "design": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32000
+          },
+          "criteria": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 2048
+                }
+              },
+              "required": [
+                "id",
+                "description"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1,
+            "maxItems": 32
+          }
+        },
+        "required": [
+          "design",
+          "criteria"
+        ],
+        "additionalProperties": false
+      },
+      "checklist": {
+        "type": "object",
+        "properties": {
+          "objective": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 16000
+          },
+          "requirements": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 4096
+                },
+                "acceptance": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2048
+                  },
+                  "minItems": 1
+                }
+              },
+              "required": [
+                "id",
+                "description",
+                "acceptance"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1,
+            "maxItems": 31
+          },
+          "context": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32000
+          }
+        },
+        "required": [
+          "objective",
+          "requirements"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "required": [
+      "review",
+      "checklist"
+    ],
+    "additionalProperties": false
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "review": {
+        "type": "object",
+        "properties": {
+          "findings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "criterion_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                },
+                "severity": {
+                  "enum": [
+                    "info",
+                    "warning",
+                    "error"
+                  ]
+                },
+                "observation": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 4096
+                },
+                "recommendation": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 4096
+                }
+              },
+              "required": [
+                "criterion_id",
+                "severity",
+                "observation",
+                "recommendation"
+              ],
+              "additionalProperties": false
+            },
+            "maxItems": 128
+          },
+          "coverage": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "criterion_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                },
+                "disposition": {
+                  "enum": [
+                    "reviewed",
+                    "insufficient_input"
+                  ]
+                },
+                "evidence": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 4096
+                }
+              },
+              "required": [
+                "criterion_id",
+                "disposition",
+                "evidence"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1,
+            "maxItems": 32
+          }
+        },
+        "required": [
+          "findings",
+          "coverage"
+        ],
+        "additionalProperties": false
+      },
+      "checklist": {
+        "type": "object",
+        "properties": {
+          "disposition": {
+            "const": "fulfilled"
+          },
+          "summary": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8192
+          },
+          "requirement_evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                },
+                "evidence": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 8192
+                }
+              },
+              "required": [
+                "id",
+                "evidence"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1,
+            "maxItems": 32
+          }
+        },
+        "required": [
+          "disposition",
+          "summary",
+          "requirement_evidence"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "required": [
+      "review",
+      "checklist"
+    ],
+    "additionalProperties": false
+  },
+  "preconditions": [
+    {
+      "kind": "input_schema",
+      "description": "Supply the design review and checklist inputs."
+    }
+  ],
+  "max_effects": [],
+  "postconditions": [
+    {
+      "id": "review-completed",
+      "criterion": "Review all supplied design criteria with evidence.",
+      "method": "semantic_review",
+      "evidence_required": [
+        "verified review output"
+      ]
+    },
+    {
+      "id": "checklist-completed",
+      "criterion": "Return the fulfilled checklist derived from the verified review.",
+      "method": "semantic_review",
+      "evidence_required": [
+        "verified checklist output and review dependency"
+      ]
+    }
+  ],
+  "failures": [
+    {
+      "code": "insufficient_input",
+      "meaning": "The supplied design does not contain enough information to review the requested criteria.",
+      "retry": "readmission",
+      "effect_disposition": "known"
+    },
+    {
+      "code": "evaluation_failed",
+      "meaning": "The bounded review could not be completed.",
+      "retry": "readmission",
+      "effect_disposition": "known"
+    }
+  ],
+  "effect_safety": {
+    "external_write_commit_evidence_required": false,
+    "unknown_commit_possible": false,
+    "retry_rule": "readmit_if_no_uncertain_effect"
+  }
+}

@@ -22,6 +22,14 @@ The controller checks every declared mandatory requirement has a responsible ste
 
 The parent owns the original objective, final integration, and caller-facing result. Delegating a step does not delegate accountability. Subsequent discoveries can revise the plan before new actions, using the same original authority and remaining budget. Consequential scope changes require a new task authorization/operation; silently extending an accepted objective is forbidden.
 
+### Typed workflows
+
+Publish the built-in `design.review-checklist` capability on a coordinator with downstream peers. Add its exact capability reference to the caller's authorization rule and grant outbound delegation separately for `design.review` and `task.attempt`. The capability takes `review` and `checklist` input objects using the corresponding child schemas. The checklist reserves one requirement slot for a LASA-supplied requirement to use the verified review. LASA compiles the plan in code, applies normal admission and routing, and returns the exact accepted review and checklist under those keys. The workflow uses inline text and allows no workspace or external effects.
+
+For this workflow a rule may include `verifier_trust`, a list of objects containing `service_id`, exact `contract` reference, and `verifier_revision` from the peer's `lasa config check`. Each entry requires a matching outbound delegation grant. The parent accepts the receipt only through the authenticated, pinned peer route and when the exact trust entry exists at admission and use. The receipt binds the delegated task and delegation IDs, the result including its request and contract pins, and the dependency digest. A missing or untrusted receipt invokes the parent's semantic verifier. A receipt offered under an approved revision with mismatched bindings fails verification. Effectful, artifact-producing, and open-ended tasks retain their normal verification path.
+
+For an existing HTTPS service, submit the typed input with `run_task.py --capability design.review-checklist --input-json <file>`. Set `--authorization-ref` to the rule that publishes the workflow and use the service's ordinary operator credentials and deadline.
+
 ## Routing policy
 
 Configuration uses two independent choices:

@@ -5,6 +5,11 @@
     "visibility": "wire"
   },
   {
+    "file": "capability-review-checklist.json",
+    "schema": "contracts.schema.json#/$defs/CapabilityDefinition",
+    "visibility": "wire"
+  },
+  {
     "file": "capability-attempt.json",
     "schema": "contracts.schema.json#/$defs/CapabilityDefinition",
     "visibility": "wire"

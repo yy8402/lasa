@@ -240,6 +240,7 @@ class Authorization:
         require("external.write" not in allowed_effects, "authority_denied", 403)
         envelope = request.get("delegation")
         require("dependency_results" not in request or envelope, "authority_denied", 403)
+        require(not envelope or not registry.is_workflow(ref), "authority_denied", 403)
         if envelope:
             require(
                 principal["kind"] == "peer"
@@ -314,6 +315,8 @@ class Authorization:
             "limits": effective_limits,
             "content_diagnostics_allowed": rule["content_diagnostics"],
         }
+        if rule.get("verifier_trust") and not envelope:
+            result["verifier_trust"] = rule["verifier_trust"]
         if envelope:
             ceiling = envelope["authority_ceiling"]
             result["allowed_effects"] = sorted(

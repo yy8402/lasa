@@ -19,6 +19,8 @@ from .peer import PeerClient
 from .planning import ModelService, Planner
 from .preconditions import check_inputs, input_size, request_input_size, restrict
 from .store import TERMINAL, Store, encode, identity, zero
+from .verification import receipt_for
+from .workflows import assemble_review_checklist
 from .workspace import Workspace
 
 
@@ -707,6 +709,7 @@ class Coordinator:
     async def run(self, task_id):
         try:
             request = self.request(task_id)
+            workflow = self.registry.is_workflow(request["selection"]["contract"])
             async with asyncio.timeout(max(0.001, self.remaining_seconds(task_id, task_only=True))):
                 self.hit("after_receipt", task_id)
                 async with asyncio.timeout(max(0.001, self.remaining_seconds(task_id))):
@@ -822,7 +825,9 @@ class Coordinator:
                     len(plan["steps"]) == 1
                     and plan["steps"][0]["contract"] == request["selection"]["contract"]
                 )
-                if reuse_step:
+                if workflow:
+                    final = assemble_review_checklist(completed)
+                elif reuse_step:
                     final = completed[plan["steps"][0]["step_id"]]
                 elif self.registry.source_profile(request["selection"]["contract"]):
                     from .evidence import verification_material
@@ -906,7 +911,8 @@ class Coordinator:
                     final["evidence"],
                 )
                 require(
-                    await self.planner.verify(
+                    workflow
+                    or await self.planner.verify(
                         task_id,
                         definition,
                         request["input"],
@@ -1010,6 +1016,14 @@ class Coordinator:
             }
             if readbacks := release_readbacks(self, task_id, final["output"]):
                 task["result"]["workspace_readbacks"] = readbacks
+            if "delegation" in request and effect == "none" and not artifacts and not readbacks:
+                task["result"]["verification_receipt"] = receipt_for(
+                    self.config.service_id,
+                    task_id,
+                    request,
+                    task["result"],
+                    self.config.verifier_revision,
+                )
             self.config.contracts.validate("Task", task)
             self.store.save_task(task)
             for artifact in artifacts:

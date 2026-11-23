@@ -984,6 +984,14 @@
           "items": {
             "$ref": "#/$defs/DelegationGrant"
           }
+        },
+        "verifier_trust": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/VerifierTrust"
+          },
+          "uniqueItems": true,
+          "maxItems": 32
         }
       },
       "required": [
@@ -1535,6 +1543,9 @@
             "$ref": "#/$defs/Evidence"
           },
           "minItems": 1
+        },
+        "verification_receipt": {
+          "$ref": "#/$defs/VerificationReceipt"
         }
       },
       "required": [
@@ -2658,6 +2669,70 @@
         "effects",
         "resources",
         "disclosure_resources"
+      ],
+      "additionalProperties": false
+    },
+    "VerifierTrust": {
+      "type": "object",
+      "properties": {
+        "service_id": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://",
+          "maxLength": 2048
+        },
+        "contract": {
+          "$ref": "#/$defs/CapabilityRef"
+        },
+        "verifier_revision": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "service_id",
+        "contract",
+        "verifier_revision"
+      ],
+      "additionalProperties": false
+    },
+    "VerificationReceipt": {
+      "type": "object",
+      "properties": {
+        "service_id": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://",
+          "maxLength": 2048
+        },
+        "task_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
+        },
+        "delegation_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
+        },
+        "verifier_revision": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "result_digest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "dependency_digest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "service_id",
+        "task_id",
+        "delegation_id",
+        "verifier_revision",
+        "result_digest",
+        "dependency_digest"
       ],
       "additionalProperties": false
     }

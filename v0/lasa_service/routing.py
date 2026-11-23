@@ -171,17 +171,23 @@ class RoutingController:
             for peer in c.peers.values()
             if remaining > 0 and peer.service_id in outbound and peer.service_id not in ancestry
         ]
+        workflow = c.registry.is_workflow(request["selection"]["contract"])
         planning_offers = []
-        for peer, snapshot in zip(
-            eligible, await asyncio.gather(*(self.catalog(peer) for peer in eligible)), strict=True
-        ):
-            if snapshot:
-                planning_offers.extend(
-                    offer
-                    for offer in snapshot["offers"]
-                    if offer["authorization_ref"] == peer.settings["authorization_ref"]
-                    and find_grant(grants, c.config.service_id, peer.service_id, offer["contract"])
-                )
+        if not workflow:
+            for peer, snapshot in zip(
+                eligible,
+                await asyncio.gather(*(self.catalog(peer) for peer in eligible)),
+                strict=True,
+            ):
+                if snapshot:
+                    planning_offers.extend(
+                        offer
+                        for offer in snapshot["offers"]
+                        if offer["authorization_ref"] == peer.settings["authorization_ref"]
+                        and find_grant(
+                            grants, c.config.service_id, peer.service_id, offer["contract"]
+                        )
+                    )
         requirements, proposals = await c.planner.propose(
             task_id, request, {"offers": planning_offers} if eligible else None
         )
@@ -207,9 +213,14 @@ class RoutingController:
             definition = c.registry.current.get(proposal["contract_digest"])
             require(definition is not None, "unsupported_contract", 422)
             ref = reference(definition)
+            require(not c.registry.is_workflow(ref), "unsupported_contract", 422)
             value = parse_json(proposal["input_json"])
             definition = c.registry.input(ref, value)
-            binding = next((x for x in c.config.document["bindings"] if x["contract"] == ref), None)
+            binding = (
+                next((x for x in c.config.document["bindings"] if x["contract"] == ref), None)
+                if not workflow
+                else None
+            )
             local = (
                 proposal["local_assessment"]
                 if binding and ref in rule["contracts"]
@@ -269,7 +280,8 @@ class RoutingController:
 
             generic = []
             if (
-                local == "insufficient"
+                not workflow
+                and local == "insufficient"
                 and state == "not_claimed"
                 and policy["unclaimed_peer_fallback"] == "attempt"
             ):
