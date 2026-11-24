@@ -157,7 +157,7 @@ Run the local multi-peer check with all three images available.
 
 The check creates an isolated network, three supervisors and launchers, and deterministic HTTPS fixtures for the model, scanner, and app. It submits a parent task, verifies both child traces and the final result, and checks receiver-specific authentication and worker cleanup. It removes the test containers, volumes, and network.
 
-To run local content inspection, connect the supervisor to a user-defined Docker network and opt in with `local_dlp.enabled` in `deployment.json`. Run `lasa deploy apply` before starting supervisors that use the managed endpoint. Register the endpoint in `content_security.inspection_profiles` and select it in the stream bindings. [Local DLP deployment and profile](inspector/README.md)
+To run local content inspection with DLPLite, connect the supervisor to a user-defined Docker network and opt in with `local_dlp.enabled` in `deployment.json`. Run `lasa deploy apply` before starting supervisors that use the managed endpoint. Register the endpoint in `content_security.inspection_profiles` and select it in the stream bindings. [DLPLite deployment and profile](deployment/LOCAL_DLP.md)
 
 ## Model service and prompts
 

@@ -175,7 +175,7 @@ Classify data and restrict disclosure in the receiver's `authorization.json`, us
 
 Routine audit records include the effective mode, selected profile, gateway identity, policy revisions, and disposition. Pre-task content audit records are eligible for retirement after 24 hours.
 
-Use `local_dlp.enabled` in the separate Docker deployment settings to manage the bundled gateway. The flag defaults to `false`. Inspection profiles and bindings independently select the endpoint and scanning mode. [Local DLP deployment and profile JSON](inspector/README.md)
+Use `local_dlp.enabled` in the separate Docker deployment settings to manage a local DLPLite gateway. The flag defaults to `false`. Inspection profiles and bindings independently select the endpoint and scanning mode. [DLPLite deployment and profile JSON](deployment/LOCAL_DLP.md)
 
 ## Outgoing peers and routing
 

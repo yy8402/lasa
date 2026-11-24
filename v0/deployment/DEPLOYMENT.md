@@ -20,7 +20,7 @@ Build and check the wheel and source distribution, then build the `linux/amd64` 
 
 The split launcher runtime uses store schema revision 2. Provision fresh state roots for this candidate and retain the revision 1 stores with the previous release. Wait for all task stores to be idle. Stop the parent, then the two receivers. Start the matching launchers before starting their supervisors. Start and verify primary and review over authenticated HTTPS before starting the parent. Each state root belongs to a single running supervisor. Verify the advertised service IDs, authentication modes, catalogs, and live dependent workflow before retiring any stopped candidate or predecessor. [Provisioning guide](../RUNNING.md)
 
-For deployments that use the bundled DLP gateway, list the supervisor manifests in `deployment.json` and enable `local_dlp`. Run `lasa deploy apply` and require authenticated HTTPS readiness and matching profile pins before rolling out the affected supervisors. External scanners remain available with the bundled stack disabled. [DLP deployment workflow](../inspector/README.md)
+For deployments that use a managed DLPLite gateway, list the supervisor manifests in `deployment.json` and enable `local_dlp`. Run `lasa deploy apply` and require authenticated HTTPS readiness and matching profile pins before rolling out the affected supervisors. External scanners remain available with the managed stack disabled. [DLPLite deployment workflow](LOCAL_DLP.md)
 
 ## 1.0.0 deployment verification
 

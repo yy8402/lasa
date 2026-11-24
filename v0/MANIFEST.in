@@ -6,4 +6,3 @@ recursive-include tools *.py
 recursive-include tests *.py
 recursive-include evaluations *.py *.json
 recursive-include deployment *.py *.md
-recursive-include inspector *.py *.md

@@ -1,13 +1,11 @@
 import json
 
-import httpx
 import pytest
 
 from lasa_service import deployment
 from lasa_service.config import ConfigurationError
 
 from .conftest import example
-from .http_helpers import certificate
 
 
 def settings(tmp_path, manifest, **local_dlp):
@@ -104,28 +102,36 @@ def test_enabled_rejects_inconsistent_bundled_profile(tmp_path, field):
         enabled.validate_profiles()
 
 
-@pytest.mark.parametrize(
-    ("status", "body", "error"),
-    [
-        (200, {"gateway_id": "local-dlp", "policy_revision": "english-dlp-v1"}, None),
-        (200, {"gateway_id": "local-dlp", "policy_revision": "wrong"}, "unexpected gateway ID"),
-        (401, {}, "HTTP 401"),
-        (503, {}, "did not become ready"),
-    ],
-)
-def test_probe_requires_authenticated_pinned_readiness(tmp_path, status, body, error):
-    ca, _ = certificate(tmp_path)
-    ca.rename(tmp_path / "ca.pem")
-    (tmp_path / "token.txt").write_text("synthetic-deployment-token\n")
-
-    def respond(request):
-        assert request.url == deployment.MANAGED_ORIGIN + "/health/ready"
-        assert request.headers["Authorization"] == "Bearer synthetic-deployment-token"
-        return httpx.Response(status, json=body)
-
-    options = {"directory": tmp_path, "transport": httpx.MockTransport(respond)}
-    if error:
-        with pytest.raises(ConfigurationError, match=error):
-            deployment.probe(deployment.POLICY_REVISION, **options)
-    else:
-        deployment.probe(deployment.POLICY_REVISION, **options)
+def test_enabled_check_calls_dlplite_probe_with_managed_pins(tmp_path, monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        deployment.DockerDeployment, "compose", lambda self, *args, **kwargs: calls.append(args)
+    )
+    enabled = settings(
+        tmp_path,
+        example("config-no-peer"),
+        enabled=True,
+        secrets_directory=str(tmp_path),
+        policy_revision="pinned-v2",
+    )
+    enabled.check()
+    assert calls == [
+        (
+            "exec",
+            "-T",
+            "inspector",
+            "dlplite-probe",
+            "--url",
+            deployment.MANAGED_ORIGIN + "/health/ready",
+            "--gateway-id",
+            deployment.GATEWAY_ID,
+            "--policy-revision",
+            "pinned-v2",
+            "--ca-file",
+            "/run/inspection/ca.pem",
+            "--token-file",
+            "/run/inspection/token.txt",
+            "--wait",
+            "0",
+        )
+    ]

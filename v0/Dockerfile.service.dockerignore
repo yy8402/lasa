@@ -7,8 +7,6 @@
 !lasa_service/config_defaults.json
 !lasa_service/*.py
 !lasa_service/prompts.json
-!inspector/
-!inspector/server.py
 !design/
 !design/*.py
 !design/*.json

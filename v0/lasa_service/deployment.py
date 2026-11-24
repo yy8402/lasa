@@ -1,22 +1,15 @@
 """Manage the optional local DLP stack on a supervisor Docker network."""
 
-import argparse
 import hashlib
 import json
 import os
-import ssl
 import subprocess
-import sys
-import time
 from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import urlsplit
 
-import httpx
-
 from .config import ConfigurationError
 from .contracts import parse_json, protocol_contracts
-from .errors import LasaError
 from .inspection import InspectionBindings
 
 MANAGED_HOST = "lasa-inspection"
@@ -24,7 +17,7 @@ MANAGED_ORIGIN = f"https://{MANAGED_HOST}:8443"
 MANAGED_URL = MANAGED_ORIGIN + "/inspect"
 GATEWAY_ID = "local-dlp"
 POLICY_REVISION = "english-dlp-v1"
-INSPECTOR_IMAGE = "lasa-inspector:1.0.0"
+INSPECTOR_IMAGE = "dlplite:0.1.0"
 PRESIDIO_IMAGE = (
     "ghcr.io/data-privacy-stack/presidio-analyzer:2.2.366"
     "@sha256:036d2f9b3c274fb36497383acef8f2d5aea528a014801c2c3040fb067990c79c"
@@ -170,11 +163,17 @@ class DockerDeployment:
             "exec",
             "-T",
             "inspector",
-            "python",
-            "-m",
-            "lasa_service.deployment",
+            "dlplite-probe",
+            "--url",
+            MANAGED_ORIGIN + "/health/ready",
+            "--gateway-id",
+            GATEWAY_ID,
             "--policy-revision",
             self.policy_revision,
+            "--ca-file",
+            str(INSPECTOR_FILES / "ca.pem"),
+            "--token-file",
+            str(INSPECTOR_FILES / "token.txt"),
             "--wait",
             str(wait),
             timeout=wait + 10,
@@ -201,58 +200,3 @@ class DockerDeployment:
         platform = docker("image", "inspect", "--format", "{{.Os}}/{{.Architecture}}", image)
         self.compose("up", "--detach", platform=platform.strip("/"), timeout=180)
         self.check_ready(wait=STARTUP_SECONDS)
-
-
-def probe(policy_revision, *, wait=0, directory=INSPECTOR_FILES, transport=None):
-    context = ssl.create_default_context(cafile=directory / "ca.pem")
-    token = (directory / "token.txt").read_text(encoding="ascii").strip()
-    expected = {"gateway_id": GATEWAY_ID, "policy_revision": policy_revision}
-    deadline = time.monotonic() + wait
-    with httpx.Client(
-        verify=context,
-        transport=transport,
-        trust_env=False,
-        follow_redirects=False,
-        timeout=2,
-        headers={"Authorization": "Bearer " + token},
-    ) as client:
-        while True:
-            try:
-                with client.stream("GET", MANAGED_ORIGIN + "/health/ready") as reply:
-                    if reply.status_code == 200:
-                        data = bytearray()
-                        for chunk in reply.iter_bytes():
-                            data.extend(chunk)
-                            if len(data) > 4096:
-                                raise ConfigurationError("Invalid local DLP readiness response")
-                        if parse_json(data) != expected:
-                            raise ConfigurationError(
-                                "Local DLP readiness returned an unexpected gateway ID or policy revision"
-                            )
-                        return
-                    if reply.status_code != 503:
-                        raise ConfigurationError(
-                            f"Local DLP readiness returned HTTP {reply.status_code}"
-                        )
-            except httpx.TransportError:
-                pass
-            if time.monotonic() >= deadline:
-                raise ConfigurationError("Local DLP did not become ready over authenticated HTTPS")
-            time.sleep(0.25)
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Probe the running managed inspector")
-    parser.add_argument("--policy-revision", required=True)
-    parser.add_argument("--wait", type=int, default=0)
-    args = parser.parse_args()
-    try:
-        probe(args.policy_revision, wait=args.wait)
-    except (ConfigurationError, LasaError, OSError, ValueError) as exc:
-        detail = (
-            str(exc)
-            if isinstance(exc, ConfigurationError)
-            else "Invalid readiness configuration or response"
-        )
-        print(detail, file=sys.stderr)
-        raise SystemExit(2) from None
