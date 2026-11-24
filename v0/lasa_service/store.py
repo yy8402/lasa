@@ -10,7 +10,7 @@ from uuid import uuid4
 from .capabilities import instant, require
 from .contracts import canonical, parse_json
 
-STORAGE_SCHEMA_VERSION = 1
+STORAGE_SCHEMA_VERSION = 2
 TERMINAL = frozenset({"completed", "failed", "rejected", "cancelled", "indeterminate"})
 ACTIVE_TASKS = "state NOT IN (" + ",".join(repr(state) for state in sorted(TERMINAL)) + ")"
 RETENTION_UNTIL = "json_extract(document,'$.retention_until')"
@@ -96,8 +96,8 @@ CREATE TABLE IF NOT EXISTS actions(task_id TEXT,operation_id TEXT,digest TEXT,st
 CREATE TABLE IF NOT EXISTS events(task_id TEXT,sequence INTEGER,document TEXT,PRIMARY KEY(task_id,sequence));
 CREATE TABLE IF NOT EXISTS audit(task_id TEXT,kind TEXT,document TEXT,created_at TEXT);
 CREATE TABLE IF NOT EXISTS artifacts(id TEXT PRIMARY KEY,task_id TEXT,manifest TEXT,content BLOB,released INTEGER);
-CREATE TABLE IF NOT EXISTS runtimes(task_id TEXT PRIMARY KEY,pid INTEGER,created REAL,container_id TEXT);
-CREATE TABLE IF NOT EXISTS retired_paths(kind TEXT,id TEXT,retry_at TEXT,PRIMARY KEY(kind,id));
+CREATE TABLE IF NOT EXISTS runtimes(task_id TEXT PRIMARY KEY REFERENCES tasks(id),attempt_id TEXT UNIQUE NOT NULL);
+CREATE TABLE IF NOT EXISTS retired_paths(id TEXT PRIMARY KEY,retry_at TEXT);
 CREATE INDEX IF NOT EXISTS tasks_by_session ON tasks(session_id);
 CREATE INDEX IF NOT EXISTS indeterminate_tasks ON tasks(id) WHERE state='indeterminate';
 CREATE INDEX IF NOT EXISTS operation_resources ON operations(kind,resource_id);
@@ -116,7 +116,7 @@ PRAGMA user_version={STORAGE_SCHEMA_VERSION};
             f"CREATE INDEX IF NOT EXISTS resolved_tasks ON events(task_id) WHERE {RESOLUTION_EVENT}"
         )
         self.db.execute(
-            "CREATE INDEX IF NOT EXISTS retired_paths_due ON retired_paths(retry_at,kind,id)"
+            "CREATE INDEX IF NOT EXISTS retired_paths_due ON retired_paths(retry_at,id)"
         )
         self.initialize_totals()
 
@@ -214,6 +214,15 @@ PRAGMA user_version={STORAGE_SCHEMA_VERSION};
         if not self.lock.closed:
             self.lock.close()
 
+    def start_runtime(self, task_id, attempt_id):
+        self.db.execute("INSERT INTO runtimes VALUES(?,?)", (task_id, attempt_id))
+
+    def runtime_attempts(self):
+        return self.db.execute("SELECT task_id,attempt_id FROM runtimes").fetchall()
+
+    def finish_runtime(self, attempt_id):
+        self.db.execute("DELETE FROM runtimes WHERE attempt_id=?", (attempt_id,))
+
     def session(self, session_id, owner=None):
         row = self.db.execute("SELECT * FROM sessions WHERE id=?", (session_id,)).fetchone()
         require(row is not None and (owner is None or row["owner"] == owner), "not_found", 404)
@@ -275,13 +284,7 @@ PRAGMA user_version={STORAGE_SCHEMA_VERSION};
             ).fetchall()
             for (session_id,) in sessions:
                 task_ids = "SELECT id FROM tasks WHERE session_id=?"
-                self.db.execute(
-                    "INSERT INTO retired_paths SELECT 'task',id,? FROM tasks WHERE session_id=?",
-                    (now, session_id),
-                )
-                self.db.execute(
-                    "INSERT INTO retired_paths VALUES('session',?,?)", (session_id, now)
-                )
+                self.db.execute("INSERT INTO retired_paths VALUES(?,?)", (session_id, now))
                 for table in (
                     "allocations",
                     "actions",
@@ -307,17 +310,17 @@ PRAGMA user_version={STORAGE_SCHEMA_VERSION};
 
     def due_paths(self, now, limit):
         return self.db.execute(
-            "SELECT kind,id FROM retired_paths WHERE retry_at<=? ORDER BY retry_at,kind,id LIMIT ?",
+            "SELECT id FROM retired_paths WHERE retry_at<=? ORDER BY retry_at,id LIMIT ?",
             (now, limit),
         ).fetchall()
 
-    def finish_path(self, kind, resource_id, *, retry_at=None):
+    def finish_path(self, resource_id, *, retry_at=None):
         if retry_at is None:
-            self.db.execute("DELETE FROM retired_paths WHERE kind=? AND id=?", (kind, resource_id))
+            self.db.execute("DELETE FROM retired_paths WHERE id=?", (resource_id,))
         else:
             self.db.execute(
-                "UPDATE retired_paths SET retry_at=? WHERE kind=? AND id=?",
-                (retry_at, kind, resource_id),
+                "UPDATE retired_paths SET retry_at=? WHERE id=?",
+                (retry_at, resource_id),
             )
 
     def replay(self, owner, route, key, request_hash, operation_id):

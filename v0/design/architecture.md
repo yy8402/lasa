@@ -38,7 +38,7 @@ flowchart TD
   Q --> S[Release result or report failure]
 ```
 
-Codex App Server remains a possible local executor behind this boundary. The public protocol does not depend on Codex thread IDs, provider model names, or MCP tool names. Model access and external tools remain mediated by LASA policy. A model can recommend delegation; only the controller can authorize and dispatch it.
+Codex App Server remains a possible local executor behind this boundary. The public protocol does not depend on Codex thread IDs, provider model names, or MCP tool names. Model access and external tools remain mediated by LASA policy. A model can recommend delegation; only the controller can authorize and dispatch it. The host-local launcher owns Docker access and connects to its supervisor through a private service-scoped Unix socket. It launches a pinned networkless worker for each local step attempt. The supervisor owns authority and the worker's durable attempt record.
 
 ## Decisions and alternatives
 

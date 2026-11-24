@@ -1,7 +1,9 @@
 import copy
 import json
+import os
 import shutil
 import subprocess
+import tempfile
 import time
 from contextlib import AsyncExitStack
 from pathlib import Path
@@ -13,6 +15,9 @@ import pytest
 from cryptography.hazmat.primitives.asymmetric import ec
 
 from lasa_service.config import Configuration
+from lasa_service.enclosure import Enclosure
+from lasa_service.launcher import Launcher
+from lasa_service.launcher_client import launcher_scope
 
 ROOT = Path(__file__).resolve().parents[1]
 EXAMPLES = ROOT / "design/examples"
@@ -152,14 +157,25 @@ def runtime_image():
     docker = shutil.which("docker")
     if not docker:
         pytest.fail("Docker required for runtime acceptance")
+    image = os.getenv("LASA_TEST_WORKER_IMAGE", "lasa-codex-worker:1.0.0")
     result = subprocess.run(
-        [docker, "image", "inspect", "--format", "{{.Id}}", "lasa-codex-worker:1.0.0"],
+        [docker, "image", "inspect", "--format", "{{.Id}}", image],
         capture_output=True,
         text=True,
         timeout=10,
     )
     assert result.returncode == 0, "Build lasa-codex-worker:1.0.0 before integration verification"
     return result.stdout.strip()
+
+
+@pytest.fixture
+async def worker_launcher(runtime_image):
+    with tempfile.TemporaryDirectory(prefix="lasa-launch-", dir="/tmp") as directory:
+        path = Path(directory) / "worker.sock"
+        service_id = f"https://identity.example.net/services/launcher-test-{uuid4().hex}"
+        launcher = Launcher(Enclosure(runtime_image, launcher_scope(service_id)))
+        async with launcher.serve(path):
+            yield launcher, path, service_id
 
 
 class FakeRuntime:

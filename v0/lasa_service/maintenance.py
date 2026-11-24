@@ -19,27 +19,24 @@ class Maintenance:
     def __init__(self, coordinator):
         self.coordinator = coordinator
         self.store = coordinator.store
-        self.roots = {
-            "session": coordinator.config.workspace_root,
-            "task": coordinator.root / "runtime",
-        }
+        self.workspace_root = coordinator.config.workspace_root
 
     async def collect(self):
         self.store.retire_sessions(instant(), RETENTION_BATCH)
-        for kind, resource_id in self.store.due_paths(instant(), PATH_BATCH):
+        for (resource_id,) in self.store.due_paths(instant(), PATH_BATCH):
             try:
-                if kind not in self.roots or not re.fullmatch(kind + "-[0-9a-f]{32}", resource_id):
+                if not re.fullmatch(r"session-[0-9a-f]{32}", resource_id):
                     raise ValueError("Invalid retired path identity")
-                await asyncio.to_thread(shutil.rmtree, self.roots[kind] / resource_id)
+                await asyncio.to_thread(shutil.rmtree, self.workspace_root / resource_id)
             except FileNotFoundError:
                 pass
             except (OSError, ValueError):
-                LOG.warning("Could not remove a retired LASA %s path; will retry", kind)
+                LOG.warning("Could not remove a retired LASA workspace; will retry")
                 self.store.finish_path(
-                    kind, resource_id, retry_at=instant(time.time() + 5 * INTERVAL_SECONDS)
+                    resource_id, retry_at=instant(time.time() + 5 * INTERVAL_SECONDS)
                 )
                 continue
-            self.store.finish_path(kind, resource_id)
+            self.store.finish_path(resource_id)
 
     async def run(self):
         after = ""

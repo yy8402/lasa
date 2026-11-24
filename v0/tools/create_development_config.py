@@ -24,7 +24,7 @@ def main():
         "--base-url", required=True, help="HTTPS protocol URL served by your TLS proxy"
     )
     parser.add_argument("--service-id", required=True)
-    parser.add_argument("--image", required=True, help="Immutable sha256 Docker image ID")
+    parser.add_argument("--launcher-socket", type=Path, required=True)
     parser.add_argument("--listen-port", type=int, default=8787)
     parser.add_argument("--model-key-env", default="LASA_MODEL_API_KEY")
     parser.add_argument("--peer-descriptor")
@@ -60,7 +60,7 @@ def main():
             "jwks_file": "jwks.json",
             "allowed_algorithms": ["ES256"],
         },
-        image=args.image,
+        launcher_socket=args.launcher_socket,
         model="gpt-5.5",
         provider_url="https://api.openai.com/v1/",
         credential_ref="env:" + args.model_key_env,

@@ -476,9 +476,10 @@
     "runtime": {
       "type": "object",
       "properties": {
-        "image": {
+        "launcher_socket": {
           "type": "string",
-          "pattern": "^sha256:[a-f0-9]{64}$"
+          "pattern": "^/[^\\u0000]+$",
+          "maxLength": 103
         },
         "startup_timeout_ms": {
           "type": "integer",
@@ -487,7 +488,7 @@
         }
       },
       "required": [
-        "image"
+        "launcher_socket"
       ],
       "additionalProperties": false
     },

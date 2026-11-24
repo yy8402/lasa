@@ -39,7 +39,7 @@ def initial_manifest(
     service_id,
     base_url,
     authentication,
-    image,
+    launcher_socket,
     model,
     provider_url,
     credential_ref,
@@ -63,7 +63,7 @@ def initial_manifest(
                 "credential_ref": credential_ref,
             }
         ],
-        "runtime": {"image": image},
+        "runtime": {"launcher_socket": str(Path(launcher_socket).absolute())},
     }
     if state_root is not None:
         manifest["storage"] = {"state_root": str(Path(state_root).absolute())}
@@ -254,8 +254,8 @@ async def check_authentication_and_worker(config, *, offline):
             ) from None
     if not offline:
         try:
-            await CodexRuntime().verify_worker(config.document["runtime"])
-        except (OSError, LasaError):
+            await CodexRuntime(config).verify_worker()
+        except (OSError, LasaError, TimeoutError):
             raise ConfigurationError(
-                "Cannot verify the configured Docker worker image and packaged Codex version"
+                "Cannot verify the configured worker launcher and Docker daemon"
             ) from None

@@ -16,9 +16,9 @@ The Mac's `com.lasa.layer1-https` user agent runs Caddy using `~/.config/lasa/pr
 
 ## Roll out a candidate
 
-Build and check the wheel and source distribution, then build the `linux/amd64` supervisor and worker images. Pin the installed worker image ID in each manifest's `runtime.image`. Run `lasa config check` with each role's production identity, mounts, and Docker access. [Package verification](../VERIFICATION.md)
+Build and check the wheel and source distribution, then build the `linux/amd64` supervisor, launcher, and worker images. Give each launcher the immutable worker image ID and configure its supervisor's `runtime.launcher_socket`. The launcher owns Docker access. Run `lasa config check` with each supervisor's production identity and mounts. [Package verification](../VERIFICATION.md)
 
-Wait for all task stores to be idle. Stop the parent, then the two receivers. Start and verify primary and review over authenticated HTTPS before starting the parent. Each state root belongs to a single running supervisor. Verify the advertised service IDs, authentication modes, catalogs, and live dependent workflow before retiring any stopped candidate or predecessor. [Provisioning guide](../RUNNING.md)
+The split launcher runtime uses store schema revision 2. Provision fresh state roots for this candidate and retain the revision 1 stores with the previous release. Wait for all task stores to be idle. Stop the parent, then the two receivers. Start the matching launchers before starting their supervisors. Start and verify primary and review over authenticated HTTPS before starting the parent. Each state root belongs to a single running supervisor. Verify the advertised service IDs, authentication modes, catalogs, and live dependent workflow before retiring any stopped candidate or predecessor. [Provisioning guide](../RUNNING.md)
 
 ## 1.0.0 deployment verification
 

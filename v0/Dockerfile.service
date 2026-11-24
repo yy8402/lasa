@@ -10,10 +10,15 @@ COPY lasa_service/ ./lasa_service/
 COPY design/ ./design/
 RUN uv sync --locked --no-dev --no-editable
 
-FROM python:3.12-slim-bookworm
-COPY --from=docker-cli /usr/local/bin/docker /usr/local/bin/docker
+FROM python:3.12-slim-bookworm AS service-base
 COPY --from=build /opt/lasa/.venv /opt/lasa/.venv
 ENV PATH="/opt/lasa/.venv/bin:$PATH" PYTHONUNBUFFERED=1
 USER 10001:10001
+
+FROM service-base AS launcher
+COPY --from=docker-cli /usr/local/bin/docker /usr/local/bin/docker
+ENTRYPOINT ["lasa-launcher"]
+
+FROM service-base AS supervisor
 ENTRYPOINT ["lasa"]
 CMD ["--config", "/etc/lasa/config.json"]

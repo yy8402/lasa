@@ -21,37 +21,37 @@ from .protocol_helpers import sse_final, sse_tool
 
 
 async def test_readiness_validates_every_executor_and_propagates_secondary_failure(monkeypatch):
-    profile = {"image": "test-image", "executable": "codex", "expected_version": "test-version"}
-    executors = [{"executor_id": name} for name in ("primary", "secondary")]
-    service = SimpleNamespace(
-        config=SimpleNamespace(
-            document={"executors": executors, "runtime": profile},
-        ),
-    )
-    runtime = CodexRuntime()
-    verified, probed = [], []
+    executors = [{"model": name} for name in ("primary", "secondary")]
+    document = {
+        "runtime": {"launcher_socket": "/unused.sock", "startup_timeout_ms": 1000},
+        "executors": executors,
+        "limits": {"reconciliation_timeout_seconds": 10},
+    }
+    service = SimpleNamespace(config=SimpleNamespace(document=document, service_id="test"))
+    runtime = CodexRuntime(service.config)
+    calls = []
 
-    async def verify(*args):
-        verified.append(args)
+    async def check():
+        calls.append("launcher")
 
-    async def start(_, executor, settings):
-        assert settings == profile
-        probed.append(executor["executor_id"])
-        if executor["executor_id"] == "secondary":
+    async def probe(model):
+        calls.append(model)
+        if model == "secondary":
             raise RuntimeError("secondary cannot start")
 
-    monkeypatch.setattr(runtime.enclosure, "verify_image", verify)
-    monkeypatch.setattr(runtime, "probe_executor", start)
+    monkeypatch.setattr(runtime.launcher, "check", check)
+    monkeypatch.setattr(runtime.launcher, "probe", probe)
     with pytest.raises(RuntimeError, match="secondary cannot start"):
         await runtime.probe(service)
-    assert probed == ["primary", "secondary"]
-    assert verified == [("test-image", "codex", "test-version")]
+    assert calls == ["launcher", "primary", "secondary"]
 
 
 @pytest.mark.integration
-async def test_real_codex_can_write_and_read_back_without_tool_discovery(tmp_path, runtime_image):
+async def test_real_codex_can_write_and_read_back_without_tool_discovery(tmp_path, worker_launcher):
     raw = documents(tmp_path)
-    raw["runtime"]["image"] = runtime_image
+    _, path, service_id = worker_launcher
+    raw["service"]["id"] = service_id
+    raw["runtime"]["launcher_socket"] = str(path)
     raw["limits"]["max_task_budget"]["model_tokens"] = 500000
     raw["limits"]["integration_reserve"]["model_tokens"] = 100000
     policy = Path(raw["authorization"]["policy_file"])
@@ -129,7 +129,6 @@ async def test_real_codex_can_write_and_read_back_without_tool_discovery(tmp_pat
 
     app = create_app(
         cfg,
-        runtime=CodexRuntime(),
         model_transport=httpx.MockTransport(model),
         verifier=deterministic_verifier,
     )

@@ -37,7 +37,12 @@ def add_init_options(parser):
     jwks.add_argument("--jwks-url")
     jwks.add_argument("--jwks-file", type=Path)
     parser.add_argument("--jwt-algorithm", action="append", choices=["ES256", "EdDSA", "RS256"])
-    parser.add_argument("--image", required=True, help="Local immutable Docker worker image ID")
+    parser.add_argument(
+        "--launcher-socket",
+        type=Path,
+        required=True,
+        help="Private Unix socket for the worker launcher",
+    )
     parser.add_argument("--model", required=True)
     parser.add_argument("--provider-url", required=True)
     parser.add_argument("--credential-ref", default="env:LASA_MODEL_API_KEY")
@@ -72,7 +77,7 @@ def initialize(args):
         service_id=args.service_id,
         base_url=args.base_url,
         authentication=authentication,
-        image=args.image,
+        launcher_socket=args.launcher_socket,
         model=args.model,
         provider_url=args.provider_url,
         credential_ref=args.credential_ref,
@@ -134,7 +139,9 @@ def main():
     )
     check = config_commands.add_parser("check", help="Validate a deployment without starting LASA")
     add_config_path(check)
-    check.add_argument("--offline", action="store_true", help="Skip remote JWKS and Docker checks")
+    check.add_argument(
+        "--offline", action="store_true", help="Skip remote JWKS and launcher checks"
+    )
     issue = config_commands.add_parser("issue-token", help="Issue a standalone caller token")
     add_config_path(issue)
     issue.add_argument("--subject", required=True)

@@ -20,6 +20,6 @@
     }
   ],
   "runtime": {
-    "image": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+    "launcher_socket": "/run/lasa/launcher.sock"
   }
 }

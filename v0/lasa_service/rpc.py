@@ -1,4 +1,4 @@
-"""Bounded JSON-RPC transport for a private App Server subprocess."""
+"""Bounded JSON-RPC transport for a private App Server stream."""
 
 import asyncio
 import base64
@@ -17,9 +17,12 @@ def tool_operation_id(thread_id, call_id):
 
 
 class AppServerClient:
-    def __init__(self, process, context, *, gateway):
-        self.process, self.context = process, context
+    def __init__(self, reader, writer, *, gateway, call_tool, request_input, record_event):
+        self.input, self.output = reader, writer
         self.gateway = gateway
+        self.call_tool = call_tool
+        self.request_input = request_input
+        self.record_event = record_event
         self.pending = {}
         self.sequence = 0
         self.completed = asyncio.get_running_loop().create_future()
@@ -29,8 +32,8 @@ class AppServerClient:
         self.handlers = set()
 
     async def send(self, message):
-        self.process.stdin.write(json.dumps(message, ensure_ascii=False).encode() + b"\n")
-        await self.process.stdin.drain()
+        self.output.write(json.dumps(message, ensure_ascii=False).encode() + b"\n")
+        await self.output.drain()
 
     async def request(self, method, params):
         self.sequence += 1
@@ -45,7 +48,7 @@ class AppServerClient:
 
     async def _read(self):
         try:
-            while line := await self.process.stdout.readline():
+            while line := await self.input.readline():
                 message = parse_json(line)
                 if message.get("lasa_gateway") == "request":
                     handler = asyncio.create_task(self._gateway_request(message))
@@ -71,8 +74,7 @@ class AppServerClient:
                             self.answer = item.get("text")
                     elif method == "turn/completed" and not self.completed.done():
                         if params["turn"]["status"] != "completed" or self.answer is None:
-                            self.context.coordinator.store.event(
-                                self.context.task_id,
+                            self.record_event(
                                 "runtime_turn_failure",
                                 {
                                     "status": params["turn"]["status"],
@@ -148,9 +150,7 @@ class AppServerClient:
 
     async def _server_request(self, message):
         method = message["method"]
-        self.context.coordinator.store.event(
-            self.context.task_id, "runtime_request", {"method": method}
-        )
+        self.record_event("runtime_request", {"method": method})
         try:
             if method in {
                 "item/commandExecution/requestApproval",
@@ -169,9 +169,7 @@ class AppServerClient:
                     choices = [option["label"] for option in question.get("options", [])]
                     if choices:
                         text += "\nChoices: " + "; ".join(choices)
-                    answer = await self.context.coordinator.request_input(
-                        self.context.task_id, text
-                    )
+                    answer = await self.request_input(text)
                     answers[question["id"]] = {"answers": [answer["answer"]]}
                 result = {"answers": answers}
             elif method == "item/tool/call":
@@ -193,7 +191,6 @@ class AppServerClient:
                 )
 
     async def tool_call(self, params):
-        c = self.context.coordinator
         call_id = params["callId"]
         tool = params["tool"]
         require(
@@ -205,12 +202,9 @@ class AppServerClient:
             "invalid_input",
         )
         try:
-            name = c.broker.tool_names.get(tool)
-            require(name is not None, "authority_denied", 403)
-            value = await c.broker.call(
-                self.context.task_id,
+            value = await self.call_tool(
                 tool_operation_id(self.thread_id, call_id),
-                name,
+                tool,
                 params["arguments"],
             )
             success = True

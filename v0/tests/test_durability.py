@@ -10,7 +10,7 @@ import pytest
 from lasa_service.capabilities import instant
 from lasa_service.contracts import canonical, digest
 from lasa_service.planning import Planner
-from lasa_service.store import Store, encode, zero
+from lasa_service.store import STORAGE_SCHEMA_VERSION, Store, encode, zero
 
 from .conftest import FakeRuntime, documents, new_session, settled, submit, task_request
 
@@ -20,10 +20,10 @@ def test_accounting_totals_backfill_and_roll_back_with_source_rows(tmp_path):
     pending = {**zero(), "model_calls": 4, "tool_calls": 3}
     spent = {**zero(), "model_calls": 2, "tool_calls": 1}
     with sqlite3.connect(tmp_path / "tasks.sqlite3") as db:
+        db.execute(f"PRAGMA user_version={STORAGE_SCHEMA_VERSION}")
         db.executescript("""
             CREATE TABLE allocations(task_id TEXT,operation_id TEXT,kind TEXT,state TEXT,reserved TEXT,usage TEXT,details TEXT,PRIMARY KEY(task_id,operation_id));
             CREATE TABLE events(task_id TEXT,sequence INTEGER,document TEXT,PRIMARY KEY(task_id,sequence));
-            PRAGMA user_version=1;
         """)
         db.execute(
             "INSERT INTO allocations VALUES(?,?,?,?,?,?,?)",
@@ -282,8 +282,6 @@ async def test_retention_retires_expired_records_and_retries_path_cleanup(servic
         c.store.db.execute(
             "UPDATE sessions SET document=? WHERE id=?", (encode(session), session["session_id"])
         )
-    scratch = c.root / "runtime" / done["task_id"]
-    scratch.mkdir(parents=True)
     workspace = c.workspace(done["session_id"]).root
 
     from lasa_service import maintenance
@@ -298,7 +296,7 @@ async def test_retention_retires_expired_records_and_retries_path_cleanup(servic
     with monkeypatch.context() as patch:
         patch.setattr(maintenance.shutil, "rmtree", fail_once)
         await c.maintenance.collect()
-    assert workspace.exists() and not scratch.exists()
+    assert workspace.exists()
     assert (await client.get(completed.headers["Location"])).status_code == 404
     base = c.config.document["service"]["base_url"]
     assert (await client.get(base + "/operations/" + done["operation_id"])).status_code == 404

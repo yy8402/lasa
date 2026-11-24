@@ -547,7 +547,6 @@ class DelegationController:
                     },
                     None,
                     [],
-                    c.workspace(parent["session_id"]),
                     baseline,
                 )
                 converted = await c.run_runtime(context)

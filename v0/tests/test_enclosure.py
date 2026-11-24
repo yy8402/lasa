@@ -2,12 +2,14 @@ import asyncio
 import json
 import os
 import sys
+import time
 from types import SimpleNamespace
 
 import pytest
 
 from lasa_service.enclosure import Enclosure
 from lasa_service.errors import LasaError
+from lasa_service.launcher_client import LauncherClient, close_stream, send_frame
 from lasa_service.runtime import CodexRuntime
 from lasa_service.store import Store, identity
 from lasa_service.workspace import Workspace
@@ -30,18 +32,78 @@ def test_symlinks_and_special_files_are_not_workspace_files(tmp_path):
     assert outside.read_text() == "not visible"
 
 
+async def test_unavailable_docker_cannot_confirm_absence(monkeypatch):
+    enclosure = Enclosure("ignored", "scope")
+
+    async def unavailable(*args, check=True):
+        assert args[0] == "ps" and check
+        raise LasaError("internal_error", 503)
+
+    monkeypatch.setattr(enclosure, "run", unavailable)
+    with pytest.raises(LasaError):
+        await enclosure.remove(identity("attempt"))
+
+
 @pytest.mark.integration
-async def test_container_blocks_host_files_processes_and_network(tmp_path, runtime_image):
-    boundary = Enclosure()
-    workspace, home, protected = [tmp_path / name for name in ("workspace", "home", "protected")]
-    for path in (workspace, home, protected, protected / "empty"):
-        path.mkdir()
-    (home / "config.toml").write_text("")
-    (protected / "empty-file").write_text("")
+async def test_recover_lost_launch_reply_and_fence_duplicate(tmp_path, worker_launcher):
+    launcher, path, service_id = worker_launcher
+    task_id = identity("task")
+    attempt_id = identity("attempt")
+    store = Store(tmp_path / "state")
+    try:
+        session = identity("session")
+        store.db.execute("INSERT INTO sessions VALUES(?,?,?)", (session, "owner", "{}"))
+        store.db.execute(
+            "INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?)",
+            (task_id, session, "executing", "{}", "{}", "{}", "{}", "{}"),
+        )
+        store.start_runtime(task_id, attempt_id)
+        _, writer = await asyncio.open_unix_connection(path)
+        try:
+            await send_frame(
+                writer,
+                {
+                    "operation": "launch",
+                    "scope": launcher.enclosure.scope,
+                    "attempt_id": attempt_id,
+                    "model": "test-model",
+                    "expires_at": time.time() + 10,
+                },
+            )
+            async with asyncio.timeout(5):
+                while True:
+                    if attempt_id in await launcher.enclosure.inventory():
+                        break
+                    await asyncio.sleep(0.02)
+            # The supervisor never reads the launch reply and has no container ID or PID.
+            settings = {"launcher_socket": str(path), "startup_timeout_ms": 10000}
+            runtime = CodexRuntime(
+                SimpleNamespace(
+                    service_id=service_id,
+                    document={
+                        "runtime": settings,
+                        "limits": {"reconciliation_timeout_seconds": 10},
+                    },
+                )
+            )
+            await runtime.recover(SimpleNamespace(store=store))
+            assert not store.runtime_attempts()
+            assert not await launcher.enclosure.inventory()
+            with pytest.raises(LasaError):
+                await LauncherClient(path, service_id).launch(attempt_id, "test-model", 10)
+        finally:
+            await close_stream(writer)
+    finally:
+        store.close()
+
+
+@pytest.mark.integration
+async def test_container_has_no_host_mounts_processes_or_network(tmp_path, worker_launcher):
+    launcher, path, service_id = worker_launcher
+    boundary = launcher.enclosure
     secret = tmp_path / "private-secret"
     secret.write_text("must stay private")
-    (workspace / "escape").symlink_to(secret)
-    canary = "host-environment-" + identity("canary")
+    canary = identity("canary")
     target = await asyncio.create_subprocess_exec(
         sys.executable,
         "-I",
@@ -49,66 +111,73 @@ async def test_container_blocks_host_files_processes_and_network(tmp_path, runti
         "-c",
         "import time; time.sleep(60)",
         env={"LASA_HOST_SECRET": canary},
-        start_new_session=True,
     )
-    task_id = identity("tsk")
-    container_id = None
+    attempt_id = identity("attempt")
+    client = LauncherClient(path, service_id)
+    writer = None
     try:
-        container_id = await boundary.create(
-            image=runtime_image,
-            executable="/usr/local/bin/codex",
-            task_id=task_id,
-            service_id="lasa-test",
-            workspace=workspace,
-            home=home,
-            protected=protected,
-            token="task-only-handle",
-            role="hold",
-        )
-        await boundary.run("start", container_id)
-        script = """import json,os,pathlib,socket,sys
-checks={}
-for name,path in [('private_file',sys.argv[1]),('symlink','/workspace/escape')]:
- try: open(path).read(); checks[name]=False
- except OSError: checks[name]=True
-for name,path in [('configuration','/home/lasa/config.toml'),('instructions','/workspace/AGENTS.md'),('project_configuration','/workspace/.codex/config.toml')]:
- try: open(path,'w').write('bad'); checks[name]=False
- except OSError: checks[name]=True
-try: socket.create_connection(('1.1.1.1',443),timeout=.25).close(); checks['network']=False
-except OSError: checks['network']=True
-checks['host_environment']=True
-for path in pathlib.Path('/proc').glob('[0-9]*/environ'):
- try:
-  if sys.argv[2].encode() in path.read_bytes(): checks['host_environment']=False
- except OSError: pass
-open('/workspace/allowed.txt','w').write('workspace access')
-checks['workspace']=True
-print(json.dumps(checks))
+        _, writer = await client.launch(attempt_id, "test-model", 10)
+        container_id = (await boundary.inventory(attempt_id))[attempt_id]
+        script = """
+import pathlib, socket, sys
+
+def inaccessible(path):
+    try:
+        pathlib.Path(path).read_bytes()
+        return False
+    except OSError:
+        return True
+
+def network_blocked():
+    try:
+        socket.create_connection(("1.1.1.1", 443), timeout=0.25).close()
+        return False
+    except OSError:
+        return True
+
+assert inaccessible(sys.argv[1])
+assert list(pathlib.Path("/workspace").iterdir()) == []
+assert network_blocked()
+for path in pathlib.Path("/proc").glob("[0-9]*/environ"):
+    try:
+        assert sys.argv[2].encode() not in path.read_bytes()
+    except OSError:
+        pass
+pathlib.Path("/workspace/scratch.txt").write_text("private worker scratch")
 """
-        _, stdout, stderr = await boundary.run(
-            "exec", container_id, "python3", "-I", "-S", "-c", script, secret, canary
+        async with asyncio.timeout(5):
+            while True:
+                _, status, _ = await boundary.run(
+                    "inspect", "--format", "{{.State.Running}}", container_id
+                )
+                if status.strip() == b"true":
+                    break
+                await asyncio.sleep(0.02)
+        status, _, stderr = await boundary.run(
+            "exec",
+            container_id,
+            "python3",
+            "-I",
+            "-S",
+            "-c",
+            script,
+            str(secret),
+            canary,
+            check=False,
         )
-        assert all(json.loads(stdout).values()), (stdout.decode(), stderr.decode())
-        assert (workspace / "allowed.txt").read_text() == "workspace access"
-        _, network, _ = await boundary.run(
-            "inspect", "--format", "{{.HostConfig.NetworkMode}}", container_id
-        )
-        assert network.strip() == b"none"
-        # Recovery removes a recorded running container before admitting new work.
-        store = Store(tmp_path / "state")
-        try:
-            store.db.execute(
-                "INSERT INTO runtimes VALUES(?,?,?,?)", (task_id, 0, 0.0, container_id)
-            )
-            await CodexRuntime().recover(
-                SimpleNamespace(store=store, config=SimpleNamespace(service_id="lasa-test"))
-            )
-            assert await boundary.inspect(container_id) is None
-            assert store.db.execute("SELECT count(*) FROM runtimes").fetchone()[0] == 0
-        finally:
-            store.close()
+        assert status == 0, stderr.decode()
+        _, stdout, _ = await boundary.run("inspect", container_id)
+        settings = json.loads(stdout)[0]
+        assert settings["HostConfig"]["NetworkMode"] == "none"
+        assert all(mount["Type"] == "tmpfs" for mount in settings["Mounts"])
+        assert not (tmp_path / "scratch.txt").exists()
+        with pytest.raises(LasaError):
+            await LauncherClient(path, "wrong-scope").stop(attempt_id)
+        await client.stop(attempt_id)
+        assert not await boundary.inventory(attempt_id)
     finally:
-        if container_id:
-            await boundary.remove(container_id, task_id, "lasa-test")
+        if writer:
+            await close_stream(writer)
+        await client.stop(attempt_id)
         target.kill()
         await target.wait()

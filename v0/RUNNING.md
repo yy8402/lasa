@@ -2,11 +2,19 @@
 
 ## Provision an installed service
 
-Install the LASA wheel with its production dependencies. The supervisor needs a Docker daemon and the matching Codex worker image. From the source distribution or checkout, build the worker and get the immutable image ID from the daemon that will run the workers.
+Install the LASA wheel with its production dependencies. The host-local launcher needs a Docker daemon and the matching Codex worker image. The supervisor connects to the launcher over a private Unix socket. From the source distribution or checkout, build the worker and get the immutable image ID from the daemon that will run the workers.
 
 ```sh
 docker build -t lasa-codex-worker:1.0.0 v0
 lasa_worker_image=$(docker image inspect --format '{{.Id}}' lasa-codex-worker:1.0.0)
+```
+
+For local development, run the launcher under your account with Docker access. The socket directory should be private and writable by your account. The supervisor connects to the owner-only socket. Use the [separate container deployment](#running-lasa-in-docker) to give Docker access only to the launcher.
+
+```sh
+lasa-launcher --image "$lasa_worker_image" \
+  --scope https://identity.example.net/services/review \
+  --socket /run/lasa/review/launcher.sock
 ```
 
 Create one manifest and one receiver policy at a stable path for the service. This example uses a named instance, a TLS-terminating proxy, and an ES256 issuer. Choose the service identity once and use it as the JWT audience. Supply a public JWKS URL or use `--jwks-file` for a local public key set.
@@ -17,14 +25,14 @@ lasa config init --output /etc/lasa/review --state-root /var/lib/lasa/review \
   --base-url https://review.example.net/lasa/v1 \
   --issuer https://identity.example.net \
   --jwks-url https://identity.example.net/.well-known/jwks.json \
-  --image "$lasa_worker_image" \
+  --launcher-socket /run/lasa/review/launcher.sock \
   --model YOUR_MODEL_ID --provider-url https://provider.example.net/v1 \
   --credential-ref file:/run/secrets/lasa/review/model-key
 ```
 
 The initial policy denies access until the administrator adds issuer subjects and grants. Pass `--operator-subject SUBJECT` to generate a read-only `design.review` grant for one subject. `--jwt-algorithm` can be repeated for an issuer with multiple allowed algorithms. Keep signing keys at the issuer. Mount the model key at the referenced path or inject it via an `env:NAME` reference. The scaffold creates the two JSON files exclusively with owner-only permissions.
 
-Before startup, run the check as the service user with the same mounts, credentials, and Docker access. It validates the effective manifest, bindings, policy, secret references, TLS files, the JWT signing keys or static token registry, and the installed worker image and version. It leaves the service store untouched and sends no model or peer requests. `--offline` skips Docker and remote JWKS access and still checks local artifacts.
+Before startup, run the check as the service user with the same mounts and credentials. It validates the manifest, bindings, policy, secrets, TLS, authentication, and connectivity to the matching launcher and Docker daemon. The launcher verifies its pinned worker image and Codex version before opening the socket. It leaves the service store untouched and sends no model or peer requests. `--offline` skips the launcher and remote JWKS access and still checks local artifacts.
 
 ```sh
 lasa config check --config /etc/lasa/review/config.json
@@ -33,7 +41,7 @@ lasa --config /etc/lasa/review/config.json
 
 [Field-by-field configuration guide](CONFIGURATION.md) · [Compact example](design/examples/config-no-peer.json) · [Manifest schema](design/config.schema.json) · [Packaged defaults](lasa_service/config_defaults.json)
 
-For a single system-wide instance, `lasa config init` defaults to `/etc/lasa`. Startup, `lasa config check`, and token issuance default to `/etc/lasa/config.json`. Use a dedicated config directory and state root for each named instance. LASA derives `private/` and `workspaces/` from `storage.state_root`, which defaults to `/var/lib/lasa`. The private store belongs to one supervisor. Task workers receive only their scoped workspace and runtime mounts.
+For a single system-wide instance, `lasa config init` defaults to `/etc/lasa`. Startup, `lasa config check`, and token issuance default to `/etc/lasa/config.json`. Use a dedicated config directory and state root for each named instance. LASA derives `private/` and `workspaces/` from `storage.state_root`, which defaults to `/var/lib/lasa`. The private store belongs to one supervisor. Workers have an empty scratch workspace. The broker mediates access to the LASA session workspace.
 
 LASA reads `authorization.json` beside the manifest by default. Set `authorization.policy_file` for a separate policy mount. A local JWKS path can also be relative to the manifest. Use absolute paths for the state root and secret file references. Keep active configuration and credentials at stable service-specific paths across releases.
 
@@ -54,14 +62,14 @@ The manifest defaults to a loopback listener on port `8787`, local execution, an
 
 JWT is the default. A service can opt into opaque bearer tokens with `authentication.mode: static_token`. The service’s incoming authentication mode and its outgoing peer choices are independent. An empty `peers` list enables local execution for capabilities with local bindings.
 
-Initialize a static-token manifest with `--auth-mode static_token` and omit the JWT issuer and JWKS flags. For example, use the following from the repository root with the worker image ID obtained above.
+Initialize a static-token manifest with `--auth-mode static_token` and omit the JWT issuer and JWKS flags. For example, use the following from the repository root after starting the launcher.
 
 ```sh
 lasa config init --output /etc/lasa/review --state-root /var/lib/lasa/review \
   --auth-mode static_token --operator-subject operator \
   --service-id https://identity.example.net/services/review \
   --base-url https://review.example.net/lasa/v1 \
-  --image "$lasa_worker_image" \
+  --launcher-socket /run/lasa/review/launcher.sock \
   --model YOUR_MODEL_ID --provider-url https://provider.example.net/v1 \
   --credential-ref file:/run/secrets/lasa/review/model-key
 
@@ -92,31 +100,42 @@ uv run --project v0 python v0/tools/create_development_config.py \
   --output /absolute/path/to/lasa-dev \
   --base-url https://localhost:8443/lasa/v1 \
   --service-id https://identity.example.net/services/development \
-  --image "$lasa_worker_image"
+  --launcher-socket /run/lasa/review/launcher.sock
 ```
 
 ## Running LASA in Docker
 
-Build the supervisor image after building the Codex worker image above:
+Build the supervisor and launcher images after building the Codex worker image.
 
 ```sh
+docker build -f v0/Dockerfile.service --target launcher -t lasa-launcher:1.0.0 v0
 docker build -f v0/Dockerfile.service -t lasa-supervisor:1.0.0 v0
 ```
 
-The image installs LASA and its locked production dependencies. It runs `lasa --config /etc/lasa/config.json` by default. For a bridge-network listener, set `storage.listen_host` to `0.0.0.0` and set `storage.tls.certificate_file` and `storage.tls.key_file` to the absolute paths of your server certificate and key. The certificate must cover the hostname in `service.base_url`. A model provider with private TLS can set `executors[].provider_ca_file` to its CA bundle. Peers use their own `ca_file` setting.
-
-Mount the config and secret directories read-only. Bind-mount the writable state root at the same absolute path on the Docker host and inside the supervisor. The Docker daemon resolves paths inside that root when creating sibling Codex containers. Run the supervisor as the state directory owner and give it access to the daemon socket.
+Mount the Docker daemon socket only in the launcher. Run the launcher with networking disabled and distribute provider keys, TLS keys, and peer credentials only to the supervisor. Give each launcher and supervisor pair a dedicated socket volume. For this example, set `runtime.launcher_socket` to `/run/lasa/launcher.sock` in the manifest.
 
 ```sh
 lasa_config=/etc/lasa/review
 lasa_state=/var/lib/lasa/review
 lasa_secrets=/run/secrets/lasa/review
 lasa_socket=/var/run/docker.sock
+lasa_socket_volume=lasa-review-launcher
+lasa_user="$(id -u):$(id -g)"
 lasa_socket_group=$(docker run --rm --network none \
   --mount "type=bind,source=$lasa_socket,target=/var/run/docker.sock" \
-  --entrypoint stat lasa-supervisor:1.0.0 -c '%g' /var/run/docker.sock)
-docker run --rm --user "$(id -u):$(id -g)" --group-add "$lasa_socket_group" \
+  --entrypoint stat lasa-launcher:1.0.0 -c '%g' /var/run/docker.sock)
+docker volume create "$lasa_socket_volume"
+docker run --rm --network none --user 0:0 \
+  --mount "type=volume,source=$lasa_socket_volume,target=/run/lasa" \
+  --entrypoint chown lasa-launcher:1.0.0 "$lasa_user" /run/lasa
+docker run -d --name lasa-review-launcher --network none \
+  --user "$lasa_user" --group-add "$lasa_socket_group" \
   --mount "type=bind,source=$lasa_socket,target=/var/run/docker.sock" \
+  --mount "type=volume,source=$lasa_socket_volume,target=/run/lasa" \
+  lasa-launcher:1.0.0 --image "$lasa_worker_image" \
+  --scope https://identity.example.net/services/review --socket /run/lasa/launcher.sock
+docker run --rm --user "$lasa_user" \
+  --mount "type=volume,source=$lasa_socket_volume,target=/run/lasa,readonly" \
   --mount "type=bind,source=$lasa_config,target=$lasa_config,readonly" \
   --mount "type=bind,source=$lasa_state,target=$lasa_state" \
   --mount "type=bind,source=$lasa_secrets,target=$lasa_secrets,readonly" \
@@ -124,15 +143,15 @@ docker run --rm --user "$(id -u):$(id -g)" --group-add "$lasa_socket_group" \
   lasa-supervisor:1.0.0 --config "$lasa_config/config.json"
 ```
 
-Create the mount directories first. This example assumes a manifest with `storage.state_root` set to `/var/lib/lasa/review`, an HTTPS base URL on `localhost:8443`, `storage.listen_host` set to `0.0.0.0`, and TLS and model credential files under the secret directory. A static-token registry mounted read-only in the supervisor can be updated from the host using the token issuance CLI.
+Create the bind mount directories first. For a bridge-network listener, set `storage.listen_host` to `0.0.0.0` and set the absolute TLS certificate and key paths. The certificate must cover the hostname in `service.base_url`. A provider with private TLS can set `executors[].provider_ca_file`; peers use their own `ca_file`. Wait for the launcher socket before starting the supervisor. Use one launcher per service identity on the Docker daemon.
 
-Run the local multi-peer check with both images available:
+Run the local multi-peer check with all three images available.
 
 ```sh
 (cd v0 && .venv/bin/python -m tests.container_smoke)
 ```
 
-The check creates a private Docker network with one parent, two downstream LASA services, and a deterministic HTTPS model fixture. It submits a task, verifies both child traces and the parent result, checks receiver-specific authentication, and removes the temporary containers and network. It uses the installed LASA CLI and the real Codex worker image.
+The check creates an isolated network, three supervisors and launchers, and a deterministic HTTPS model fixture. It submits a parent task, verifies both child traces and the final result, and checks receiver-specific authentication and worker cleanup. It removes the test containers, volumes, and network.
 
 ## Model service and prompts
 

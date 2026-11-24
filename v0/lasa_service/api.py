@@ -24,7 +24,7 @@ def create_app(
     if runtime is None:
         from .runtime import CodexRuntime
 
-        runtime = CodexRuntime()
+        runtime = CodexRuntime(config)
     c = Coordinator(
         config,
         runtime,

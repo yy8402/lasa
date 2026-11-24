@@ -8,6 +8,7 @@ import asyncio
 import copy
 import json
 import sys
+import tempfile
 from contextlib import AsyncExitStack
 from datetime import UTC, datetime
 from pathlib import Path
@@ -18,7 +19,9 @@ import httpx
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from lasa_service.api import create_app
 from lasa_service.config import Configuration
-from lasa_service.runtime import CodexRuntime
+from lasa_service.enclosure import Enclosure
+from lasa_service.launcher import Launcher
+from lasa_service.launcher_client import launcher_scope
 from tests.conftest import documents, new_session, task_request, token
 from tests.http_helpers import certificate, live_http
 
@@ -29,9 +32,9 @@ ROUTE_CASES = ["local_first", "delegate_first", "fallback_disabled", "fallback_e
 CASES = ROUTE_CASES + ["assessment_" + x["id"] for x in CORPUS]
 
 
-def configure(directory, layer, case, key, runtime_image):
+def configure(directory, layer, case, key, launcher_socket):
     raw = documents(directory, layer, peer=(layer == "layer1" and case != "no_peer"))
-    raw["runtime"]["image"] = runtime_image
+    raw["runtime"]["launcher_socket"] = str(launcher_socket)
     raw["service"]["deployment_revision"] = "evaluation-" + case
     raw["discovery_cache"]["catalog_max_age_seconds"] = 300
     budget = raw["limits"]["max_task_budget"]
@@ -100,15 +103,24 @@ async def events(client, url):
 
 async def run_case(directory, case, key, runtime_image):
     tls = certificate(directory)
-    child_raw, child_env = configure(directory / "child", "layer2", case, key, runtime_image)
     async with AsyncExitStack() as stack:
+        sockets = Path(
+            stack.enter_context(tempfile.TemporaryDirectory(prefix="lasa-eval-", dir="/tmp"))
+        )
+        for role, layer in (("child", "layer2"), ("parent", "layer1")):
+            scope = launcher_scope("https://identity.example.net/services/" + layer)
+            launcher = Launcher(Enclosure(runtime_image, scope))
+            await stack.enter_async_context(launcher.serve(sockets / f"{role}.sock"))
+        child_raw, child_env = configure(
+            directory / "child", "layer2", case, key, sockets / "child.sock"
+        )
         child_cfg = Configuration.from_document(child_raw, environ=child_env)
-        child_app = create_app(child_cfg, runtime=CodexRuntime())
+        child_app = create_app(child_cfg)
         await stack.enter_async_context(child_app.router.lifespan_context(child_app))
         child_origin = await stack.enter_async_context(live_http(child_app, tls=tls))
         prefix = "/prefix/lasa/v1"
         child_cfg.document["service"].update(base_url=child_origin + prefix)
-        raw, env = configure(directory / "parent", "layer1", case, key, runtime_image)
+        raw, env = configure(directory / "parent", "layer1", case, key, sockets / "parent.sock")
         if raw["peers"]:
             raw["peers"][0].update(
                 descriptor_url=child_origin + prefix + "/descriptor",
@@ -116,7 +128,7 @@ async def run_case(directory, case, key, runtime_image):
                 ca_file=str(tls[0]),
             )
         cfg = Configuration.from_document(raw, environ=env)
-        app = create_app(cfg, runtime=CodexRuntime())
+        app = create_app(cfg)
         await stack.enter_async_context(app.router.lifespan_context(app))
         origin = await stack.enter_async_context(live_http(app, tls=tls))
         cfg.document["service"].update(base_url=origin + prefix)

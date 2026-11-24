@@ -1,9 +1,11 @@
 """Verify an installed LASA image using three containers and a local model fixture."""
 
 import argparse
+import hashlib
 import json
 import os
 import secrets
+import sqlite3
 import ssl
 import subprocess
 import sys
@@ -27,6 +29,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PEERS = {"review": "design.review", "attempt": "task.attempt"}
 MODEL_KEY = "local-responses-fixture"
 PORT = 8443
+LAUNCHER_SOCKET = "/run/lasa/launcher.sock"
 
 
 def origin(name):
@@ -62,7 +65,7 @@ def mount(source, target=None, *, read_only=True):
     )
 
 
-def configure(root, name, namespace, runtime):
+def configure(root, name, namespace):
     directory = root / name
     identity = f"https://identity.lasa.test/services/{namespace}"
     command = [
@@ -74,8 +77,8 @@ def configure(root, name, namespace, runtime):
         base(name),
         "--service-id",
         f"{identity}/{name}",
-        "--image",
-        runtime,
+        "--launcher-socket",
+        LAUNCHER_SOCKET,
         "--listen-port",
         str(PORT),
     ]
@@ -460,6 +463,7 @@ def verify(root):
 def run(args, root):
     namespace = "lasa-smoke-" + uuid4().hex[:10]
     image = docker("image", "inspect", "--format", "{{.Id}}", args.service_image)
+    launcher_image = docker("image", "inspect", "--format", "{{.Id}}", args.launcher_image)
     runtime = docker("image", "inspect", "--format", "{{.Id}}", args.runtime_image)
     socket_mount = mount(args.docker_socket, "/var/run/docker.sock", read_only=False)
     gid = docker(
@@ -471,12 +475,12 @@ def run(args, root):
         socket_mount,
         "--entrypoint",
         "stat",
-        image,
+        launcher_image,
         "-c",
         "%g",
         "/var/run/docker.sock",
     )
-    configs = {name: configure(root, name, namespace, runtime) for name in (*PEERS, "parent")}
+    configs = {name: configure(root, name, namespace) for name in (*PEERS, "parent")}
     model = root / "model"
     model.mkdir()
     certificate(model, dns_name="lasa-model")
@@ -488,6 +492,7 @@ def run(args, root):
     for name, config in configs.items():
         save(root / name / "config.json", config)
     containers = []
+    volumes = []
     docker("network", "create", "--internal", namespace)
     user = f"{os.getuid()}:{os.getgid()}"
     fixture = [
@@ -523,22 +528,82 @@ def run(args, root):
         for name, config in configs.items():
             state = Path(config["storage"]["state_root"])
             state.mkdir(mode=0o700, parents=True)
-            containers.append(namespace + "-" + name)
+            volume = namespace + "-socket-" + name
+            volumes.append(volume)
+            docker("volume", "create", volume)
+            socket_volume = f"type=volume,source={volume},target=/run/lasa"
+            docker(
+                "run",
+                "--rm",
+                "--network",
+                "none",
+                "--user",
+                "0:0",
+                "--mount",
+                socket_volume,
+                "--entrypoint",
+                "chown",
+                image,
+                user,
+                "/run/lasa",
+            )
+            launcher = namespace + "-launcher-" + name
+            containers.append(launcher)
             docker(
                 "run",
                 "-d",
                 "--name",
-                containers[-1],
+                launcher,
                 "--network",
-                namespace,
-                "--network-alias",
-                "lasa-" + name,
+                "none",
                 "--user",
                 user,
                 "--group-add",
                 gid,
                 "--mount",
                 socket_mount,
+                "--mount",
+                socket_volume,
+                launcher_image,
+                "--image",
+                runtime,
+                "--scope",
+                config["service"]["id"],
+                "--socket",
+                LAUNCHER_SOCKET,
+            )
+            end = time.monotonic() + 20
+            while True:
+                if (
+                    docker(
+                        "exec",
+                        launcher,
+                        "sh",
+                        "-c",
+                        "test -S /run/lasa/launcher.sock && echo ready",
+                        check=False,
+                    )
+                    == "ready"
+                ):
+                    break
+                if time.monotonic() > end:
+                    raise TimeoutError(f"Launcher for {name} did not become ready")
+                time.sleep(0.1)
+            supervisor = namespace + "-" + name
+            containers.append(supervisor)
+            docker(
+                "run",
+                "-d",
+                "--name",
+                supervisor,
+                "--network",
+                namespace,
+                "--network-alias",
+                "lasa-" + name,
+                "--user",
+                user,
+                "--mount",
+                socket_volume + ",readonly",
                 "--mount",
                 mount(root / name),
                 "--mount",
@@ -551,6 +616,8 @@ def run(args, root):
                 "--config",
                 root / name / "config.json",
             )
+            mounts = json.loads(docker("inspect", "--format", "{{json .Mounts}}", supervisor))
+            assert all(x["Destination"] != "/var/run/docker.sock" for x in mounts)
         client = namespace + "-verify"
         containers.append(client)
         print(
@@ -575,10 +642,14 @@ def run(args, root):
             )
         )
         for config in configs.values():
-            label = "label=com.lasa.service_id=" + config["service"]["id"]
+            label = (
+                "label=com.lasa.launcher="
+                + hashlib.sha256(config["service"]["id"].encode()).hexdigest()
+            )
             assert not docker("ps", "-aq", "--filter", label), "A task enclosure was left running"
             state = Path(config["storage"]["state_root"])
-            assert (state / "private" / "tasks.sqlite3").is_file()
+            with sqlite3.connect(state / "private" / "tasks.sqlite3") as store:
+                assert store.execute("SELECT count(*) FROM runtimes").fetchone() == (0,)
             assert any((state / "workspaces").iterdir())
     except Exception:
         for container in containers:
@@ -591,10 +662,15 @@ def run(args, root):
             docker("stop", "-t", "5", container, check=False)
             docker("rm", "-f", container, check=False)
         for config in configs.values():
-            label = "label=com.lasa.service_id=" + config["service"]["id"]
+            label = (
+                "label=com.lasa.launcher="
+                + hashlib.sha256(config["service"]["id"].encode()).hexdigest()
+            )
             remaining = docker("ps", "-aq", "--filter", label, check=False).splitlines()
             if remaining:
                 docker("rm", "-f", *remaining)
+        for volume in volumes:
+            docker("volume", "rm", volume)
         docker("network", "rm", namespace)
 
 
@@ -606,6 +682,7 @@ if __name__ == "__main__":
     else:
         parser = argparse.ArgumentParser(description=__doc__)
         parser.add_argument("--service-image", default="lasa-supervisor:1.0.0")
+        parser.add_argument("--launcher-image", default="lasa-launcher:1.0.0")
         parser.add_argument("--runtime-image", default="lasa-codex-worker:1.0.0")
         parser.add_argument("--docker-socket", type=Path, default=Path("/var/run/docker.sock"))
         with tempfile.TemporaryDirectory(prefix="lasa-container-") as directory:

@@ -1,106 +1,51 @@
-"""A networkless, unprivileged Docker boundary for each agent task."""
+"""Docker operations available only to the host-local launcher."""
 
 import asyncio
-import json
 import os
+import re
 import shutil
-import stat
+
+import tomli_w
 
 from .errors import LasaError
+from .worker_config import worker_configuration
+
+ATTEMPT_ID = re.compile(r"attempt-[0-9a-f]{32}")
+CONTAINER_ID = re.compile(r"[0-9a-f]{64}")
+WORKER_EXECUTABLE = "/usr/local/bin/codex"
 
 
 class Enclosure:
-    def __init__(self):
+    def __init__(self, image, scope):
         self.docker = shutil.which("docker")
+        self.image = image
+        self.scope = scope
 
-    async def run(self, *arguments, check=True, limit_seconds=20):
+    async def run(self, *arguments, check=True):
         if self.docker is None:
             raise LasaError("internal_error", 503)
         process = await asyncio.create_subprocess_exec(
             self.docker,
-            *map(str, arguments),
+            *arguments,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
         try:
-            async with asyncio.timeout(limit_seconds):
+            async with asyncio.timeout(20):
                 stdout, stderr = await process.communicate()
         except BaseException:
-            process.kill()
+            if process.returncode is None:
+                process.kill()
             await process.wait()
             raise
         if check and process.returncode:
             raise LasaError("internal_error", 503)
         return process.returncode, stdout, stderr
 
-    async def verify_image(self, image, executable, expected_version):
-        _, value, _ = await self.run("image", "inspect", "--format", "{{.Id}}", image)
-        if value.decode().strip() != image:
-            raise LasaError("internal_error", 503)
-        _, stdout, _ = await self.run(
-            "run",
-            "--rm",
+    def isolation(self):
+        return [
             "--pull",
             "never",
-            "--network",
-            "none",
-            "--read-only",
-            "--cap-drop",
-            "ALL",
-            "--security-opt",
-            "no-new-privileges",
-            "--pids-limit",
-            "64",
-            "--memory",
-            "768m",
-            image,
-            "probe",
-            executable,
-        )
-        if stdout.decode().strip() != "codex-cli " + expected_version:
-            raise LasaError("internal_error", 503)
-
-    async def create(
-        self,
-        *,
-        image,
-        executable,
-        task_id,
-        service_id,
-        workspace,
-        home,
-        protected,
-        token,
-        role="serve",
-        workspace_readonly=False,
-    ):
-        for reserved in (".codex", ".agents"):
-            path = workspace / reserved
-            try:
-                path.mkdir(mode=0o700)
-            except FileExistsError:
-                if path.is_symlink() or not path.is_dir():
-                    raise LasaError("precondition_failed", 422) from None
-        fd = os.open(workspace / "AGENTS.md", os.O_WRONLY | os.O_CREAT | os.O_NOFOLLOW, 0o600)
-        try:
-            if not stat.S_ISREG(os.fstat(fd).st_mode):
-                raise LasaError("precondition_failed", 422)
-        finally:
-            os.close(fd)
-        name = "lasa-" + task_id
-        args = [
-            "create",
-            "--rm",
-            "--pull",
-            "never",
-            "--init",
-            "--interactive",
-            "--name",
-            name,
-            "--label",
-            "com.lasa.task_id=" + task_id,
-            "--label",
-            "com.lasa.service_id=" + service_id,
             "--network",
             "none",
             "--read-only",
@@ -116,47 +61,90 @@ class Enclosure:
             "1",
             "--user",
             f"{os.getuid()}:{os.getgid()}",
+        ]
+
+    async def verify_image(self, expected_version):
+        _, value, _ = await self.run("image", "inspect", "--format", "{{.Id}}", self.image)
+        if value.decode().strip() != self.image:
+            raise LasaError("internal_error", 503)
+        _, stdout, _ = await self.run(
+            "run", "--rm", *self.isolation(), self.image, "probe", WORKER_EXECUTABLE
+        )
+        if stdout.decode().strip() != "codex-cli " + expected_version:
+            raise LasaError("internal_error", 503)
+
+    async def create(self, attempt_id, model, role):
+        _, stdout, _ = await self.run(
+            "create",
+            "--rm",
+            "--init",
+            "--interactive",
+            *self.isolation(),
+            "--name",
+            "lasa-" + attempt_id,
+            "--label",
+            "com.lasa.launcher=" + self.scope,
+            "--label",
+            "com.lasa.attempt=" + attempt_id,
             "--tmpfs",
-            "/tmp:rw,nosuid,nodev,noexec,size=67108864,mode=1777",
+            "/tmp:rw,nosuid,nodev,noexec,size=64m,mode=1777",
+            "--tmpfs",
+            "/workspace:rw,nosuid,nodev,noexec,size=64m,mode=1777",
+            "--tmpfs",
+            "/home/lasa:rw,nosuid,nodev,noexec,size=64m,mode=1777",
             "--workdir",
             "/workspace",
-        ]
-        for source, target, readonly in (
-            (workspace, "/workspace", workspace_readonly),
-            (home, "/home/lasa", False),
-            (home / "config.toml", "/home/lasa/config.toml", True),
-            (protected / "empty", "/workspace/.codex", True),
-            (protected / "empty", "/workspace/.agents", True),
-            (protected / "empty-file", "/workspace/AGENTS.md", True),
-        ):
-            args += [
-                "--mount",
-                f"type=bind,source={source},target={target}" + (",readonly" if readonly else ""),
-            ]
-        args += ["--env", "LASA_GATEWAY_TOKEN=" + token]
-        _, stdout, _ = await self.run(*args, image, role, executable)
+            "--env",
+            "LASA_CODEX_CONFIG=" + tomli_w.dumps(worker_configuration(model)),
+            self.image,
+            role,
+            WORKER_EXECUTABLE,
+        )
         container_id = stdout.decode().strip()
-        if len(container_id) != 64 or any(c not in "0123456789abcdef" for c in container_id):
+        if not CONTAINER_ID.fullmatch(container_id):
             raise LasaError("internal_error", 503)
         return container_id
 
-    async def inspect(self, container_id):
-        status, stdout, _ = await self.run(
-            "inspect", "--format", "{{json .Config.Labels}}", container_id, check=False
+    async def start(self, container_id):
+        return await asyncio.create_subprocess_exec(
+            self.docker,
+            "start",
+            "--attach",
+            "--interactive",
+            container_id,
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.DEVNULL,
         )
-        if status:
-            # Distinguish an absent container from an unreachable daemon before releasing ownership.
-            await self.run("info", "--format", "{{.ServerVersion}}")
-            return None
-        return json.loads(stdout)
 
-    async def remove(self, container_id, task_id, service_id):
-        labels = await self.inspect(container_id)
-        if labels is None:
-            return
-        if (
-            labels.get("com.lasa.task_id") != task_id
-            or labels.get("com.lasa.service_id") != service_id
-        ):
-            raise LasaError("internal_error", 503)
-        await self.run("rm", "--force", container_id)
+    async def inventory(self, attempt_id=None):
+        filters = ["--filter", "label=com.lasa.launcher=" + self.scope]
+        if attempt_id is not None:
+            filters += ["--filter", "label=com.lasa.attempt=" + attempt_id]
+        _, stdout, _ = await self.run(
+            "ps",
+            "--all",
+            "--no-trunc",
+            *filters,
+            "--format",
+            '{{.ID}} {{.Label "com.lasa.attempt"}}',
+        )
+        containers = {}
+        for line in stdout.decode().splitlines():
+            container_id, _, attempt = line.partition(" ")
+            if (
+                not CONTAINER_ID.fullmatch(container_id)
+                or not ATTEMPT_ID.fullmatch(attempt)
+                or (attempt_id is not None and attempt != attempt_id)
+                or attempt in containers
+            ):
+                raise LasaError("internal_error", 503)
+            containers[attempt] = container_id
+        return containers
+
+    async def remove(self, attempt_id):
+        container_id = (await self.inventory(attempt_id)).get(attempt_id)
+        if container_id is not None:
+            await self.run("rm", "--force", container_id, check=False)
+            if await self.inventory(attempt_id):
+                raise LasaError("internal_error", 503)

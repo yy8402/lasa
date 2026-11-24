@@ -3,9 +3,10 @@
 import asyncio
 import base64
 import json
-import signal
+import os
 import subprocess
 import sys
+from pathlib import Path
 from uuid import uuid4
 
 MAX_BODY = 1048576
@@ -118,13 +119,15 @@ def main():
     executable = sys.argv[2] if len(sys.argv) > 2 else "/usr/local/bin/codex"
     if role == "probe":
         return subprocess.call([executable, "--version"])
+    if role in {"config-check", "serve"}:
+        (Path(os.environ["CODEX_HOME"]) / "config.toml").write_text(
+            os.environ.pop("LASA_CODEX_CONFIG"), encoding="utf-8"
+        )
+        os.environ["LASA_LOCAL_MODEL_KEY"] = "local"
     if role == "config-check":
         return subprocess.call(
             [executable, "app-server", "--strict-config", "--print-startup-config"]
         )
-    if role == "hold":
-        signal.pause()
-        return 0
     if role != "serve":
         raise ValueError("Unknown container role")
     return asyncio.run(serve(executable))

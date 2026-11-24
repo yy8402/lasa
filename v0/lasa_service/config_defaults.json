@@ -61,9 +61,10 @@
   },
   "static_tokens_file": "static-tokens.json",
   "runtime": {
-    "executable": "/usr/local/bin/codex",
-    "expected_version": "0.169.0-alpha.11.1",
     "startup_timeout_ms": 10000
+  },
+  "worker": {
+    "expected_version": "0.169.0-alpha.11.1"
   },
   "published_contracts": [
     "design.review",

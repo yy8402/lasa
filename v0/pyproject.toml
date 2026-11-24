@@ -12,7 +12,6 @@ dependencies = [
   "httpx>=0.28,<1",
   "jsonschema>=4.26,<5",
   "mcp>=1.20,<2",
-  "psutil>=7,<8",
   "PyJWT[crypto]>=2.10,<3",
   "referencing>=0.37,<1",
   "rfc8785>=0.1.4,<1",
@@ -23,6 +22,7 @@ dependencies = [
 [project.scripts]
 lasa = "lasa_service.cli:main"
 lasa-issue-jwt = "lasa_service.issue_jwt:main"
+lasa-launcher = "lasa_service.launcher:main"
 
 [dependency-groups]
 dev = ["pytest>=8,<10", "pytest-asyncio>=1,<2", "ruff>=0.14,<1"]

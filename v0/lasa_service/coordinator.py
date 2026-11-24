@@ -34,7 +34,6 @@ class ExecutionContext:
     limits: dict
     binding: dict | None
     effects: list
-    workspace: Workspace
     baseline: dict
     step_id: str | None = None
 
@@ -666,7 +665,6 @@ class Coordinator:
             step["allocation"],
             binding,
             effects,
-            self.workspace(task["session_id"]),
             self.store.usage(task_id, reserved=True),
             step["step_id"],
         )
@@ -887,7 +885,6 @@ class Coordinator:
                         },
                         None,
                         [],
-                        self.workspace(task["session_id"]),
                         baseline,
                     )
                     final = await self.run_runtime(context)

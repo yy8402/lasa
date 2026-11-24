@@ -15,7 +15,7 @@ In the tables, **Required** means the field must appear in the supplied object. 
 | `authentication` | Yes | See below | JWT or static-token object | Verifies incoming callers. Choose static tokens explicitly when provisioning an opaque bearer credential. |
 | `authorization` | No | The policy file `authorization.json` beside the manifest | Object with optional `policy_file` | Points to the separate policy that determines what authenticated subjects can do. |
 | `executors` | Yes | None | One or more executor objects with distinct IDs | Selects the model provider and any private connectors. Start with one executor. |
-| `runtime` | Yes | See below | Object with `image` | Pins the Codex worker and controls its startup timeout. |
+| `runtime` | Yes | See below | Object with `launcher_socket` | Selects the service's private launcher and bounds worker startup. |
 | `default_executor` | With multiple executors | The sole executor's ID | An ID in `executors` | Selects the executor for planning, verification, integration, and generated local bindings. Set it explicitly with multiple executors. |
 | `verification` | No | The default executor's model and the provider's reasoning defaults | Object with `model` and optional `reasoning_effort` | Selects the model for outcome verification using the default executor's provider and credentials. Set it after evaluating the model on correct and incorrect outcomes. |
 | `peers` | No | `[]` | Ordered list of 0–16 peer objects with distinct, non-self service IDs | Supplies downstream routes. Order breaks ties among suitable peers. Leave it empty for standalone operation. |
@@ -48,10 +48,10 @@ An **identifier** in the tables below is 3–128 characters. Its first character
 | `storage.tls` | With a non-loopback listener | None | Object with `certificate_file` and `key_file` | Enables TLS on the LASA listener. Omit it for loopback HTTP behind a TLS-terminating local proxy. |
 | `storage.tls.certificate_file` | With `storage.tls` | None | Non-empty absolute path to a readable certificate chain | Supplies the server certificate and chain. Use a certificate that covers the hostname clients use for that listener. |
 | `storage.tls.key_file` | With `storage.tls` | None | Non-empty absolute path to the matching private key | Supplies the server key. Mount it privately and make it readable by the service user. |
-| `runtime.image` | Yes | None | Immutable Docker image ID, `sha256:` plus 64 lowercase hex digits | Pins the installed Codex worker. Update it when installing a new compatible worker image. |
+| `runtime.launcher_socket` | Yes | None | Absolute Unix socket path | Connects the supervisor to its host-local launcher. The launcher separately pins the immutable worker image ID. |
 | `runtime.startup_timeout_ms` | No | `10000` | Integer 1,000–60,000 | Bounds worker readiness. Increase it for reliably slower hosts after checking worker startup logs. |
 
-Use HTTPS service URLs without embedded credentials, a query, or a fragment. LASA keeps task records, receipts, and other private state in `<state_root>/private/` and session files in `<state_root>/workspaces/`. The two paths must be direct directories. For sibling Docker workers, bind-mount the state root at the same absolute path on the Docker host and inside the supervisor. The package pins the worker executable and expected version through its internal defaults. [Docker deployment](RUNNING.md#running-lasa-in-docker)
+Use HTTPS service URLs without embedded credentials, a query, or a fragment. LASA keeps task records, receipts, and other private state in `<state_root>/private/` and session files in `<state_root>/workspaces/`. The two paths must be direct directories. Give the supervisor a writable state mount and a read-only view of the launcher socket directory. The launcher verifies the pinned worker image and the packaged Codex version. [Docker deployment](RUNNING.md#running-lasa-in-docker)
 
 ## Incoming authentication and authorization
 
@@ -236,7 +236,7 @@ This is a complete manifest. Replace the example URLs, model ID, and all-zero pl
     }
   ],
   "runtime": {
-    "image": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+    "launcher_socket": "/run/lasa/launcher.sock"
   }
 }
 ```
@@ -267,7 +267,7 @@ The parent uses JWT for incoming callers. It prefers two downstream services for
     }
   ],
   "runtime": {
-    "image": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+    "launcher_socket": "/run/lasa/launcher.sock"
   },
   "routing": {"preferred_executor": "peer"},
   "peers": [
