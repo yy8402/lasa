@@ -1,5 +1,6 @@
 FROM ghcr.io/astral-sh/uv:0.12.3 AS uv
 FROM docker:29-cli AS docker-cli
+FROM ghcr.io/betterleaks/betterleaks:v1.10.1@sha256:f345c1ac502abc51ec334c3d815ad18a79fb1509555fc4496b2cb88e760681b3 AS betterleaks
 
 FROM python:3.12-slim-bookworm AS build
 COPY --from=uv /uv /usr/local/bin/uv
@@ -18,6 +19,11 @@ USER 10001:10001
 FROM service-base AS launcher
 COPY --from=docker-cli /usr/local/bin/docker /usr/local/bin/docker
 ENTRYPOINT ["lasa-launcher"]
+
+FROM service-base AS inspector
+COPY --from=betterleaks /usr/bin/betterleaks /usr/bin/betterleaks
+COPY inspector/server.py /opt/lasa/inspector/server.py
+ENTRYPOINT ["python", "/opt/lasa/inspector/server.py"]
 
 FROM service-base AS supervisor
 ENTRYPOINT ["lasa"]

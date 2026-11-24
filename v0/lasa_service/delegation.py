@@ -7,6 +7,7 @@ import time
 
 from . import PROTOCOL_VERSION
 from .capabilities import epoch, require
+from .content_security import Transfer
 from .contracts import canonical, digest, parse_json, request_digest
 from .errors import LasaError
 from .evidence import validate_child_readbacks
@@ -15,6 +16,8 @@ from .preconditions import check_inputs, request_input_size, restrict
 from .routing import fallback_input
 from .store import TERMINAL, encode, identity, zero
 from .verification import receipt_for
+
+CONTENT_FAILURES = {"disclosure_denied", "content_gateway_unavailable"}
 
 
 class DelegationController:
@@ -110,7 +113,14 @@ class DelegationController:
                 value, status, _ = await peer.request(
                     "POST", url, body, body["operation_id"], binding=binding
                 )
-                if status == expected or (not uncertain and 400 <= status < 500 and status != 408):
+                content_refused = (
+                    kind == "task"
+                    and isinstance(value, dict)
+                    and value.get("code") in CONTENT_FAILURES
+                )
+                if status == expected or (
+                    not uncertain and ((400 <= status < 500 and status != 408) or content_refused)
+                ):
                     return value, status
             except LasaError:
                 pass
@@ -337,7 +347,6 @@ class DelegationController:
             "state": "reserved",
             "dispatched": False,
             "imported_artifacts": [],
-            "request": body,
             "step_contract": step["contract"],
             "step_id": step["step_id"],
         }
@@ -392,6 +401,24 @@ class DelegationController:
                 )
                 require(current == ceiling and visible == artifacts, "authority_denied", 403)
 
+            dispatch = await c.content.check(
+                Transfer(
+                    "delegation.request",
+                    "peer:" + peer.service_id,
+                    "task",
+                    delegation_id,
+                    task_id,
+                    request["selection"]["contract"]["id"],
+                ),
+                body,
+                projection={
+                    "input": delegated_input,
+                    "dependencies": body.get("dependency_results", {}),
+                    "attachments": artifacts,
+                },
+                remaining=lambda: c.remaining_seconds(task_id),
+            )
+            check_submission()
             child["request"] = body
             child["state"] = "submitting"
             child["dispatched"] = True
@@ -405,18 +432,26 @@ class DelegationController:
                 reserved=amount,
                 content={"service_id": child["service_id"], "request": body},
             )
-            value, status = await self.create(
-                peer,
-                binding,
-                base + "/sessions/" + child["session_id"] + "/tasks",
-                body,
-                "task",
-                check_submission,
-            )
+            try:
+                value, status = await self.create(
+                    peer,
+                    binding,
+                    base + "/sessions/" + child["session_id"] + "/tasks",
+                    body,
+                    "task",
+                    check_submission,
+                )
+            except (LasaError, asyncio.CancelledError):
+                c.content.outcome(dispatch, "delivery_unknown")
+                raise
+            c.content.outcome(dispatch, "delivered")
             if status != 202:
                 self.settle_child(child, state="rejected", effect="none", usage=zero())
+                code = value.get("code") if isinstance(value, dict) else None
+                if code in CONTENT_FAILURES:
+                    raise LasaError(code, status)
                 raise LasaError("offer_changed" if status == 409 else "peer_unavailable", status)
-            self.receive_task(child, value)
+            await self.record_observation(child, peer, value)
             c.hit("after_child_dispatch", task_id)
             _, parent = c.check_active(task_id)
             parent["status"] = "waiting_child"
@@ -425,13 +460,14 @@ class DelegationController:
                 while value["status"] not in TERMINAL:
                     c.check_active(task_id)
                     await asyncio.sleep(0.05)
-                    value, status, _ = await peer.request(
-                        "GET", base + "/tasks/" + child["task_id"], binding=binding
-                    )
+                    value, status, _ = await self.poll(child, peer)
                     require(status == 200, "child_outcome_unknown", 503)
-                    self.receive_task(child, value)
+                    await self.record_observation(child, peer, value)
             if child["effect_disposition"] == "unknown":
                 raise LasaError("child_outcome_unknown", 503, effect="unknown")
+            problem = value.get("problem", {})
+            if problem.get("code") in CONTENT_FAILURES:
+                raise LasaError(problem["code"], problem["status"])
             require(value["status"] == "completed", "verification_failed", 422)
             result = value["result"]
             require(
@@ -448,6 +484,15 @@ class DelegationController:
                 "verification_failed",
                 502,
             )
+            source = "peer:" + peer.service_id
+            receive = await c.content.check(
+                Transfer("delegation.response", source, "result", delegation_id, task_id, source),
+                result,
+                projection={"output": result["output"]},
+                remaining=lambda: c.remaining_seconds(task_id),
+            )
+            c.content.remember_source(task_id, receive)
+            c.content.outcome(receive, "accepted")
             artifact_ids = []
             artifact_map = {}
             downloaded = 0
@@ -478,6 +523,21 @@ class DelegationController:
                 )
                 downloaded += len(data)
                 require(downloaded <= result["usage"]["artifact_bytes"], "verification_failed", 502)
+                received = await c.content.check(
+                    Transfer(
+                        "delegation.response",
+                        source,
+                        "artifact",
+                        manifest["artifact_id"],
+                        task_id,
+                        source,
+                    ),
+                    data,
+                    projection={"text": data.decode()},
+                    media_type=manifest["media_type"],
+                    remaining=lambda: c.remaining_seconds(task_id),
+                )
+                c.content.outcome(received, "accepted")
                 artifact_id = identity("artifact")
                 artifact_map[manifest["artifact_id"]] = artifact_id
                 local_manifest = {**manifest, "artifact_id": artifact_id, "source_task_id": task_id}
@@ -610,8 +670,42 @@ class DelegationController:
                 self.settle_child(child, state="failed", effect="none", usage=zero())
             raise
 
-    def receive_task(self, child, value):
-        self.coordinator.contracts.validate("Task", value, "incompatible_protocol", 502)
+    async def control(self, child, peer):
+        binding = child["peer_binding"]
+        url = binding["base_url"] + "/tasks/" + child["task_id"] + "?view=control"
+        value, status, headers = await peer.request("GET", url, binding=binding)
+        if status == 200:
+            self.receive_task(child, value, control=True)
+        return value, status, headers
+
+    async def poll(self, child, peer, *, observing=False):
+        binding = child["peer_binding"]
+        url = binding["base_url"] + "/tasks/" + child["task_id"]
+        value, status, headers = await peer.request("GET", url, binding=binding)
+        if (
+            status in {403, 503}
+            and isinstance(value, dict)
+            and value.get("code") in CONTENT_FAILURES | {"authority_denied"}
+        ):
+            result = await self.control(child, peer)
+            if observing:
+                return result
+            raise LasaError(value["code"], status)
+        return value, status, headers
+
+    async def record_observation(self, child, peer, value):
+        problem = value.get("problem", {}) if isinstance(value, dict) else {}
+        if problem.get("code") in CONTENT_FAILURES:
+            self.coordinator.contracts.validate("Task", value, "incompatible_protocol", 502)
+            self.check_linkage(child, value)
+            child["task_id"] = value["task_id"]
+            _, status, _ = await self.control(child, peer)
+            if status == 200:
+                return
+        self.receive_task(child, value)
+
+    @staticmethod
+    def check_linkage(child, value):
         request = child["request"]
         expected_digest = request_digest(request)
         require(
@@ -624,6 +718,13 @@ class DelegationController:
             "verification_failed",
             502,
         )
+        return expected_digest
+
+    def receive_task(self, child, value, *, control=False):
+        schema = "TaskDisposition" if control else "Task"
+        self.coordinator.contracts.validate(schema, value, "incompatible_protocol", 502)
+        expected_digest = self.check_linkage(child, value)
+        request = child["request"]
         state = value["status"]
         child["task_id"] = value["task_id"]
         if state not in TERMINAL:
@@ -631,7 +732,11 @@ class DelegationController:
             self.save(child)
             return
         usage = None
-        if state == "completed":
+        if control:
+            effect = value["effect_disposition"]
+            usage = copy.deepcopy(value["usage"])
+            usage["delegations"] += 1
+        elif state == "completed":
             require(
                 all(
                     value[key]["request_digest"] == expected_digest
@@ -685,10 +790,11 @@ class DelegationController:
                     child["task_id"] = resource_id
                     self.save(child)
                 url = binding["base_url"] + "/tasks/" + child["task_id"]
-                value, status, headers = await peer.request("GET", url, binding=binding)
+                value, status, headers = await self.poll(child, peer, observing=True)
                 if status != 200:
                     return
-                self.receive_task(child, value)
+                if "effect_disposition" not in value:
+                    await self.record_observation(child, peer, value)
                 if not cancel or child["state"] in TERMINAL:
                     return
                 body = {"operation_id": child["delegation_id"] + "-cancel"}
@@ -701,11 +807,12 @@ class DelegationController:
                     binding=binding,
                 )
                 while status in (200, 202):
-                    self.receive_task(child, value)
+                    if "effect_disposition" not in value:
+                        await self.record_observation(child, peer, value)
                     if child["state"] in TERMINAL:
                         return
                     await asyncio.sleep(0.05)
-                    value, status, _ = await peer.request("GET", url, binding=binding)
+                    value, status, _ = await self.poll(child, peer, observing=True)
         except (LasaError, TimeoutError):
             return
 

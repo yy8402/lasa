@@ -17,6 +17,7 @@ from .capabilities import reference
 from .connector_schema import check_schema, validate
 from .contracts import digest, parse_json, protocol_contracts
 from .grants import find_grant, grant_key
+from .inspection import InspectionBindings
 from .workflows import REVIEW_CHECKLIST
 
 
@@ -148,6 +149,7 @@ class Configuration:
     publishers: list = field(repr=False)
     secrets: dict = field(default_factory=dict, repr=False)
     connectors: dict = field(default_factory=dict, repr=False)
+    inspection: InspectionBindings = field(init=False, repr=False)
 
     @classmethod
     def load(cls, path, *, environ=None):
@@ -337,8 +339,22 @@ class Configuration:
                 raise ConfigurationError(
                     "Peer credential does not match its configured authentication mode or service ID"
                 ) from None
+        config.configure_inspection()
         config.policy()
         return config
+
+    def configure_inspection(self):
+        try:
+            self.inspection = InspectionBindings.from_manifest(self.document)
+        except ValueError as exc:
+            raise ConfigurationError(str(exc)) from None
+        for profile in self.inspection.profiles.values():
+            validate_url(profile["url"])
+            if "ca_file" in profile:
+                require(
+                    Path(profile["ca_file"]).is_absolute(), "Inspection CA path must be absolute"
+                )
+            self.secret(profile["credential_ref"], label="Inspection profile")
 
     @property
     def contracts(self):

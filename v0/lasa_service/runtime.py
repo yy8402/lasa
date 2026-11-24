@@ -50,6 +50,15 @@ class CodexRuntime:
         c = context.coordinator
         source_profile = c.registry.source_profile(context.prompt["contract"])
         executor = c.config.executor(context.binding)
+        guidance = [
+            c.config.prompts["execution_developer"],
+            "LASA tools available to this step are callable functions registered "
+            "on this thread. Use their advertised names and arguments.",
+        ]
+        if instruction := context.prompt.get("instruction"):
+            guidance.append(instruction)
+        if source_profile:
+            guidance.append(c.config.prompts["source_execution"])
         gateway = TaskGateway(context)
         attempt_id = identity("attempt")
         c.store.start_runtime(context.task_id, attempt_id)
@@ -93,9 +102,7 @@ class CodexRuntime:
                     "sandbox": "workspace-write",
                     "approvalPolicy": "never",
                     "dynamicTools": c.broker.tools(context.task_id),
-                    "developerInstructions": c.config.prompts["execution_developer"]
-                    + "\n\nLASA tools available to this step are callable functions registered "
-                    "on this thread. Use their advertised names and arguments.",
+                    "developerInstructions": "\n\n".join(guidance),
                 },
             )
             client.thread_id = thread["thread"]["id"]
@@ -115,14 +122,12 @@ class CodexRuntime:
             "enum": [p["id"] for p in context.definition["postconditions"]],
         }
         prompt = {
-            **context.prompt,
+            **{key: value for key, value in context.prompt.items() if key != "instruction"},
             "outcome_contract": context.definition,
             "required_evidence_criterion_ids": [
                 p["id"] for p in context.definition["postconditions"]
             ],
         }
-        if source_profile:
-            prompt["source_execution"] = c.config.prompts["source_execution"]
         await client.request(
             "turn/start",
             {

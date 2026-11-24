@@ -1,6 +1,7 @@
 """Always-on bounded operation evidence; separately authorized content disclosure."""
 
 from .capabilities import instant
+from .content_security import CREDENTIAL_FIELDS, Transfer
 from .contracts import canonical, digest, parse_json
 from .errors import LasaError
 from .store import identity, zero
@@ -36,18 +37,7 @@ class Diagnostics:
                 return [clean(x) for x in node]
             if isinstance(node, dict):
                 return {
-                    key: "[REDACTED]"
-                    if key.lower()
-                    in {
-                        "authorization",
-                        "api_key",
-                        "token",
-                        "secret",
-                        "password",
-                        "private_key",
-                        "encrypted_content",
-                    }
-                    else clean(item)
+                    key: "[REDACTED]" if key.lower() in CREDENTIAL_FIELDS else clean(item)
                     for key, item in node.items()
                 }
             return node
@@ -173,11 +163,44 @@ class Diagnostics:
             "next_sequence": events[-1]["sequence"] + 1 if events else after + 1,
         }
 
+    async def disclose_content(self, task_id, events, destination, channel, *, source=None):
+        c = self.coordinator
+        content = [event["content"] for event in events if "content" in event]
+        if not content:
+            return
+        source = source or c.request(task_id)["selection"]["contract"]["id"]
+        try:
+            decision = await c.content.check(
+                Transfer(
+                    channel, destination, "diagnostics", identity("diagnostic"), task_id, source
+                ),
+                content,
+                projection={"content": content},
+            )
+            c.content.outcome(decision, "delivered")
+        except LasaError:
+            for event in events:
+                event.pop("content", None)
+
+    async def release_page(self, task_id, principal, after=0, limit=50):
+        c = self.coordinator
+        page = self.page(task_id, principal, after, limit)
+        row, _ = c.store.task(task_id, principal["subject"])
+        c.check_task_identity(row, principal)
+        await self.disclose_content(
+            task_id,
+            page["events"],
+            c.release_destination(principal),
+            "caller.response",
+        )
+        return page
+
     async def children_report(self, task_id, principal, after=0):
         import asyncio
 
         c = self.coordinator
         row, _ = c.store.task(task_id, principal["subject"])
+        c.check_task_identity(row, principal)
         children = c.store.children(task_id)
         try:
             content = (
@@ -206,6 +229,21 @@ class Diagnostics:
                             raise LasaError("verification_failed", 502)
                         if not content:
                             event.pop("content", None)
+                    source = "peer:" + child["service_id"]
+                    await self.disclose_content(
+                        task_id,
+                        page["events"],
+                        source,
+                        "delegation.response",
+                        source=source,
+                    )
+                    await self.disclose_content(
+                        task_id,
+                        page["events"],
+                        c.release_destination(principal),
+                        "caller.response",
+                        source=source,
+                    )
                     summary["trace"] = self.redact(page, task_id)
             except (LasaError, TimeoutError) as exc:
                 summary["problem"] = (

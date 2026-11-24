@@ -141,6 +141,7 @@ def configuration(raw):
         raw,
         environ={
             "MODEL_KEY": "test-model-key",
+            "GATEWAY_KEY": "test-gateway-key",
             **{
                 peer["credential_ref"][4:]: token(
                     "peer-" + raw["service"]["id"].rsplit("/", 1)[-1], peer["expected_service_id"]
@@ -247,6 +248,7 @@ async def services(tmp_path):
             runtime=None,
             peer_transport=None,
             model_transport=None,
+            inspection_transport=None,
             planner=None,
             verifier=None,
         ):
@@ -259,6 +261,7 @@ async def services(tmp_path):
                 runtime=runtime or FakeRuntime(),
                 peer_transport=peer_transport,
                 model_transport=model_transport,
+                inspection_transport=inspection_transport,
                 planner=planner or deterministic_planner,
                 verifier=verifier or deterministic_verifier,
             )

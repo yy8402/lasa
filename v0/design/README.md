@@ -16,6 +16,8 @@ Read in this order:
 6. [Downstream multi-peer delegation](multi-peer-delegation.md)
 7. [Standards and sources](sources.md)
 
+[Content inspection and gateway profiles](content-security.md)
+
 Machine-readable artifacts (also packaged for the runtime):
 
 - [Public and internal contracts](contracts.schema.json), [private configuration](config.schema.json), [private policy/runtime/tools schemas](private.schema.json), and [OpenAPI 3.2.1](api.openapi.json).

@@ -12,7 +12,18 @@ docker build --platform linux/amd64 -f v0/Dockerfile.service -t lasa-supervisor:
 (cd v0 && .venv/bin/python -m tests.container_smoke)
 ```
 
-The Docker smoke test starts isolated supervisors and a deterministic model fixture. It exercises both JWT and static-token delegation, parent verification, and separate config and state mounts, one launcher per supervisor, and the absence of Docker daemon mounts in supervisors. The isolated builds check package metadata, installed files, examples, provisioning, and the config CLI.
+The Docker smoke test starts isolated supervisors and separate deterministic HTTPS fixtures for model inference, inspection, and document retrieval. It checks allowed and denied transfers against captured synthetic requests and metadata-only content audit records. It exercises both JWT and static-token delegation, parent verification, and separate config and state mounts, one launcher per supervisor, and the absence of Docker daemon mounts in supervisors. The isolated builds check package metadata, installed files, examples, provisioning, and the config CLI.
+
+Use the same harness to verify the [local DLP gateway](inspector/README.md) with real Presidio and Betterleaks detectors. It runs the pinned Presidio image on a private internal network alongside deterministic HTTPS fixtures for the model and connector. Separate LASA configurations isolate each stream group and mode so inspection at one boundary cannot mask the case at another.
+
+The matrix runs clean text, a synthetic email address, and a synthetic token in `observe` and `enforce` on model requests and streamed tool responses, caller intake and clarification questions, delegate dispatch and result intake, connector arguments and results, and candidate result and artifact release. It checks the receiving boundary, confirmed usage and effects, and correlates detector reason codes with metadata-only LASA audit records.
+
+The harness uses `lasa deploy apply` and `lasa deploy check` for the real stack. It checks default-off behavior, disabled-binding rejection, repeat apply, profile and live readiness revision mismatches, private networks, and teardown. Build the inspector for the Docker host's native architecture. On an ARM64 host configured to default to AMD64, pass `--platform linux/arm64` to the inspector build.
+
+```sh
+docker build -f v0/Dockerfile.service --target inspector -t lasa-inspector:1.0.0 v0
+(cd v0 && .venv/bin/python -m tests.container_smoke --inspector-image lasa-inspector:1.0.0)
+```
 
 ```sh
 release_dir=$(mktemp -d)

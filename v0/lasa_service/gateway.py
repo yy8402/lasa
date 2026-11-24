@@ -2,52 +2,17 @@
 
 import asyncio
 import hmac
-import re
 import secrets
 import socket
-import time
 from contextlib import nullcontext
 
-import httpx
 import uvicorn
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse, Response
 
 from .capabilities import require
-from .contracts import canonical, parse_json
+from .contracts import parse_json
 from .errors import LasaError
-
-
-class EventStream:
-    """Read SSE data frames while the original bytes continue to the client."""
-
-    line_end = re.compile(rb"\r\n?|\n")
-
-    def __init__(self):
-        self.partial = bytearray()
-        self.data = []
-        self.trailing_cr = False
-        self.first_line = True
-
-    def feed(self, chunk):
-        if not chunk:
-            return
-        start = int(self.trailing_cr and chunk.startswith(b"\n"))
-        self.trailing_cr = chunk.endswith(b"\r")
-        for separator in self.line_end.finditer(chunk, start):
-            self.partial.extend(chunk[start : separator.start()])
-            start = separator.end()
-            line = self.partial
-            self.partial = bytearray()
-            if self.first_line:
-                line = line.removeprefix(b"\xef\xbb\xbf")
-                self.first_line = False
-            if line.startswith(b"data:"):
-                self.data.append(bytes(line[5:]).removeprefix(b" "))
-            elif not line and self.data:
-                yield b"\n".join(self.data)
-                self.data.clear()
-        self.partial.extend(chunk[start:])
 
 
 def validate_local_tools(value):
@@ -109,7 +74,6 @@ class TaskGateway:
         self.server = None
         self.worker = None
         self.sockets = []
-        self.client = None
         self.url = None
 
     def fail(self, error):
@@ -121,13 +85,6 @@ class TaskGateway:
         task_id = self.context.task_id
         executor = c.config.executor(self.context.binding)
         c.diagnostics.register_secret(task_id, self.token)
-        self.client = httpx.AsyncClient(
-            trust_env=False,
-            follow_redirects=False,
-            timeout=60,
-            verify=c.config.provider_verify(executor),
-            transport=c.model_transport,
-        )
         app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 
         def authenticate(request):
@@ -165,96 +122,15 @@ class TaskGateway:
             validate_local_tools(value)
             value["store"] = False
             value["max_output_tokens"] = min(value.get("max_output_tokens", 3000), 3000)
-            operation = c.begin_model(task_id, value, "execution")
-            started = time.monotonic()
-            try:
-                async with asyncio.timeout(c.remaining_seconds(task_id, operation_id=operation)):
-                    upstream = await self.client.send(
-                        self.client.build_request(
-                            "POST",
-                            executor["provider_base_url"].rstrip("/") + suffix,
-                            content=canonical(value),
-                            headers={
-                                "Authorization": "Bearer "
-                                + c.config.secret(executor["credential_ref"]),
-                                "Content-Type": "application/json",
-                            },
-                        ),
-                        stream=True,
-                    )
-            except TimeoutError:
-                raise LasaError("deadline_exceeded", 422) from None
-            except httpx.HTTPError:
-                raise LasaError("peer_unavailable", 503) from None
-            if upstream.status_code != 200:
-                await upstream.aclose()
-                raise LasaError("peer_unavailable", 503)
-            content_type = upstream.headers.get("Content-Type", "").split(";", 1)[0].strip().lower()
-            if content_type not in {"text/event-stream", "application/json"}:
-                await upstream.aclose()
-                raise LasaError("verification_failed", 502)
-
-            async def stream():
-                total = 0
-                parser = EventStream() if content_type == "text/event-stream" else None
-                buffer = bytearray()
-                finished = False
-                try:
-                    async with asyncio.timeout(
-                        c.remaining_seconds(task_id, operation_id=operation)
-                    ):
-                        async for chunk in upstream.aiter_bytes():
-                            c.check_active(task_id)
-                            total += len(chunk)
-                            require(total <= 2097152, "capacity_exhausted", 429)
-                            if parser is None:
-                                buffer.extend(chunk)
-                                continue
-                            for data in parser.feed(chunk):
-                                if not data or data == b"[DONE]":
-                                    continue
-                                event = parse_json(data)
-                                require(isinstance(event, dict), "verification_failed", 502)
-                                if event.get("type") == "response.completed":
-                                    require(not finished, "verification_failed", 502)
-                                    response = event["response"]
-                                    visible = [
-                                        item
-                                        for item in response.get("output", [])
-                                        if item.get("type")
-                                        in {"message", "function_call", "custom_tool_call"}
-                                    ]
-                                    c.finish_model(
-                                        task_id,
-                                        operation,
-                                        response.get("usage", {}),
-                                        int((time.monotonic() - started) * 1000),
-                                        {"output": visible},
-                                    )
-                                    finished = True
-                            yield chunk
-                        if parser is None:
-                            response = parse_json(buffer)
-                            c.finish_model(
-                                task_id,
-                                operation,
-                                response.get("usage", {}),
-                                int((time.monotonic() - started) * 1000),
-                                {"status": response.get("status")},
-                            )
-                            finished = True
-                            yield bytes(buffer)
-                        require(finished, "verification_failed", 502)
-                except TimeoutError:
-                    self.fail(LasaError("deadline_exceeded", 422))
-                except (httpx.HTTPError, LasaError) as exc:
-                    self.fail(
-                        exc if isinstance(exc, LasaError) else LasaError("peer_unavailable", 503)
-                    )
-                finally:
-                    await upstream.aclose()
-
-            return StreamingResponse(stream(), media_type=content_type)
+            result = await c.model_client.exchange(
+                task_id,
+                executor,
+                value,
+                "compaction" if suffix.endswith("/compact") else "execution",
+                suffix=suffix,
+                worker=True,
+            )
+            return Response(result.body, media_type=result.media_type)
 
         @app.post("/model/responses")
         async def responses(request: Request):
@@ -301,5 +177,3 @@ class TaskGateway:
                 await asyncio.gather(self.worker, return_exceptions=True)
         for sock in self.sockets:
             sock.close()
-        if self.client:
-            await self.client.aclose()

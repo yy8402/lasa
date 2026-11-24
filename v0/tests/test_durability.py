@@ -204,10 +204,10 @@ async def test_cancel_before_job_starts_releases_session_and_job_state(services)
     session_id = await new_session(client, app)
     request = await task_request(client, app)
     principal = c.authentication.authenticate(client.headers["Authorization"])
-    task, _ = c.submit(principal, session_id, request, "submit-key", "submit-route")
+    task, _ = await c.submit(principal, session_id, request, "submit-key", "submit-route")
     task_id = task["task_id"]
     job = c.jobs[task_id]
-    c.mutation(
+    await c.mutation(
         principal,
         task_id,
         {"operation_id": "cancel-early"},

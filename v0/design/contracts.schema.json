@@ -1597,6 +1597,7 @@
             "incompatible_protocol",
             "authority_denied",
             "disclosure_denied",
+            "content_gateway_unavailable",
             "offer_changed",
             "catalog_changed",
             "capacity_exhausted",
@@ -2733,6 +2734,81 @@
         "verifier_revision",
         "result_digest",
         "dependency_digest"
+      ],
+      "additionalProperties": false
+    },
+    "TaskDisposition": {
+      "type": "object",
+      "properties": {
+        "task_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
+        },
+        "session_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
+        },
+        "service_id": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://",
+          "maxLength": 2048
+        },
+        "operation_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "evaluating",
+            "awaiting_input",
+            "accepted",
+            "executing",
+            "waiting_child",
+            "cancelling",
+            "completed",
+            "rejected",
+            "failed",
+            "cancelled",
+            "indeterminate"
+          ]
+        },
+        "selection": {
+          "$ref": "#/$defs/OfferSelection"
+        },
+        "request_digest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "effect_disposition": {
+          "type": "string",
+          "enum": [
+            "none",
+            "known",
+            "unknown"
+          ]
+        },
+        "usage": {
+          "$ref": "#/$defs/Budget"
+        }
+      },
+      "required": [
+        "task_id",
+        "session_id",
+        "service_id",
+        "operation_id",
+        "revision",
+        "status",
+        "selection",
+        "request_digest",
+        "effect_disposition",
+        "usage"
       ],
       "additionalProperties": false
     }

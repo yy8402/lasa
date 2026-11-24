@@ -7,6 +7,7 @@ from pathlib import PurePosixPath
 from .capabilities import reference, require
 from .connector_schema import validate as validate_connector
 from .connectors import Connector
+from .content_security import Transfer
 from .contracts import canonical, digest, parse_json, validate_data
 from .errors import LasaError
 from .planning import object_schema
@@ -198,14 +199,32 @@ class Broker:
                 require(existing["state"] == "finished", "child_outcome_unknown", 503)
                 result = parse_json(existing["result"])
                 if "error" in result:
-                    raise LasaError(result["error"]["code"])
+                    raise LasaError(result["error"]["code"], result["error"]["status"])
                 return result["value"]
             amount = zero()
             amount["tool_calls"] = 1
             effect = "workspace.write" if name == "workspace.write" else "none"
             context = c.contexts[task_id]
             if name in self.operations:
-                permission = self.operations[name][1]
+                connector, permission = self.operations[name]
+                destination = "connector:" + name
+                invoke = await c.content.check(
+                    Transfer(
+                        "tool.invoke",
+                        destination,
+                        "arguments",
+                        operation_id,
+                        task_id,
+                        context.definition["id"],
+                        connector=connector.resource["id"],
+                        operation=name,
+                    ),
+                    arguments,
+                    projection={"arguments": arguments},
+                    remaining=lambda: c.remaining_seconds(task_id),
+                )
+                c.check_active(task_id)
+                require(name in self._authorized(task_id), "authority_denied", 403)
                 resource, permission_effect, action = (
                     permission["resource"],
                     permission["effect"],
@@ -255,18 +274,37 @@ class Broker:
                         workspace.read(arguments["relative_path"]),
                     )
                 else:
-                    connector, operation = self.operations[name]
-                    value = await connector.call(
-                        name,
-                        arguments,
-                        max(0.001, c.remaining_seconds(task_id)),
-                    )
+                    try:
+                        value = await connector.call(
+                            name,
+                            arguments,
+                            max(0.001, c.remaining_seconds(task_id)),
+                        )
+                    except (LasaError, asyncio.CancelledError):
+                        c.content.outcome(invoke, "delivery_unknown")
+                        raise
+                    c.content.outcome(invoke, "delivered")
+                    operation = permission
                     validate_connector(operation["output_schema"], value)
-                    require(
-                        canonical(c.diagnostics.redact(value, task_id)) == canonical(value),
-                        "disclosure_denied",
-                        403,
+                    received = await c.content.check(
+                        Transfer(
+                            "tool.result",
+                            destination,
+                            "result",
+                            operation_id,
+                            task_id,
+                            destination,
+                            connector=connector.resource["id"],
+                            operation=name,
+                        ),
+                        value,
+                        projection={"output": value},
+                        remaining=lambda: c.remaining_seconds(task_id),
                     )
+                    c.check_active(task_id)
+                    require(name in self._authorized(task_id), "authority_denied", 403)
+                    c.content.remember_source(task_id, received)
+                    c.content.outcome(received, "accepted")
                     sequence = c.store.db.execute(
                         "SELECT rowid FROM actions WHERE task_id=? AND operation_id=?",
                         (task_id, operation_id),
@@ -330,5 +368,5 @@ class Broker:
                 content=stored,
             )
             if "error" in stored:
-                raise LasaError(stored["error"]["code"])
+                raise LasaError(stored["error"]["code"], stored["error"]["status"])
             return value

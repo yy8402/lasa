@@ -208,6 +208,7 @@ def check_deployment(config, *, offline):
             (config.document["executors"], "provider_ca_file"),
             (config.peers, "ca_file"),
             (config.connectors.values(), "ca_file"),
+            (config.inspection.profiles.values(), "ca_file"),
         )
         for item in items
         if key in item

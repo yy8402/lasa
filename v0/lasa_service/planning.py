@@ -1,13 +1,7 @@
 """Advisory model planning and independent, tool-free semantic verification."""
 
-import asyncio
-import time
-
-import httpx
-
 from .capabilities import reference, require
 from .contracts import canonical, digest, parse_json, validate_data
-from .errors import LasaError
 from .workflows import review_checklist_steps
 
 
@@ -79,16 +73,6 @@ def provider_schema(value):
 class ModelService:
     def __init__(self, coordinator):
         self.coordinator = coordinator
-        self.client = httpx.AsyncClient(
-            trust_env=False,
-            follow_redirects=False,
-            timeout=60,
-            verify=coordinator.config.provider_verify(coordinator.config.executor()),
-            transport=coordinator.model_transport,
-        )
-
-    async def close(self):
-        await self.client.aclose()
 
     async def ask(
         self, task_id, purpose, payload, schema, *, instruction="", candidate_output=_NO_CANDIDATE
@@ -97,9 +81,11 @@ class ModelService:
         c.check_active(task_id, evaluating=True)
         executor = c.config.executor()
         guidance = c.config.prompts["assessment_developer"].replace("{purpose}", purpose)
+        if instruction:
+            guidance = "\n\n".join((guidance, instruction))
         user_data = [payload]
         if candidate_output is not _NO_CANDIDATE:
-            guidance = "\n\n".join((guidance, instruction, OUTCOME_BOUNDARY))
+            guidance = "\n\n".join((guidance, OUTCOME_BOUNDARY))
             user_data.append(candidate_output)
         body = {
             "model": executor["model"],
@@ -123,45 +109,16 @@ class ModelService:
             body["model"] = settings["model"]
             if effort := settings.get("reasoning_effort"):
                 body["reasoning"] = {"effort": effort}
-        operation = c.begin_model(task_id, body, purpose)
-        started = time.monotonic()
-        try:
-            async with asyncio.timeout(c.remaining_seconds(task_id, operation_id=operation)):
-                async with self.client.stream(
-                    "POST",
-                    executor["provider_base_url"].rstrip("/") + "/responses",
-                    json=body,
-                    headers={
-                        "Authorization": "Bearer " + c.config.secret(executor["credential_ref"])
-                    },
-                ) as response:
-                    require(response.status_code == 200, "peer_unavailable", 503)
-                    content = bytearray()
-                    async for chunk in response.aiter_bytes():
-                        require(len(content) + len(chunk) <= 1048576, "verification_failed", 422)
-                        content.extend(chunk)
-                value = parse_json(content)
-                texts = [
-                    part["text"]
-                    for item in value.get("output", [])
-                    if item.get("type") == "message"
-                    for part in item.get("content", [])
-                    if part.get("type") == "output_text"
-                ]
-                result = parse_json("".join(texts))
-                validate_data(schema, result, "verification_failed", 422)
-                c.finish_model(
-                    task_id,
-                    operation,
-                    value.get("usage", {}),
-                    int((time.monotonic() - started) * 1000),
-                    result,
-                )
-                return result
-        except TimeoutError:
-            raise LasaError("deadline_exceeded", 422) from None
-        except httpx.HTTPError:
-            raise LasaError("peer_unavailable", 503, retry="readmission") from None
+        response = await c.model_client.exchange(task_id, executor, body, purpose)
+        texts = [
+            part["text"]
+            for item in response.value.get("output", [])
+            if item.get("type") == "message"
+            for part in item.get("content", [])
+            if part.get("type") == "output_text"
+        ]
+        result = parse_json("".join(texts))
+        return validate_data(schema, result, "verification_failed", 422)
 
 
 class Planner:
@@ -257,11 +214,16 @@ class Planner:
                     for x in c.config.document["bindings"]
                 ],
                 "peer_offers": offers,
-                "instruction": c.config.prompts["plan_proposal"],
             }
             if "dependency_results" in request:
                 payload["request"]["dependency_results"] = request["dependency_results"]
-            value = await c.models.ask(task_id, "planning", payload, PROPOSAL)
+            value = await c.models.ask(
+                task_id,
+                "planning",
+                payload,
+                PROPOSAL,
+                instruction=c.config.prompts["plan_proposal"],
+            )
         validate_data(PROPOSAL, value)
         c.store.event(task_id, "planning_proposal", value)
         return requirements, value["steps"]
@@ -293,9 +255,9 @@ class Planner:
                     }
                     for step in plan["steps"]
                 ],
-                "instruction": c.config.prompts["plan_verification"],
             },
             VERDICT,
+            instruction=c.config.prompts["plan_verification"],
         )
         c.store.event(task_id, "plan_semantic_verdict", verdict)
         return verdict["passed"]

@@ -58,6 +58,10 @@ LASA reads `authorization.json` beside the manifest by default. Set `authorizati
 
 The manifest defaults to a loopback listener on port `8787`, local execution, and built-in review and task attempt capability definitions. It derives the descriptor URL and deployment revision. Manifest changes take effect on restart. Replace the receiver policy atomically to apply grant changes to subsequent checks. File-based credentials are reread on use. Environment secrets and issuer keys loaded at startup require a restart to refresh. [Managed deployment report](deployment/DEPLOYMENT.md)
 
+### Content security gateways
+
+Register local or remote scanner endpoints under `content_security.inspection_profiles` and select them in grouped `bindings`. Mount each profile's credential and any private CA only in the supervisor. Run `lasa config check` with those mounts to see the effective inspection rule for each direction, peer, connector, and operation. An enforced gateway failure holds protected data while authenticated task disposition remains available through `GET /tasks/{task_id}?view=control`. [Content security configuration](CONFIGURATION.md#content-security)
+
 ### Static tokens
 
 JWT is the default. A service can opt into opaque bearer tokens with `authentication.mode: static_token`. The service’s incoming authentication mode and its outgoing peer choices are independent. An empty `peers` list enables local execution for capabilities with local bindings.
@@ -151,7 +155,9 @@ Run the local multi-peer check with all three images available.
 (cd v0 && .venv/bin/python -m tests.container_smoke)
 ```
 
-The check creates an isolated network, three supervisors and launchers, and a deterministic HTTPS model fixture. It submits a parent task, verifies both child traces and the final result, and checks receiver-specific authentication and worker cleanup. It removes the test containers, volumes, and network.
+The check creates an isolated network, three supervisors and launchers, and deterministic HTTPS fixtures for the model, scanner, and app. It submits a parent task, verifies both child traces and the final result, and checks receiver-specific authentication and worker cleanup. It removes the test containers, volumes, and network.
+
+To run local content inspection, connect the supervisor to a user-defined Docker network and opt in with `local_dlp.enabled` in `deployment.json`. Run `lasa deploy apply` before starting supervisors that use the managed endpoint. Register the endpoint in `content_security.inspection_profiles` and select it in the stream bindings. [Local DLP deployment and profile](inspector/README.md)
 
 ## Model service and prompts
 

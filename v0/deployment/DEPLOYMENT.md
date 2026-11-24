@@ -20,6 +20,8 @@ Build and check the wheel and source distribution, then build the `linux/amd64` 
 
 The split launcher runtime uses store schema revision 2. Provision fresh state roots for this candidate and retain the revision 1 stores with the previous release. Wait for all task stores to be idle. Stop the parent, then the two receivers. Start the matching launchers before starting their supervisors. Start and verify primary and review over authenticated HTTPS before starting the parent. Each state root belongs to a single running supervisor. Verify the advertised service IDs, authentication modes, catalogs, and live dependent workflow before retiring any stopped candidate or predecessor. [Provisioning guide](../RUNNING.md)
 
+For deployments that use the bundled DLP gateway, list the supervisor manifests in `deployment.json` and enable `local_dlp`. Run `lasa deploy apply` and require authenticated HTTPS readiness and matching profile pins before rolling out the affected supervisors. External scanners remain available with the bundled stack disabled. [DLP deployment workflow](../inspector/README.md)
+
 ## 1.0.0 deployment verification
 
 On November 23, 2026, the Mac parent and both air188 backends passed `lasa config check` at deployment revision `docker-1.0.0-unified-43e45cad4420`. All three authenticated HTTPS endpoints advertised wire protocol `lasa/1.0.0`, descriptor format `1.0.0`, and OpenAPI `info.version` `1.0.0`. The Mac JWT renewal job also passed with the updated package.

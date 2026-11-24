@@ -731,6 +731,18 @@
               "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
             },
             "description": ""
+          },
+          {
+            "name": "view",
+            "in": "query",
+            "required": false,
+            "description": "Use control for the authenticated task disposition without task content.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "control"
+              ]
+            }
           }
         ],
         "responses": {
@@ -739,7 +751,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "contracts.schema.json#/$defs/Task"
+                  "oneOf": [
+                    {
+                      "$ref": "contracts.schema.json#/$defs/Task"
+                    },
+                    {
+                      "$ref": "#/components/schemas/TaskDisposition"
+                    }
+                  ]
                 }
               }
             },
@@ -1426,6 +1445,9 @@
       },
       "AuthorityCeiling": {
         "$ref": "contracts.schema.json#/$defs/AuthorityCeiling"
+      },
+      "TaskDisposition": {
+        "$ref": "contracts.schema.json#/$defs/TaskDisposition"
       }
     }
   }

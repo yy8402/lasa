@@ -1,7 +1,8 @@
 import pytest
 
 from lasa_service.errors import LasaError
-from lasa_service.gateway import EventStream, validate_local_tools
+from lasa_service.gateway import validate_local_tools
+from lasa_service.model_transport import EventStream
 
 
 @pytest.mark.parametrize(

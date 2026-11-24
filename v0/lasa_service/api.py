@@ -19,7 +19,14 @@ MAX_AFTER_SEQUENCE = 9007199254740990
 
 
 def create_app(
-    config, *, runtime=None, peer_transport=None, model_transport=None, planner=None, verifier=None
+    config,
+    *,
+    runtime=None,
+    peer_transport=None,
+    model_transport=None,
+    inspection_transport=None,
+    planner=None,
+    verifier=None,
 ):
     if runtime is None:
         from .runtime import CodexRuntime
@@ -30,6 +37,7 @@ def create_app(
         runtime,
         peer_transport=peer_transport,
         model_transport=model_transport,
+        inspection_transport=inspection_transport,
         planner=planner,
         verifier=verifier,
     )
@@ -115,7 +123,12 @@ def create_app(
         c.contracts.validate(schema, body)
         return p, body, key
 
-    def response(document, status=200):
+    def response(document, status=200, *, audience=None):
+        if "question" in document:
+            row, _ = c.store.task(document["task_id"], audience["subject"])
+            c.check_read_authority(row, audience)
+        if "result" in document:
+            c.check_release_read(document["task_id"], "result", document["result"], audience)
         headers = {"Cache-Control": "no-store"}
         if "task_id" in document:
             headers.update(
@@ -154,17 +167,23 @@ def create_app(
     @app.post(prefix + "/sessions/{session_id}/tasks")
     async def submit(session_id: str, request: Request):
         p, body, key = await mutation(request, "TaskRequest")
-        return response(*c.submit(p, session_id, body, key, "POST " + request.url.path))
+        return response(
+            *await c.submit(p, session_id, body, key, "POST " + request.url.path), audience=p
+        )
 
     @app.get(prefix + "/tasks/{task_id}")
     async def task(task_id: str, request: Request):
-        return response(c.store.task(task_id, principal(request)["subject"])[1])
+        p = principal(request)
+        row, document = c.store.task(task_id, p["subject"])
+        if request.query_params.get("view") == "control":
+            return response(c.task_disposition(row, document, p))
+        return response(document, audience=p)
 
     @app.post(prefix + "/tasks/{task_id}/inputs")
     async def answer(task_id: str, request: Request):
         p, body, key = await mutation(request, "TaskInput")
         return response(
-            *c.mutation(
+            *await c.mutation(
                 p,
                 task_id,
                 body,
@@ -172,14 +191,15 @@ def create_app(
                 "POST " + request.url.path,
                 request.headers.get("If-Match"),
                 "input",
-            )
+            ),
+            audience=p,
         )
 
     @app.post(prefix + "/tasks/{task_id}/cancel")
     async def cancel(task_id: str, request: Request):
         p, body, key = await mutation(request, "CancelTask")
         return response(
-            *c.mutation(
+            *await c.mutation(
                 p,
                 task_id,
                 body,
@@ -187,13 +207,16 @@ def create_app(
                 "POST " + request.url.path,
                 request.headers.get("If-Match"),
                 "cancel",
-            )
+            ),
+            audience=p,
         )
 
     @app.post(prefix + "/tasks/{task_id}/reconcile")
     async def reconcile(task_id: str, request: Request):
         p, body, key = await mutation(request, "ReconcileTask")
-        return response(*await c.reconcile(p, task_id, body, key, "POST " + request.url.path))
+        return response(
+            *await c.reconcile(p, task_id, body, key, "POST " + request.url.path), audience=p
+        )
 
     @app.get(prefix + "/operations/{operation_id}")
     async def operation(operation_id: str, request: Request):
@@ -226,13 +249,14 @@ def create_app(
         after = query_integer(request, "after_sequence", "0", 0, MAX_AFTER_SEQUENCE)
         limit = query_integer(request, "limit", "50", 1, 100)
         return JSONResponse(
-            c.diagnostics.page(task_id, principal(request), after, limit),
+            await c.diagnostics.release_page(task_id, principal(request), after, limit),
             headers={"Cache-Control": "no-store"},
         )
 
     @app.get(prefix + "/tasks/{task_id}/artifacts/{artifact_id}")
     async def artifact(task_id: str, artifact_id: str, request: Request):
-        c.store.task(task_id, principal(request)["subject"])
+        p = principal(request)
+        c.store.task(task_id, p["subject"])
         row = c.store.db.execute(
             "SELECT * FROM artifacts WHERE id=? AND task_id=? AND released=1",
             (artifact_id, task_id),
@@ -246,6 +270,7 @@ def create_app(
             "verification_failed",
             500,
         )
+        c.check_release_read(task_id, artifact_id, data, p)
         return Response(
             data,
             media_type=manifest["media_type"],

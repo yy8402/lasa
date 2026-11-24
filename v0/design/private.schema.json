@@ -192,6 +192,9 @@
             "maxLength": 2048
           },
           "uniqueItems": true
+        },
+        "content_disclosure": {
+          "$ref": "#/$defs/ContentDisclosure"
         }
       },
       "required": [
@@ -674,6 +677,432 @@
         "tokens"
       ],
       "additionalProperties": false
+    },
+    "DockerDeployment": {
+      "type": "object",
+      "properties": {
+        "supervisor_network": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,127}$"
+        },
+        "supervisors": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "local_dlp": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "secrets_directory": { "type": "string", "minLength": 1 },
+            "inspector_image": { "$ref": "#/$defs/DockerImage" },
+            "presidio_image": { "$ref": "#/$defs/DockerImage" },
+            "policy_revision": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            }
+          },
+          "if": { "properties": { "enabled": { "const": true } }, "required": ["enabled"] },
+          "then": { "required": ["secrets_directory"] },
+          "additionalProperties": false
+        }
+      },
+      "required": ["supervisor_network"],
+      "additionalProperties": false
+    },
+    "DockerImage": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._/:@-]{0,511}$"
+    },
+    "ContentSecurity": {
+      "type": "object",
+      "properties": {
+        "inspection_profiles": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/InspectionProfile"
+          },
+          "maxItems": 32,
+          "uniqueItems": true
+        },
+        "bindings": {
+          "type": "object",
+          "properties": {
+            "caller": {
+              "$ref": "#/$defs/InspectionDirections"
+            },
+            "model": {
+              "$ref": "#/$defs/InspectionDirections"
+            },
+            "delegates": {
+              "type": "object",
+              "properties": {
+                "request": {
+                  "$ref": "#/$defs/InspectionRule"
+                },
+                "response": {
+                  "$ref": "#/$defs/InspectionRule"
+                },
+                "overrides": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/DelegateInspectionOverride"
+                  },
+                  "maxItems": 16,
+                  "uniqueItems": true
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            },
+            "connectors": {
+              "type": "object",
+              "properties": {
+                "request": {
+                  "$ref": "#/$defs/InspectionRule"
+                },
+                "response": {
+                  "$ref": "#/$defs/InspectionRule"
+                },
+                "overrides": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/ConnectorInspectionOverride"
+                  },
+                  "maxItems": 128,
+                  "uniqueItems": true
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "ContentInspectionRequest": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "1"
+        },
+        "inspection_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+        },
+        "binding_revision": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "policy_revision": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "gateway_policy_revision": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+        },
+        "channel": {
+          "enum": [
+            "reasoning.request",
+            "reasoning.response",
+            "candidate.release",
+            "caller.request",
+            "caller.response",
+            "delegation.request",
+            "delegation.response",
+            "tool.invoke",
+            "tool.result"
+          ]
+        },
+        "purpose": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+        },
+        "media_type": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "inspection_digest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "content": {
+          "type": "object",
+          "minProperties": 1,
+          "maxProperties": 32
+        }
+      },
+      "required": [
+        "version",
+        "inspection_id",
+        "binding_revision",
+        "policy_revision",
+        "gateway_policy_revision",
+        "channel",
+        "purpose",
+        "media_type",
+        "inspection_digest",
+        "content"
+      ],
+      "additionalProperties": false
+    },
+    "ContentInspectionResponse": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "1"
+        },
+        "inspection_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+        },
+        "gateway_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+        },
+        "gateway_policy_revision": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+        },
+        "inspection_digest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "verdict": {
+          "enum": [
+            "permit",
+            "hard_deny",
+            "indeterminate"
+          ]
+        },
+        "reason_codes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+          },
+          "minItems": 0,
+          "maxItems": 16,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "version",
+        "inspection_id",
+        "gateway_id",
+        "gateway_policy_revision",
+        "inspection_digest",
+        "verdict",
+        "reason_codes"
+      ],
+      "additionalProperties": false
+    },
+    "ContentDisclosure": {
+      "type": "object",
+      "properties": {
+        "source_classes": {
+          "type": "object",
+          "maxProperties": 128,
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "minItems": 1,
+            "maxItems": 16,
+            "uniqueItems": true
+          }
+        },
+        "destinations": {
+          "type": "object",
+          "maxProperties": 128,
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "minItems": 1,
+            "maxItems": 16,
+            "uniqueItems": true
+          }
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "InspectionProfile": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+        },
+        "gateway_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://",
+          "maxLength": 2048
+        },
+        "policy_revision": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+        },
+        "credential_ref": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "ca_file": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "region": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+        },
+        "retention": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+        }
+      },
+      "required": [
+        "id",
+        "gateway_id",
+        "url",
+        "policy_revision",
+        "credential_ref",
+        "region",
+        "retention"
+      ],
+      "additionalProperties": false
+    },
+    "InspectionRule": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "enum": [
+            "enforce",
+            "observe",
+            "off"
+          ]
+        },
+        "profile": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+        },
+        "artifact_profile": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+        }
+      },
+      "required": [
+        "mode"
+      ],
+      "additionalProperties": false,
+      "if": {
+        "properties": {
+          "mode": {
+            "const": "off"
+          }
+        }
+      },
+      "then": {
+        "maxProperties": 1
+      }
+    },
+    "InspectionDirections": {
+      "type": "object",
+      "properties": {
+        "request": {
+          "$ref": "#/$defs/InspectionRule"
+        },
+        "response": {
+          "$ref": "#/$defs/InspectionRule"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "DelegateInspectionOverride": {
+      "type": "object",
+      "properties": {
+        "service_id": {
+          "type": "string",
+          "maxLength": 2048,
+          "format": "uri",
+          "pattern": "^https://"
+        },
+        "request": {
+          "$ref": "#/$defs/InspectionRule"
+        },
+        "response": {
+          "$ref": "#/$defs/InspectionRule"
+        }
+      },
+      "required": [
+        "service_id"
+      ],
+      "additionalProperties": false,
+      "anyOf": [
+        {
+          "required": [
+            "request"
+          ]
+        },
+        {
+          "required": [
+            "response"
+          ]
+        }
+      ]
+    },
+    "ConnectorInspectionOverride": {
+      "type": "object",
+      "properties": {
+        "connector_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+        },
+        "operation_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+        },
+        "request": {
+          "$ref": "#/$defs/InspectionRule"
+        },
+        "response": {
+          "$ref": "#/$defs/InspectionRule"
+        }
+      },
+      "required": [
+        "connector_id"
+      ],
+      "additionalProperties": false,
+      "anyOf": [
+        {
+          "required": [
+            "request"
+          ]
+        },
+        {
+          "required": [
+            "response"
+          ]
+        }
+      ]
     }
   }
 }

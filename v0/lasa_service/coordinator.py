@@ -9,12 +9,14 @@ from weakref import WeakValueDictionary
 
 from .auth import Authentication, Authorization
 from .capabilities import CapabilityRegistry, Publication, epoch, instant, require
+from .content_security import ContentSecurity, Transfer, payload_digest
 from .contracts import canonical, digest, parse_json, request_digest, validate_data
 from .diagnostics import Diagnostics
 from .discovery import Discovery
 from .errors import LasaError
 from .evidence import release_readbacks
 from .maintenance import Maintenance
+from .model_transport import ModelTransport
 from .peer import PeerClient
 from .planning import ModelService, Planner
 from .preconditions import check_inputs, input_size, request_input_size, restrict
@@ -46,13 +48,13 @@ class Coordinator:
         *,
         peer_transport=None,
         model_transport=None,
+        inspection_transport=None,
         planner=None,
         verifier=None,
     ):
         self.config = config
         self.contracts = config.contracts
         self.runtime = runtime
-        self.model_transport = model_transport
         self.root = config.private_root
         self.store = Store(self.root)
         try:
@@ -77,6 +79,7 @@ class Coordinator:
             settings["expected_service_id"]: PeerClient(config, settings, transport=peer_transport)
             for settings in config.peers
         }
+        self.model_client = ModelTransport(self, model_transport)
         self.models = ModelService(self)
         self.planner = Planner(self, planner, verifier)
         from .delegation import DelegationController
@@ -85,6 +88,7 @@ class Coordinator:
         self.routing = RoutingController(self)
         self.delegation = DelegationController(self)
         self.diagnostics = Diagnostics(self)
+        self.content = ContentSecurity(self, inspection_transport)
         self.jobs = {}
         self.contexts = {}
         self.expiries = {}
@@ -136,7 +140,8 @@ class Coordinator:
                 job.cancel()
         await asyncio.gather(*jobs, return_exceptions=True)
         await self.broker.close()
-        await self.models.close()
+        await self.model_client.close()
+        await self.content.close()
         await asyncio.gather(*(peer.close() for peer in self.peers.values()))
         self.registry.close()
         self.store.close()
@@ -388,34 +393,60 @@ class Coordinator:
             )
         return document, 201
 
-    def submit(self, principal, session_id, body, key, route):
+    def submission_scope(self, principal, session_id, body, received_at):
+        _, session = self.store.session(session_id, principal["subject"])
+        require(epoch(session["retention_until"]) > time.time(), "not_found", 404)
+        require(not self.store.active(session_id), "session_busy", 409)
+        require(self.availability() == "available", "capacity_exhausted", 429)
+        offer = self.publication.select(principal, body["selection"])
+        require(body["authorization_ref"] == offer["authorization_ref"], "authority_denied", 403)
+        authority = self.authorization.resolve(
+            principal,
+            body,
+            offer,
+            self.registry,
+            deadline_ceiling=instant(
+                epoch(received_at) + body["requested_limits"]["budget"]["wall_time_ms"] / 1000
+            ),
+        )
+        require(epoch(authority["limits"]["deadline"]) > time.time(), "deadline_exceeded", 422)
+        return session, authority
+
+    async def submit(self, principal, session_id, body, key, route):
         received_monotonic = asyncio.get_running_loop().time()
         received_at = instant()
         owner = principal["subject"]
         request_hash = digest(body)
+        operation_id = body["operation_id"]
+        replay = self.store.replay(owner, route, key, request_hash, operation_id)
+        if replay:
+            return self.store.task(replay["resource_id"], owner)[1], replay["status"]
+        _, authority = self.submission_scope(principal, session_id, body, received_at)
+        source = body["selection"]["contract"]["id"]
+        delegation = body.get("delegation", {})
+        if principal.get("kind") == "peer":
+            source = (source, "peer:" + principal["service_id"])
+        inspection = await self.content.check(
+            Transfer(
+                "caller.request",
+                self.release_destination(principal),
+                "task",
+                operation_id,
+                source=source,
+            ),
+            body,
+            projection={
+                "input": body["input"],
+                "attachments": delegation.get("disclosed_artifacts", []),
+                "dependencies": body.get("dependency_results", {}),
+            },
+            remaining=lambda: epoch(authority["limits"]["deadline"]) - time.time(),
+        )
         with self.store.transaction():
-            replay = self.store.replay(owner, route, key, request_hash, body["operation_id"])
+            replay = self.store.replay(owner, route, key, request_hash, operation_id)
             if replay:
                 return self.store.task(replay["resource_id"], owner)[1], replay["status"]
-            _, session = self.store.session(session_id, owner)
-            require(epoch(session["retention_until"]) > time.time(), "not_found", 404)
-            require(not self.store.active(session_id), "session_busy", 409)
-            require(self.availability() == "available", "capacity_exhausted", 429)
-            offer = self.publication.select(principal, body["selection"])
-            require(
-                body["authorization_ref"] == offer["authorization_ref"],
-                "authority_denied",
-                403,
-            )
-            authority = self.authorization.resolve(
-                principal,
-                body,
-                offer,
-                self.registry,
-                deadline_ceiling=instant(
-                    epoch(received_at) + body["requested_limits"]["budget"]["wall_time_ms"] / 1000
-                ),
-            )
+            session, authority = self.submission_scope(principal, session_id, body, received_at)
             task_id = identity("task")
             created = received_at
             document = {
@@ -442,6 +473,8 @@ class Coordinator:
                     encode(authority),
                 ),
             )
+            self.content.remember_source(task_id, inspection)
+            self.content.outcome({**inspection, "task_id": task_id}, "admitted")
             self.store.operation(
                 owner, route, key, request_hash, body["operation_id"], task_id, "task", 202
             )
@@ -479,7 +512,7 @@ class Coordinator:
             # A cancellation before the coroutine starts cannot reach run's handler.
             self.fail(task_id, LasaError("task_state_conflict", 409), cancel=True)
 
-    def begin_model(self, task_id, body, purpose):
+    def begin_model(self, task_id, operation, body, purpose):
         row, task = self.check_active(task_id, evaluating=True)
         amount = zero()
         amount.update(
@@ -515,7 +548,6 @@ class Coordinator:
                 "capacity_exhausted",
                 429,
             )
-        operation = identity("model")
         from_integration = False
         with self.store.transaction():
             pool = self.store.db.execute(
@@ -597,7 +629,7 @@ class Coordinator:
             {"operation_id": operation},
             usage=usage,
             output=output,
-            content={"output": output},
+            content={"output": output} if output is not None else None,
         )
 
     async def execute_step(self, task_id, step, inputs, predecessors):
@@ -929,7 +961,7 @@ class Coordinator:
                     "verification_failed",
                     422,
                 )
-                self.release(task_id, final)
+                await self.release(task_id, final)
         except asyncio.CancelledError:
             if self.store.task(task_id)[1]["status"] not in TERMINAL:
                 self.fail(
@@ -972,27 +1004,141 @@ class Coordinator:
             self.questions.pop(task_id, None)
             self.broker.locks.pop(task_id, None)
             self.diagnostics.forget_secrets(task_id)
+            self.model_client.forget(task_id)
             self.planner.verified = {
                 key: value for key, value in self.planner.verified.items() if key[0] != task_id
             }
 
-    def release(self, task_id, final):
+    @staticmethod
+    def release_destination(principal):
+        if principal.get("kind") == "peer":
+            return "peer:" + principal["service_id"] + ":" + principal["subject"]
+        return "caller:" + principal["subject"]
+
+    def check_task_identity(self, row, principal):
+        original = parse_json(row["principal"])
+        require(
+            self.release_destination(original) == self.release_destination(principal),
+            "authority_denied",
+            403,
+        )
+
+    def check_read_authority(self, row, principal):
+        self.check_task_identity(row, principal)
+        request = parse_json(row["request"])
+        rule = self.authorization.rule(principal, request["authorization_ref"])
+        require(request["selection"]["contract"] in rule["contracts"], "authority_denied", 403)
+
+    def task_disposition(self, row, task, principal):
+        self.check_task_identity(row, principal)
+        result = {
+            name: task[name]
+            for name in (
+                "task_id",
+                "service_id",
+                "session_id",
+                "operation_id",
+                "revision",
+                "status",
+                "selection",
+                "request_digest",
+            )
+        }
+        effect = self.store.effect_disposition(task["task_id"])
+        if task["status"] == "indeterminate":
+            effect = "unknown"
+        result.update(effect_disposition=effect, usage=self.store.usage(task["task_id"]))
+        return self.contracts.validate("TaskDisposition", result)
+
+    def check_release_read(self, task_id, component, value, principal):
+        row, _ = self.store.task(task_id, principal["subject"])
+        self.check_read_authority(row, principal)
+        grant = self.store.db.execute(
+            "SELECT * FROM content_releases WHERE task_id=? AND component=?",
+            (task_id, component),
+        ).fetchone()
+        require(
+            grant is not None
+            and grant["destination"] == self.release_destination(principal)
+            and grant["digest"] == payload_digest(value)
+            and grant["policy_revision"] == self.content.release_revision(),
+            "disclosure_denied",
+            403,
+        )
+
+    async def release(self, task_id, final):
         self.check_active(task_id)
         self.hit("before_release", task_id)
         row, task = self.store.task(task_id)
         request = parse_json(row["request"])
+        principal = parse_json(row["principal"])
+        destination = self.release_destination(principal)
+        source = request["selection"]["contract"]["id"]
+        effect = self.store.effect_disposition(task_id)
+        require(effect != "unknown", "child_outcome_unknown", 503)
+        amount = zero()
+        amount["output_bytes"] = len(canonical(final["output"]))
+        usage = self.store.usage(task_id)
+        usage["output_bytes"] += amount["output_bytes"]
         artifacts = []
+        permits = []
         for artifact_id in final["artifact_ids"]:
             artifact = self.store.db.execute(
                 "SELECT * FROM artifacts WHERE id=? AND task_id=?", (artifact_id, task_id)
             ).fetchone()
             require(artifact is not None, "verification_failed", 422)
-            artifacts.append(parse_json(artifact["manifest"]))
-        amount = zero()
-        amount["output_bytes"] = len(canonical(final["output"]))
+            manifest = parse_json(artifact["manifest"])
+            data = bytes(artifact["content"])
+            require(payload_digest(data) == manifest["digest"], "verification_failed", 422)
+            permit = await self.content.check(
+                Transfer(
+                    "candidate.release", destination, "artifact", artifact_id, task_id, source
+                ),
+                data,
+                projection={"text": data.decode()},
+                media_type=manifest["media_type"],
+                remaining=lambda: self.remaining_seconds(task_id),
+                defer_permit=True,
+            )
+            artifacts.append(manifest)
+            permits.append((artifact_id, permit))
+        result = {
+            "contract": request["selection"]["contract"],
+            "request_digest": request_digest(request),
+            "output": final["output"],
+            "usage": usage,
+            "effect_disposition": effect,
+            "artifacts": artifacts,
+            "evidence": final["evidence"],
+        }
+        if readbacks := release_readbacks(self, task_id, final["output"]):
+            result["workspace_readbacks"] = readbacks
+        if "delegation" in request and effect == "none" and not artifacts and not readbacks:
+            result["verification_receipt"] = receipt_for(
+                self.config.service_id,
+                task_id,
+                request,
+                result,
+                self.config.verifier_revision,
+            )
+        permit = await self.content.check(
+            Transfer(
+                "candidate.release", destination, "result", "released-output", task_id, source
+            ),
+            result,
+            projection={"output": result["output"]},
+            remaining=lambda: self.remaining_seconds(task_id),
+            defer_permit=True,
+        )
+        permits.append(("result", permit))
+        _, task = self.check_active(task_id)
+        revision = self.content.release_revision()
+        require(
+            all(decision["release_revision"] == revision for _, decision in permits),
+            "disclosure_denied",
+            403,
+        )
         with self.store.transaction():
-            effect = self.store.effect_disposition(task_id)
-            require(effect != "unknown", "child_outcome_unknown", 503)
             self.store.reserve(
                 task_id,
                 "released-output",
@@ -1002,26 +1148,22 @@ class Coordinator:
             )
             self.store.settle(task_id, "released-output", amount)
             task["status"] = "completed"
-            task["result"] = {
-                "contract": request["selection"]["contract"],
-                "request_digest": request_digest(request),
-                "output": final["output"],
-                "usage": self.store.usage(task_id),
-                "effect_disposition": effect,
-                "artifacts": artifacts,
-                "evidence": final["evidence"],
-            }
-            if readbacks := release_readbacks(self, task_id, final["output"]):
-                task["result"]["workspace_readbacks"] = readbacks
-            if "delegation" in request and effect == "none" and not artifacts and not readbacks:
-                task["result"]["verification_receipt"] = receipt_for(
-                    self.config.service_id,
-                    task_id,
-                    request,
-                    task["result"],
-                    self.config.verifier_revision,
-                )
+            task["result"] = result
             self.config.contracts.validate("Task", task)
+            for component, decision in permits:
+                self.content.record(decision)
+                self.store.db.execute(
+                    "INSERT INTO content_releases VALUES(?,?,?,?,?)",
+                    (
+                        task_id,
+                        component,
+                        destination,
+                        decision["payload_digest"],
+                        revision,
+                    ),
+                )
+                self.content.outcome(decision, "released")
+            self.hit("before_release_commit", task_id)
             self.store.save_task(task)
             for artifact in artifacts:
                 self.store.db.execute(
@@ -1088,10 +1230,26 @@ class Coordinator:
             "expires_at": instant(time.time() + self.remaining_seconds(task_id)),
         }
         self.contracts.validate("Question", question, "verification_failed", 422)
+        proof = await self.content.check(
+            Transfer(
+                "caller.response",
+                self.release_destination(parse_json(row["principal"])),
+                "clarification",
+                question["question_id"],
+                task_id,
+                request["selection"]["contract"]["id"],
+            ),
+            question,
+            projection={"question": message},
+            remaining=lambda: self.remaining_seconds(task_id),
+        )
+        _, task = self.check_active(task_id)
         prior = task["status"]
         task["status"] = "awaiting_input"
         task["question"] = question
-        self.store.save_task(task)
+        with self.store.transaction():
+            self.store.save_task(task)
+            self.content.outcome(proof, "released")
         future = asyncio.get_running_loop().create_future()
         self.questions[task_id] = (question, future)
         answer = await future
@@ -1101,37 +1259,75 @@ class Coordinator:
         self.store.save_task(task)
         return {"answer": answer}
 
-    def mutation(self, principal, task_id, body, key, route, if_match, kind):
+    def task_mutation_scope(self, principal, task_id, if_match):
+        row, task = self.store.task(task_id, principal["subject"])
+        require(
+            self.release_destination(parse_json(row["principal"]))
+            == self.release_destination(principal),
+            "authority_denied",
+            403,
+        )
+        require(if_match is not None, "precondition_required", 428)
+        require(if_match == '"' + str(task["revision"]) + '"', "stale_revision", 412)
+        return row, task
+
+    def validate_answer(self, task_id, task, body):
+        require(
+            task["status"] == "awaiting_input" and task_id in self.questions,
+            "task_state_conflict",
+            409,
+        )
+        question, future = self.questions[task_id]
+        require(not future.done(), "task_state_conflict", 409)
+        require(
+            body["question_id"] == question["question_id"]
+            and body["question_revision"] == question["revision"],
+            "stale_revision",
+            412,
+        )
+        validate_data(question["answer_schema"], body["answer"])
+        return question, future
+
+    async def mutation(self, principal, task_id, body, key, route, if_match, kind):
         owner = principal["subject"]
         request_hash = digest(body)
+        operation_id = body["operation_id"]
+        replay = self.store.replay(owner, route, key, request_hash, operation_id)
+        if replay:
+            return self.store.task(task_id, owner)[1], 202
+        row, task = self.task_mutation_scope(principal, task_id, if_match)
+        if kind == "input":
+            self.check_read_authority(row, principal)
+            self.validate_answer(task_id, task, body)
+            source = parse_json(row["request"])["selection"]["contract"]["id"]
+            decision = await self.content.check(
+                Transfer(
+                    "caller.request",
+                    self.release_destination(principal),
+                    "clarification",
+                    operation_id,
+                    task_id,
+                    source,
+                ),
+                body,
+                projection={"answer": body["answer"]},
+                remaining=lambda: self.remaining_seconds(task_id),
+            )
         answer = None
         cancel = None
         with self.store.transaction():
-            replay = self.store.replay(owner, route, key, request_hash, body["operation_id"])
+            replay = self.store.replay(owner, route, key, request_hash, operation_id)
             if replay:
                 return self.store.task(task_id, owner)[1], 202
-            _, task = self.store.task(task_id, owner)
-            require(if_match is not None, "precondition_required", 428)
-            require(if_match == '"' + str(task["revision"]) + '"', "stale_revision", 412)
+            row, task = self.task_mutation_scope(principal, task_id, if_match)
             if kind == "input":
-                require(
-                    task["status"] == "awaiting_input" and task_id in self.questions,
-                    "task_state_conflict",
-                    409,
-                )
-                question, future = self.questions[task_id]
-                require(not future.done(), "task_state_conflict", 409)
-                require(
-                    body["question_id"] == question["question_id"]
-                    and body["question_revision"] == question["revision"],
-                    "stale_revision",
-                    412,
-                )
-                validate_data(question["answer_schema"], body["answer"])
+                self.check_read_authority(row, principal)
+                question, future = self.validate_answer(task_id, task, body)
                 amount = zero()
                 amount["input_bytes"] = len(canonical(body["answer"]))
                 self.reserve(task_id, question["question_id"], "input", amount)
                 self.store.settle(task_id, question["question_id"], amount)
+                self.content.outcome(decision, "admitted")
                 answer = future
             elif task["status"] not in TERMINAL and task["status"] != "cancelling":
                 task.pop("question", None)

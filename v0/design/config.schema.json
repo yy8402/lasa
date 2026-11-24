@@ -429,17 +429,31 @@
             "oneOf": [
               {
                 "type": "object",
-                "properties": {"mode": {"const": "jwt"}},
-                "required": ["mode"],
+                "properties": {
+                  "mode": {
+                    "const": "jwt"
+                  }
+                },
+                "required": [
+                  "mode"
+                ],
                 "additionalProperties": false
               },
               {
                 "type": "object",
                 "properties": {
-                  "mode": {"const": "static_token"},
-                  "subject": {"type": "string", "minLength": 1}
+                  "mode": {
+                    "const": "static_token"
+                  },
+                  "subject": {
+                    "type": "string",
+                    "minLength": 1
+                  }
                 },
-                "required": ["mode", "subject"],
+                "required": [
+                  "mode",
+                  "subject"
+                ],
                 "additionalProperties": false
               }
             ]
@@ -516,6 +530,9 @@
         "model"
       ],
       "additionalProperties": false
+    },
+    "content_security": {
+      "$ref": "private.schema.json#/$defs/ContentSecurity"
     }
   },
   "required": [

@@ -95,6 +95,8 @@ CREATE TABLE IF NOT EXISTS children(delegation_id TEXT PRIMARY KEY,task_id TEXT,
 CREATE TABLE IF NOT EXISTS actions(task_id TEXT,operation_id TEXT,digest TEXT,state TEXT,result TEXT,effect TEXT,intent TEXT,PRIMARY KEY(task_id,operation_id));
 CREATE TABLE IF NOT EXISTS events(task_id TEXT,sequence INTEGER,document TEXT,PRIMARY KEY(task_id,sequence));
 CREATE TABLE IF NOT EXISTS audit(task_id TEXT,kind TEXT,document TEXT,created_at TEXT);
+CREATE TABLE IF NOT EXISTS content_classes(task_id TEXT, class TEXT, PRIMARY KEY(task_id,class));
+CREATE TABLE IF NOT EXISTS content_releases(task_id TEXT, component TEXT, destination TEXT, digest TEXT, policy_revision TEXT, PRIMARY KEY(task_id,component));
 CREATE TABLE IF NOT EXISTS artifacts(id TEXT PRIMARY KEY,task_id TEXT,manifest TEXT,content BLOB,released INTEGER);
 CREATE TABLE IF NOT EXISTS runtimes(task_id TEXT PRIMARY KEY REFERENCES tasks(id),attempt_id TEXT UNIQUE NOT NULL);
 CREATE TABLE IF NOT EXISTS retired_paths(id TEXT PRIMARY KEY,retry_at TEXT);
@@ -103,6 +105,7 @@ CREATE INDEX IF NOT EXISTS indeterminate_tasks ON tasks(id) WHERE state='indeter
 CREATE INDEX IF NOT EXISTS operation_resources ON operations(kind,resource_id);
 CREATE INDEX IF NOT EXISTS children_by_task ON children(task_id);
 CREATE INDEX IF NOT EXISTS audit_by_task ON audit(task_id);
+CREATE INDEX IF NOT EXISTS content_intake_retention ON audit(created_at) WHERE task_id IS NULL;
 CREATE INDEX IF NOT EXISTS artifacts_by_task ON artifacts(task_id);
 PRAGMA user_version={STORAGE_SCHEMA_VERSION};
 """)
@@ -290,6 +293,8 @@ PRAGMA user_version={STORAGE_SCHEMA_VERSION};
                     "actions",
                     "children",
                     "audit",
+                    "content_classes",
+                    "content_releases",
                     "events",
                     "artifacts",
                     "ledger_totals",
@@ -346,6 +351,20 @@ PRAGMA user_version={STORAGE_SCHEMA_VERSION};
     def event(self, task_id, kind, document):
         self.db.execute(
             "INSERT INTO audit VALUES(?,?,?,?)", (task_id, kind, encode(document), instant())
+        )
+
+    def content_classes(self, task_id):
+        return {
+            row[0]
+            for row in self.db.execute(
+                "SELECT class FROM content_classes WHERE task_id=?", (task_id,)
+            )
+        }
+
+    def add_content_classes(self, task_id, classes):
+        self.db.executemany(
+            "INSERT OR IGNORE INTO content_classes VALUES(?,?)",
+            [(task_id, name) for name in sorted(classes)],
         )
 
     def usage(self, task_id, *, reserved=False):

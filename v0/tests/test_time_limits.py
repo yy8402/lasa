@@ -235,6 +235,7 @@ async def test_stalled_tool_connector_is_cancelled_at_step_limit(services, tmp_p
     stopped = asyncio.Event()
 
     class Connector:
+        resource = {"id": "fixture-connector"}
         worker = SimpleNamespace(done=lambda: False)
 
         async def call(self, name, arguments, seconds):

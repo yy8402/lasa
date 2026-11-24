@@ -11,7 +11,7 @@ from lasa_service import cli as cli_module
 from lasa_service.config import Configuration, ConfigurationError
 from lasa_service.errors import LasaError
 
-from .conftest import ISSUER, JWK, delegation_grant, token
+from .conftest import ISSUER, JWK, delegation_grant, example, token
 
 
 def cli(tmp_path, *arguments):
@@ -263,3 +263,28 @@ def test_check_rejects_conflicting_state_directories(tmp_path, deployment, block
     conflict.symlink_to(manifest_dir, target_is_directory=True)
     with pytest.raises(ConfigurationError, match="direct children"):
         Configuration.load(path)
+
+
+def test_config_check_prints_resolved_inspection_without_credentials(tmp_path, deployment):
+    folder, key, args = deployment
+    assert cli(tmp_path, *args).returncode == 0
+    key.write_text("model-key")
+    gateway_key = tmp_path / "scanner-key"
+    gateway_key.write_text("local-profile-credential")
+    path = folder / "config.json"
+    manifest = json.loads(path.read_text())
+    settings = example("content-security-all-channels")
+    profile = settings["inspection_profiles"][0]
+    profile.pop("ca_file")
+    profile["credential_ref"] = f"file:{gateway_key}"
+    manifest["content_security"] = {
+        "inspection_profiles": [profile],
+        "bindings": {"caller": {"response": {"mode": "enforce", "profile": profile["id"]}}},
+    }
+    path.write_text(json.dumps(manifest))
+    checked = cli(tmp_path, "check", "--config", path, "--offline")
+    assert checked.returncode == 0, checked.stderr
+    report = json.loads(checked.stdout.split("Effective content inspection\n")[1])
+    assert report["defaults"]["model"]["request"]["mode"] == "off"
+    assert report["defaults"]["caller"]["response"]["artifact_profile"] == "local-dlp"
+    assert "local-profile-credential" not in checked.stdout

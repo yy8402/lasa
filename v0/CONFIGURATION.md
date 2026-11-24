@@ -18,6 +18,7 @@ In the tables, **Required** means the field must appear in the supplied object. 
 | `runtime` | Yes | See below | Object with `launcher_socket` | Selects the service's private launcher and bounds worker startup. |
 | `default_executor` | With multiple executors | The sole executor's ID | An ID in `executors` | Selects the executor for planning, verification, integration, and generated local bindings. Set it explicitly with multiple executors. |
 | `verification` | No | The default executor's model and the provider's reasoning defaults | Object with `model` and optional `reasoning_effort` | Selects the model for outcome verification using the default executor's provider and credentials. Set it after evaluating the model on correct and incorrect outcomes. |
+| `content_security` | No | Built-in safeguards and metadata audit | Object with optional `inspection_profiles` and grouped `bindings` | Selects which content streams use an inspection profile and how its verdict applies. |
 | `peers` | No | `[]` | Ordered list of 0–16 peer objects with distinct, non-self service IDs | Supplies downstream routes. Order breaks ties among suitable peers. Leave it empty for standalone operation. |
 | `routing` | No | Local preference and reject fallback | Object | Changes how eligible local and peer routes are selected. |
 | `storage` | No | See below | Object | Overrides private state paths or listener settings. |
@@ -153,6 +154,28 @@ An exact contract reference, used by publication, bindings, and verifiers, has t
 | `id` | HTTPS URI, up to 2,048 characters | Names the registered contract. Copy it from the trusted definition or offer. |
 | `version` | Three dot-separated nonnegative integers, without leading zeros | Pins the contract version. Use the exact registered version. |
 | `digest` | `sha256:` followed by 64 lowercase hex digits | Pins the registered definition's canonical JSON. Copy the digest from the exact reference. |
+
+## Content security
+
+Define `content_security.inspection_profiles` to register local or remote HTTPS scanner profiles. Each entry contains a unique profile `id`, expected verdict `gateway_id`, fixed HTTPS `url`, `credential_ref`, pinned `policy_revision`, processing `region`, and `retention` category. Set an absolute `ca_file` for a private CA. Several profiles may use one gateway identity with separate endpoint paths and policy revisions. The adapter applies a two-second inspection timeout capped by the operation deadline, a 4 MiB request ceiling, and a 4 KiB verdict ceiling.
+
+Configure `request` and `response` under the `caller`, `model`, `delegates`, or `connectors` sections of `bindings`. Every authored rule declares a `mode`.
+
+| Mode | Result |
+| --- | --- |
+| `enforce` | Hold the protected transfer on a denial, timeout, or invalid verdict. |
+| `observe` | Record the verdict or failure. Other disclosure and authority checks still apply. |
+| `off` | Skip the configured scanner and clear both inherited profile references. Baseline safeguards and metadata audit still apply. |
+
+An active rule resolves to a `profile`. A caller or delegate response may also select `artifact_profile`. Artifacts use the effective response profile when no artifact profile is specified. Omitted directions inherit the applicable default and otherwise resolve to `off`.
+
+Delegate overrides use the configured peer's `service_id`. Connector overrides use `connector_id`. Add `operation_id` to specialize an operation within that connector. The operation override follows the connector override, independently of array order. Overrides inherit unspecified profile fields from active rules. Re-enabling inspection after `off` supplies a profile. Run `lasa config check` to validate inventory references, HTTPS trust, and profile credentials and see the effective mode, profile, and setting origins for each direction. [Complete grouped JSON example](design/examples/content-security-all-channels.json) · [Inspection design](design/content-security.md)
+
+Classify data and restrict disclosure in the receiver's `authorization.json`, using the optional `content_disclosure` section. Its `source_classes` map can label an exact contract ID, `peer:<service-id>`, or `connector:<operation-id>`. Its `destinations` map supplies the accepted classes for logical recipients, including `model:<executor-id>`, `inspection:<profile-id>`, `connector:<operation-id>`, `peer:<service-id>`, `caller:<subject>`, and `peer:<service-id>:<subject>` for authenticated peer callers. Unclassified sources carry `unknown`. A destination without a matching class rule accepts `unknown` within existing authority. Approved transfers must satisfy all accumulated classes. The intended destination and the inspection profile are assessed independently, including in `observe` mode.
+
+Routine audit records include the effective mode, selected profile, gateway identity, policy revisions, and disposition. Pre-task content audit records are eligible for retirement after 24 hours.
+
+Use `local_dlp.enabled` in the separate Docker deployment settings to manage the bundled gateway. The flag defaults to `false`. Inspection profiles and bindings independently select the endpoint and scanning mode. [Local DLP deployment and profile JSON](inspector/README.md)
 
 ## Outgoing peers and routing
 

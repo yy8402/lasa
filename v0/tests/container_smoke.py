@@ -1,4 +1,4 @@
-"""Verify an installed LASA image using three containers and a local model fixture."""
+"""Verify an installed LASA image using isolated services and local HTTPS fixtures."""
 
 import argparse
 import hashlib
@@ -21,13 +21,85 @@ from fastapi import FastAPI, Request
 from fastapi.responses import Response
 
 from lasa_service.auth import static_token_digest
+from lasa_service.config import builtin_capabilities, reference
+from lasa_service.contracts import digest
+from lasa_service.deployment import GATEWAY_ID as DLP_GATEWAY_ID
+from lasa_service.deployment import POLICY_REVISION as DLP_REVISION
+from lasa_service.deployment import PRESIDIO_IMAGE, DockerDeployment
 
 from .http_helpers import certificate
-from .protocol_helpers import sse_final
+from .protocol_helpers import sse_final, sse_tool
 
 ROOT = Path(__file__).resolve().parents[1]
 PEERS = {"review": "design.review", "attempt": "task.attempt"}
 MODEL_KEY = "local-responses-fixture"
+GATEWAY_KEY = "local-inspection-fixture"
+SOURCE_KEY = "local-connector-fixture"
+GATEWAY_ID = "smoke-local-inspection"
+DLP_PROFILE = "local-text-dlp"
+DLP_ARTIFACT_PROFILE = "local-artifact-dlp"
+DLP_MODES = ("enforce", "observe")
+DLP_STREAMS = {
+    "caller-intake": ("caller", "caller.request", "task"),
+    "caller-question": ("caller", "caller.response", "clarification"),
+    "result-release": ("caller", "candidate.release", "result"),
+    "artifact-release": ("caller", "candidate.release", "artifact"),
+    "model-request": ("model", "reasoning.request", "execution"),
+    "model-response": ("model", "reasoning.response", "execution"),
+    "delegate-request": ("delegates", "delegation.request", "task"),
+    "delegate-result": ("delegates", "delegation.response", "result"),
+    "connector-request": ("connectors", "tool.invoke", "arguments"),
+    "connector-result": ("connectors", "tool.result", "result"),
+}
+DLP_GROUPS = tuple(dict.fromkeys(group for group, _, _ in DLP_STREAMS.values()))
+DLP_TARGETS = {f"{group}-{mode}": (group, mode) for mode in DLP_MODES for group in DLP_GROUPS}
+DLP_CASES = {
+    "clean": "Synthetic review text for the local DLP smoke test.",
+    "pii_detected": "lasa-dlp-synthetic@example.com",
+    "credential_detected": "ghp_3Q1vZHfJ2CW8K6M0RwtPN5yAE7LbUmGXkT9s",  # Synthetic.
+}
+PROFILE_REVISIONS = {
+    "standard": "standard-v1",
+    "artifacts": "artifact-v2",
+    "document": "document-v3",
+}
+MARKERS = {
+    "caller": "SMOKE_CALLER_BLOCK",
+    "model_request": "SMOKE_MODEL_REQUEST_BLOCK",
+    "model_response": "SMOKE_MODEL_RESPONSE_BLOCK",
+    "release": "SMOKE_FINAL_RELEASE_BLOCK",
+    "invalid_verdict": "SMOKE_INVALID_GATEWAY_VERDICT",
+    "delegation_request": "SMOKE_DELEGATE_REQUEST_BLOCK",
+    "delegation_response": "SMOKE_DELEGATE_RESPONSE_BLOCK",
+    "connector_argument": "blocked-argument.md",
+    "connector_result": "SMOKE_CONNECTOR_RESULT_BLOCK",
+    "artifact": "SMOKE_ARTIFACT_RELEASE_BLOCK",
+    "wrong_revision": "SMOKE_WRONG_PROFILE_REVISION",
+    "observe": "SMOKE_MODEL_OBSERVE_DENY",
+    "delegate_off": "SMOKE_DELEGATE_RESPONSE_OFF",
+    "connector_off": "SMOKE_CONNECTOR_RESPONSE_OFF",
+}
+CHANNEL_DENIALS = {
+    "caller.request": ("caller",),
+    "reasoning.request": ("model_request",),
+    "reasoning.response": ("model_response", "observe"),
+    "candidate.release": ("release", "artifact"),
+    "delegation.request": ("delegation_request",),
+    "delegation.response": ("delegation_response", "delegate_off"),
+    "tool.invoke": ("connector_argument",),
+    "tool.result": ("connector_result", "connector_off"),
+}
+GATEWAY_FIELDS = {
+    "caller.request": {"input", "attachments", "dependencies", "answer"},
+    "caller.response": {"question", "content"},
+    "reasoning.request": {"input"},
+    "reasoning.response": {"output", "deltas"},
+    "candidate.release": {"output", "text"},
+    "delegation.request": {"input", "dependencies", "attachments"},
+    "delegation.response": {"output", "text", "content"},
+    "tool.invoke": {"arguments"},
+    "tool.result": {"output"},
+}
 PORT = 8443
 LAUNCHER_SOCKET = "/run/lasa/launcher.sock"
 
@@ -65,7 +137,7 @@ def mount(source, target=None, *, read_only=True):
     )
 
 
-def configure(root, name, namespace):
+def configure(root, name, namespace, *, trusted_parent=None):
     directory = root / name
     identity = f"https://identity.lasa.test/services/{namespace}"
     command = [
@@ -82,8 +154,8 @@ def configure(root, name, namespace):
         "--listen-port",
         str(PORT),
     ]
-    if name in PEERS:
-        command += ["--trusted-parent-id", f"{identity}/parent"]
+    if trusted_parent:
+        command += ["--trusted-parent-id", f"{identity}/{trusted_parent}"]
     subprocess.run(command, check=True, timeout=10)
     cert, key = certificate(directory, dns_name=f"lasa-{name}")
     config = read(directory / "config.json")
@@ -109,6 +181,7 @@ def configure(root, name, namespace):
         listen_host="0.0.0.0",
         tls={"certificate_file": str(cert), "key_file": str(key)},
     )
+    config["runtime"]["startup_timeout_ms"] = 25000
     for executor in config["executors"]:
         executor.update(
             provider_base_url=origin("model") + "/v1", provider_ca_file=str(root / "ca.pem")
@@ -116,15 +189,216 @@ def configure(root, name, namespace):
     return config
 
 
-def authorize(root, configs):
-    parent = configs["parent"]
-    policy_path = root / "parent" / "authorization.json"
+def configure_content(root, name, configs):
+    config = configs[name]
+    enforce = {"mode": "enforce", "profile": "standard"}
+    observe = {"mode": "observe", "profile": "standard"}
+    release = {**enforce, "artifact_profile": "artifacts"}
+    bindings = {
+        "caller": {"request": enforce, "response": release},
+        "model": {"request": enforce, "response": observe if name == "attempt" else enforce},
+    }
+    if name == "parent":
+        review = configs["review"]["service"]["id"]
+        bindings["delegates"] = {
+            "request": enforce,
+            "response": release,
+            "overrides": [{"service_id": review, "response": {"mode": "off"}}],
+        }
+    if name == "review":
+        bindings["connectors"] = {
+            "request": enforce,
+            "response": observe,
+            "overrides": [
+                {
+                    "connector_id": "fixture-source",
+                    "operation_id": "documents.read",
+                    "response": {"mode": "enforce", "profile": "document"},
+                },
+                {"connector_id": "fixture-source", "response": {"mode": "off"}},
+            ],
+        }
+    config["content_security"] = {
+        "inspection_profiles": [
+            {
+                "id": profile,
+                "gateway_id": GATEWAY_ID,
+                "url": origin("inspection") + "/inspect/" + profile,
+                "policy_revision": revision,
+                "credential_ref": "env:LASA_GATEWAY_KEY",
+                "ca_file": str(root / "ca.pem"),
+                "region": "isolated",
+                "retention": "fixture-only",
+            }
+            for profile, revision in PROFILE_REVISIONS.items()
+        ],
+        "bindings": bindings,
+    }
+    if name == "review":
+        configure_connectors(root, name, config)
+
+
+def configure_connectors(root, name, config):
+    definitions = {
+        contract: reference(builtin_capabilities()[contract][0])
+        for contract in ("documents.read", "documents.search")
+    }
+    config["published_contracts"] = ["design.review", "task.attempt", *definitions]
+    config["bindings"] = [
+        {
+            "binding_id": "fixture-review",
+            "contract": reference(builtin_capabilities()["design.review"][0]),
+            "executor_id": config["executors"][0]["id"],
+            "approved_resources": [{"resource": "workspace:self", "actions": ["read"]}],
+            "allowed_effects": ["workspace.read"],
+            "required_operations": [],
+        },
+        *[
+            {
+                "binding_id": "fixture-" + contract,
+                "contract": definitions[contract],
+                "executor_id": config["executors"][0]["id"],
+                "approved_resources": [{"resource": resource, "actions": ["read"]}],
+                "allowed_effects": ["external.read"],
+                "required_operations": [contract],
+            }
+            for contract, resource in (
+                ("documents.read", "documents:lasa"),
+                ("documents.search", "repository:python-sdk"),
+            )
+        ],
+    ]
+    input_schema = {
+        "type": "object",
+        "properties": {"report_id": {"type": "string"}},
+        "required": ["report_id"],
+        "additionalProperties": False,
+    }
+    output_schema = {
+        "type": "object",
+        "properties": {"text": {"type": "string"}},
+        "required": ["text"],
+        "additionalProperties": False,
+    }
+    index_fields = {key: {"type": "string"} for key in ("name", "type", "html_url")}
+    index_schema = {
+        "type": "array",
+        "items": {
+            "type": "object",
+            "properties": index_fields,
+            "required": list(index_fields),
+            "additionalProperties": False,
+        },
+    }
+    source_url = origin("source") + "/documents"
+    config["executors"][0]["connectors"] = [
+        {
+            "id": "fixture-source",
+            "kind": "json-get",
+            "base_url": source_url,
+            "headers": {},
+            "credential_ref": "env:LASA_SOURCE_KEY",
+            "ca_file": str(root / "ca.pem"),
+            "limits": {
+                "max_queue": 4,
+                "request_timeout_seconds": 4,
+                "response_bytes": 65536,
+                "recovery_interval_seconds": 1,
+                "schema_refresh_seconds": 60,
+            },
+            "operations": [
+                {
+                    "operation_id": "documents.read",
+                    "description": "Read a fixture document.",
+                    "task_input_bindings": [
+                        {
+                            "input_field": "document_id",
+                            "argument_field": "report_id",
+                            "comparison": "exact",
+                        }
+                    ],
+                    "effect": "external.read",
+                    "resource": "documents:lasa",
+                    "url": source_url,
+                    "input_schema": input_schema,
+                    "argument_constraints": {},
+                    "output_schema": output_schema,
+                    "response_schema": output_schema,
+                    "result_fields": ["text"],
+                    "probe_arguments": {"report_id": "probe.md"},
+                },
+                {
+                    "operation_id": "documents.search",
+                    "description": "Read the fixture document index.",
+                    "task_input_bindings": [
+                        {"input_field": "query", "argument_field": "query", "comparison": "exact"},
+                    ],
+                    "effect": "external.read",
+                    "resource": "repository:python-sdk",
+                    "url": source_url + "/index",
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {"query": {"type": "string"}},
+                        "required": ["query"],
+                        "additionalProperties": False,
+                    },
+                    "argument_constraints": {},
+                    "output_schema": index_schema,
+                    "response_schema": index_schema,
+                    "result_fields": list(index_fields),
+                    "probe_arguments": {"query": "probe"},
+                },
+            ],
+        }
+    ]
+    policy_file = root / name / "authorization.json"
+    policy = read(policy_file)
+    for principal in policy["principals"]:
+        for rule in principal["rules"]:
+            rule["contracts"].extend(definitions.values())
+            rule["effects"].append("external.read")
+            rule["resources"].extend(
+                {"resource": resource, "actions": ["read"]}
+                for resource in ("documents:lasa", "repository:python-sdk")
+            )
+    save(policy_file, policy)
+
+
+def configure_dlp(root, name, config, group, mode):
+    token_file = root / name / "inspection-token.txt"
+    token_file.write_bytes((root / "inspection" / "token.txt").read_bytes())
+    token_file.chmod(0o600)
+    rule = {"mode": mode, "profile": DLP_PROFILE}
+    response = {**rule, "artifact_profile": DLP_ARTIFACT_PROFILE} if group == "caller" else rule
+    config["content_security"] = {
+        "inspection_profiles": [
+            {
+                "id": profile,
+                "gateway_id": DLP_GATEWAY_ID,
+                "url": origin("inspection") + "/inspect",
+                "policy_revision": DLP_REVISION,
+                "credential_ref": "file:" + str(token_file),
+                "ca_file": str(root / "ca.pem"),
+                "region": "isolated",
+                "retention": "metadata-only",
+            }
+            for profile in (DLP_PROFILE, DLP_ARTIFACT_PROFILE)
+        ],
+        "bindings": {group: {"request": rule, "response": response}},
+    }
+    if group in {"caller", "connectors"}:
+        configure_connectors(root, name, config)
+
+
+def authorize(root, configs, parent_name="parent", peers=PEERS):
+    parent = configs[parent_name]
+    policy_path = root / parent_name / "authorization.json"
     policy = read(policy_path)
     rule = policy["principals"][0]["rules"][0]
     parent["routing"]["unclaimed_peer_fallback"] = "reject"
-    for name, contract_name in PEERS.items():
+    for name, contract_name in peers.items():
         receiver = configs[name]["service"]["id"]
-        token_path = root / "parent" / f"{name}-token.txt"
+        token_path = root / parent_name / f"{name}-token.txt"
         token_path.write_bytes((root / name / "peer-token.txt").read_bytes())
         token_path.chmod(0o600)
         parent["peers"].append(
@@ -172,18 +446,42 @@ def payload(body):
     raise ValueError("Fixture could not find the LASA model payload")
 
 
+def dlp_fixture_text(label, scenario):
+    prefix = f"dlp-{scenario}-"
+    if label.startswith(prefix):
+        return DLP_CASES.get(label.removeprefix(prefix).removesuffix(".md"))
+    return None
+
+
 def propose_plan(context):
+    request = context["request"]
+    requirements = [requirement["requirement_id"] for requirement in context["requirements"]]
+    objective = request["input"]["objective"]
+    if objective.startswith("dlp-delegate-"):
+        return {
+            "steps": [
+                {
+                    "step_id": "step-delegate",
+                    "requirement_ids": requirements,
+                    "depends_on": [],
+                    "contract_digest": request["contract"]["digest"],
+                    "input_json": json.dumps(request["input"]),
+                    "local_assessment": "sufficient",
+                    "assessment_summary": "Exercise one authenticated delegate.",
+                }
+            ]
+        }
     review = next(
         d
         for d, contract in context["contracts"].items()
         if contract["id"].endswith("/design.review")
     )
-    request = context["request"]
-    requirements = [requirement["requirement_id"] for requirement in context["requirements"]]
     review_inputs = {
-        "design": "The parent delegates its review and attempt to separate authorized receivers.",
+        "design": MARKERS["delegate_off"],
         "criteria": [{"id": "selection", "description": "Check bounded peer selection."}],
     }
+    if MARKERS["delegation_request"] in objective:
+        review_inputs["design"] = MARKERS["delegation_request"]
     steps = [
         ("step-review", review, review_inputs, []),
         ("step-attempt", request["contract"]["digest"], request["input"], ["step-review"]),
@@ -207,20 +505,45 @@ def propose_plan(context):
 def execute_fixture(context):
     contract = context["outcome_contract"]
     inputs = context["input"]
-    if contract["id"].endswith("/design.review"):
+    if contract["id"].endswith(("/documents.read", "/documents.search")):
+        output = {"ready_for_verification": True}
+    elif contract["id"].endswith("/design.review"):
+        fixture_text = dlp_fixture_text(inputs["design"], "result-release") or next(
+            (
+                MARKERS[key]
+                for key in ("model_response", "observe", "delegate_off")
+                if MARKERS[key] in inputs["design"]
+            ),
+            "The receivers are distinct.",
+        )
         output = {
             "findings": [],
             "coverage": [
                 {
                     "criterion_id": item["id"],
                     "disposition": "reviewed",
-                    "evidence": "The receivers are distinct.",
+                    "evidence": fixture_text,
                 }
                 for item in inputs["criteria"]
             ],
         }
     else:
-        if results := context.get("verified_step_results"):
+        objective = inputs["objective"]
+        flagged = next(
+            (
+                MARKERS[key]
+                for key in ("release", "delegation_response")
+                if MARKERS[key] in objective
+            ),
+            None,
+        )
+        if marker := dlp_fixture_text(objective, "delegate-result"):
+            summary = marker
+        elif objective.startswith(("dlp-model-response-", "dlp-delegate-request-")):
+            summary = "The requested execution completed."
+        elif flagged:
+            summary = flagged
+        elif results := context.get("verified_step_results"):
             assert (
                 results["step-attempt"]["output"]["summary"]
                 == "The worker consumed the verified review."
@@ -254,18 +577,109 @@ def execute_fixture(context):
     }
 
 
-def serve_model(directory):
+def capture(directory, document):
+    with (directory / "traffic.jsonl").open("a") as file:
+        file.write(json.dumps(document, separators=(",", ":")) + "\n")
+
+
+def serve_fixture(directory):
     app = FastAPI()
 
-    @app.post("/v1/responses")
-    async def respond(request: Request):
-        assert request.headers["Authorization"] == "Bearer " + MODEL_KEY
+    @app.post("/inspect/{profile}")
+    async def inspect_content(request: Request, profile: str):
+        assert request.headers["Authorization"] == "Bearer " + GATEWAY_KEY
         body = await request.json()
+        revision = PROFILE_REVISIONS[profile]
+        capture(directory, {"fixture_profile": profile, **body})
+        assert body["gateway_policy_revision"] == revision
+        assert body["inspection_digest"] == digest(body["content"])
+        assert set(body["content"]) <= GATEWAY_FIELDS[body["channel"]]
+        markers = json.dumps(body["content"])
+        blocked = any(MARKERS[key] in markers for key in CHANNEL_DENIALS.get(body["channel"], ()))
+        return {
+            "version": "1",
+            "gateway_id": GATEWAY_ID,
+            "gateway_policy_revision": (
+                PROFILE_REVISIONS["artifacts"]
+                if body["channel"] == "reasoning.request" and MARKERS["wrong_revision"] in markers
+                else revision
+            ),
+            "inspection_id": body["inspection_id"],
+            "verdict": "hard_deny" if blocked else "permit",
+            "reason_codes": ["fixture-denial"] if blocked else [],
+            "inspection_digest": (
+                "sha256:" + "0" * 64
+                if body["channel"] == "reasoning.request" and MARKERS["invalid_verdict"] in markers
+                else body["inspection_digest"]
+            ),
+        }
+
+    @app.get("/documents")
+    async def source(request: Request, report_id: str):
+        assert request.headers["Authorization"] == "Bearer " + SOURCE_KEY
+        capture(directory, {"report_id": report_id})
+        return {
+            "text": dlp_fixture_text(report_id, "connector-result")
+            or dlp_fixture_text(report_id, "artifact-release")
+            or {
+                "blocked-result.md": MARKERS["connector_result"],
+                "blocked-artifact.md": MARKERS["artifact"],
+            }.get(report_id, "An allowed HTTPS source record."),
+        }
+
+    @app.get("/documents/index")
+    async def source_index(request: Request, query: str):
+        assert request.headers["Authorization"] == "Bearer " + SOURCE_KEY
+        capture(directory, {"query": query})
+        name = (query if query in DLP_CASES.values() else MARKERS["connector_off"]) + ".md"
+        return [
+            {
+                "name": name,
+                "type": "file",
+                "html_url": "https://github.com/modelcontextprotocol/python-sdk/blob/main/" + name,
+            }
+        ]
+
+    @app.post("/{prefix:path}/responses")
+    async def respond(request: Request, prefix: str):
+        assert request.headers["Authorization"] == "Bearer " + MODEL_KEY
+        receiver, _, version = prefix.rpartition("/")
+        assert version == "v1"
+        body = await request.json()
+        capture(directory, {"fixture_receiver": receiver, **body} if receiver else body)
         if body.get("stream"):
-            return Response(
-                sse_final(json.dumps(execute_fixture(payload(body)))),
-                media_type="text/event-stream",
+            context = payload(body)
+            inputs = context["input"]
+            contract = context["outcome_contract"]["id"]
+            first_turn = not any(
+                item.get("type") == "function_call_output" for item in body["input"]
             )
+            if first_turn and contract.endswith("/documents.read"):
+                data = sse_tool("documents_read", {"report_id": inputs["document_id"]}, 1)
+            elif first_turn and contract.endswith("/documents.search"):
+                data = sse_tool("documents_search", {"query": inputs["query"]}, 1)
+            elif first_turn and (
+                question := dlp_fixture_text(inputs.get("design", ""), "caller-question")
+            ):
+                data = sse_tool("lasa_request_input", {"message": question}, 1)
+            elif first_turn and (
+                text := dlp_fixture_text(inputs.get("objective", ""), "model-response")
+            ):
+                data = sse_tool("workspace_write", {"relative_path": "effect.txt", "text": text}, 1)
+            elif (
+                first_turn
+                and any(
+                    MARKERS[key] in inputs.get("objective", "")
+                    for key in ("release", "delegation_response")
+                )
+                or (first_turn and dlp_fixture_text(inputs.get("objective", ""), "delegate-result"))
+            ):
+                data = sse_tool(
+                    "workspace_write", {"relative_path": "effect.txt", "text": "confirmed"}, 1
+                )
+            else:
+                data = sse_final(json.dumps(execute_fixture(context)), 2 if not first_turn else 1)
+            return Response(data, media_type="text/event-stream")
         message_format = body["text"]["format"]
         if message_format["name"] == "lasa_verification":
             developer, context, candidate = body["input"]
@@ -283,11 +697,14 @@ def serve_model(directory):
             assert "candidate_output" not in context and "output_schema" not in context["contract"]
             if context["contract"]["ref"]["id"].endswith("/design.review"):
                 assert set(candidate) == {"coverage", "findings"}
-            else:
+            elif context["contract"]["ref"]["id"].endswith("/task.attempt"):
                 assert candidate["disposition"] == "fulfilled"
                 material = context["trusted_execution_evidence"]
-                assert material["dependencies"]
-                if material["step_id"] is None and len(material["dependencies"]) == 2:
+                if candidate["summary"] != MARKERS["release"] and not context["input"][
+                    "objective"
+                ].startswith("dlp-"):
+                    assert material["dependencies"]
+                if material["step_id"] is None and len(material.get("dependencies", ())) == 2:
                     review_input, attempt_input = material["step_inputs"]
                     assert review_input["step_id"] == "step-review"
                     assert review_input["content"]["criteria"][0]["id"] == "selection"
@@ -319,28 +736,622 @@ def serve_model(directory):
     )
 
 
+def read_traffic(root, name):
+    path = root / name / "traffic.jsonl"
+    return [json.loads(line) for line in path.read_text().splitlines()] if path.exists() else []
+
+
+def state_rows(root, name, statement, arguments=()):
+    path = root / "state" / name / "private" / "tasks.sqlite3"
+    with sqlite3.connect(path.as_uri() + "?mode=ro", uri=True) as db:
+        return db.execute(statement, arguments).fetchall()
+
+
+def checked_task(
+    client, root, name, profile, inputs, scenario, *, intake_denied=False, answer_question=None
+):
+    token = (root / name / "operator-token.txt").read_text().strip()
+    headers = {"Authorization": "Bearer " + token}
+    catalog = client.get(base(name) + "/capabilities", headers=headers).raise_for_status().json()
+    offer = next(x for x in catalog["offers"] if x["contract"]["id"].endswith("/" + profile))
+    session_key = "session-" + scenario
+    task_key = "task-" + scenario
+    session = (
+        client.post(
+            base(name) + "/sessions",
+            json={"operation_id": session_key},
+            headers={**headers, "Idempotency-Key": session_key},
+        )
+        .raise_for_status()
+        .json()
+    )
+    payload = {
+        "operation_id": task_key,
+        "selection": {field: offer[field] for field in ("contract", "offer_id", "catalog_view")}
+        | {"offer_revision": offer["revision"]},
+        "input": inputs,
+        "requested_limits": {
+            "budget": offer["max_budget"],
+            "max_hops": min(1, offer["max_hops"]),
+            "deadline": (datetime.now(UTC) + timedelta(seconds=160)).isoformat(),
+        },
+        "authorization_ref": offer["authorization_ref"],
+        "diagnostics": "metadata",
+    }
+    response = client.post(
+        base(name) + f"/sessions/{session['session_id']}/tasks",
+        json=payload,
+        headers={**headers, "Idempotency-Key": task_key},
+    )
+    if intake_denied:
+        assert response.status_code == 403 and response.json()["code"] == "disclosure_denied", (
+            response.text
+        )
+        return None, response.json(), headers
+    location = response.raise_for_status().headers["Location"]
+    deadline = time.monotonic() + 60
+    while time.monotonic() < deadline:
+        current = client.get(location, headers=headers).raise_for_status()
+        task = current.json()
+        if task["status"] in {"completed", "rejected", "failed", "indeterminate", "cancelled"}:
+            return location, task, headers
+        if task["status"] == "awaiting_input" and answer_question:
+            question = task["question"]
+            answer = answer_question(question["prompt"])
+            answer_key = "answer-" + scenario
+            client.post(
+                location + "/inputs",
+                headers={
+                    **headers,
+                    "Idempotency-Key": answer_key,
+                    "If-Match": current.headers["ETag"],
+                },
+                json={
+                    "operation_id": answer_key,
+                    "question_id": question["question_id"],
+                    "question_revision": question["revision"],
+                    "answer": answer,
+                },
+            ).raise_for_status()
+            answer_question = None
+        time.sleep(0.1)
+    raise TimeoutError(f"Fixture task {scenario} did not settle")
+
+
+def attempt_input(objective):
+    return {
+        "objective": objective,
+        "requirements": [
+            {
+                "id": "fixture-effect",
+                "description": "Exercise the controlled boundary.",
+                "acceptance": ["Record the operation outcome."],
+            }
+        ],
+    }
+
+
+def inspection_decisions(root, receiver, task_id, channel):
+    return [
+        json.loads(row)
+        for (row,) in state_rows(
+            root,
+            receiver,
+            "SELECT document FROM audit WHERE kind='content_decision' AND task_id IS ? "
+            "AND json_extract(document,'$.channel')=?",
+            (task_id, channel),
+        )
+    ]
+
+
+def verify_content(client, root):
+    outcomes = {}
+    for scenario in (
+        "caller",
+        "model_request",
+        "model_response",
+        "release",
+        "invalid_verdict",
+        "wrong_revision",
+    ):
+        if scenario == "release":
+            inputs = attempt_input(MARKERS[scenario])
+            name, profile = "attempt", "task.attempt"
+        else:
+            inputs = {
+                "design": MARKERS[scenario],
+                "criteria": [{"id": "fixture", "description": "Check the controlled boundary."}],
+            }
+            name, profile = "review", "design.review"
+        location, task, headers = checked_task(
+            client, root, name, profile, inputs, scenario, intake_denied=scenario == "caller"
+        )
+        problem = task if scenario == "caller" else task["problem"]
+        expected = (
+            "content_gateway_unavailable"
+            if scenario in {"invalid_verdict", "wrong_revision"}
+            else "disclosure_denied"
+        )
+        assert problem["code"] == expected and "result" not in task, (scenario, task)
+        outcomes[scenario] = problem["code"]
+        if scenario == "release":
+            assert problem["effect_disposition"] == "known", task
+            control = (
+                client.get(location + "?view=control", headers=headers).raise_for_status().json()
+            )
+            assert control["effect_disposition"] == "known" and control["usage"]["tool_calls"] == 1
+
+    for scenario in ("delegation_request", "delegation_response"):
+        receiver = "review" if scenario == "delegation_request" else "attempt"
+        child_tasks = state_rows(root, receiver, "SELECT count(*) FROM tasks")[0][0]
+        inputs = attempt_input(MARKERS[scenario])
+        location, task, headers = checked_task(
+            client, root, "parent", "task.attempt", inputs, scenario
+        )
+        assert task["problem"]["code"] == "disclosure_denied" and "result" not in task, task
+        admitted = state_rows(root, receiver, "SELECT count(*) FROM tasks")[0][0] - child_tasks
+        if scenario == "delegation_request":
+            assert admitted == 0 and task["problem"]["effect_disposition"] == "none"
+        else:
+            assert admitted == 1 and task["problem"]["effect_disposition"] == "known", task
+            control = (
+                client.get(location + "?view=control", headers=headers).raise_for_status().json()
+            )
+            assert control["usage"]["tool_calls"] == 1
+        outcomes[scenario] = {"blocked": True, "child_tasks_admitted": admitted}
+
+    _, observed_task, _ = checked_task(
+        client,
+        root,
+        "attempt",
+        "design.review",
+        {
+            "design": MARKERS["observe"],
+            "criteria": [
+                {"id": "fixture", "description": "Exercise an observation-only verdict."},
+            ],
+        },
+        "observe",
+    )
+    assert observed_task["status"] == "completed", observed_task
+    assert observed_task["result"]["output"]["coverage"][0]["evidence"] == MARKERS["observe"]
+    observed = inspection_decisions(root, "attempt", observed_task["task_id"], "reasoning.response")
+    assert any(
+        record["mode"] == "observe"
+        and record["reason_code"] == "gateway_hard_deny"
+        and record["profile_id"] == "standard"
+        for record in observed
+    )
+    outcomes["observe"] = {"status": "completed", "gateway_verdict": "hard_deny"}
+
+    query = MARKERS["connector_off"]
+    before = sum(event.get("query") == query for event in read_traffic(root, "source"))
+    _, index_task, _ = checked_task(
+        client,
+        root,
+        "review",
+        "documents.search",
+        {"collection": "python-sdk-root", "query": query, "limit": 1},
+        "connector_off",
+    )
+    assert index_task["status"] == "completed", index_task
+    assert index_task["result"]["output"]["matches"][0]["document_id"] == query + ".md"
+    assert sum(event.get("query") == query for event in read_traffic(root, "source")) - before == 1
+    index_records = inspection_decisions(root, "review", index_task["task_id"], "tool.result")
+    assert len(index_records) == 1 and index_records[0]["mode"] == "off"
+    assert index_records[0]["mode_origin"] == "connector:fixture-source"
+    assert "profile_id" not in index_records[0]
+    request_records = inspection_decisions(root, "review", index_task["task_id"], "tool.invoke")
+    assert any(record["profile_id"] == "standard" for record in request_records)
+    outcomes["connector_off"] = {"response": "off", "request": "standard", "source_calls": 1}
+
+    for scenario, name in (
+        ("connector_allowed", "allowed.md"),
+        ("connector_argument", MARKERS["connector_argument"]),
+        ("connector_result", "blocked-result.md"),
+        ("artifact", "blocked-artifact.md"),
+    ):
+        source_calls = sum(event.get("report_id") == name for event in read_traffic(root, "source"))
+        location, task, headers = checked_task(
+            client,
+            root,
+            "review",
+            "documents.read",
+            {"collection": "lasa-docs", "document_id": name},
+            scenario,
+        )
+        observed = (
+            sum(event.get("report_id") == name for event in read_traffic(root, "source"))
+            - source_calls
+        )
+        assert observed == int(scenario != "connector_argument"), (scenario, observed)
+        artifacts = state_rows(
+            root,
+            "review",
+            "SELECT id,released FROM artifacts WHERE task_id=?",
+            (task["task_id"],),
+        )
+        if scenario == "connector_allowed":
+            assert task["status"] == "completed", task
+            (manifest,) = task["result"]["artifacts"]
+            assert manifest["provenance"]["operation_id"].startswith("tool-")
+            artifact = client.get(
+                location + "/artifacts/" + manifest["artifact_id"], headers=headers
+            )
+            assert (
+                artifact.status_code == 200
+                and artifact.json()["text"] == "An allowed HTTPS source record."
+            )
+        elif scenario == "artifact":
+            assert task["problem"]["code"] == "disclosure_denied" and "result" not in task, task
+            ((artifact_id, visibility),) = artifacts
+            assert visibility == -1
+            artifact = client.get(location + "/artifacts/" + artifact_id, headers=headers)
+            assert artifact.status_code == 404 and MARKERS["artifact"] not in artifact.text
+        else:
+            assert (
+                task["status"] in {"failed", "rejected"} and not artifacts and "result" not in task
+            ), task
+        if scenario != "connector_argument":
+            decisions = inspection_decisions(root, "review", task["task_id"], "tool.result")
+            assert any(
+                record["mode"] == "enforce"
+                and record["mode_origin"] == "operation:documents.read"
+                and record["profile_id"] == "document"
+                and record["gateway_policy_revision"] == PROFILE_REVISIONS["document"]
+                for record in decisions
+            )
+        outcomes[scenario] = {"status": task["status"], "source_calls": observed}
+
+    model = json.dumps(read_traffic(root, "model"))
+    for key in ("caller", "model_request", "invalid_verdict", "wrong_revision", "connector_result"):
+        assert MARKERS[key] not in model, f"Blocked {key} bytes reached the model"
+    gateway = read_traffic(root, "inspection")
+    for channel, denied in CHANNEL_DENIALS.items():
+        inspected = json.dumps(
+            [entry["content"] for entry in gateway if entry["channel"] == channel]
+        )
+        for kind in denied:
+            if kind in {"delegate_off", "connector_off"}:
+                assert MARKERS[kind] not in inspected, (channel, kind)
+            else:
+                assert MARKERS[kind] in inspected, (channel, kind)
+    for profile, channel, marker in (
+        ("artifacts", "candidate.release", MARKERS["artifact"]),
+        ("document", "tool.result", MARKERS["connector_result"]),
+        ("standard", "reasoning.request", MARKERS["wrong_revision"]),
+    ):
+        assert any(
+            entry["fixture_profile"] == profile
+            and entry["channel"] == channel
+            and entry["gateway_policy_revision"] == PROFILE_REVISIONS[profile]
+            and marker in json.dumps(entry["content"])
+            for entry in gateway
+        ), (profile, channel)
+    projection = json.dumps([entry["content"] for entry in gateway])
+    for protected in (
+        MODEL_KEY,
+        GATEWAY_KEY,
+        SOURCE_KEY,
+        "The last user message is the complete candidate_output",
+    ):
+        assert protected not in projection
+    audit = [
+        document
+        for name in (*PEERS, "parent")
+        for (document,) in state_rows(
+            root,
+            name,
+            "SELECT document FROM audit WHERE kind IN ('content_decision','content_transfer')",
+        )
+    ]
+    assert audit and all(
+        private not in "".join(audit)
+        for private in (*MARKERS.values(), MODEL_KEY, GATEWAY_KEY, SOURCE_KEY)
+    )
+    print(
+        json.dumps(
+            {
+                "content_security": outcomes,
+                "model_requests": len(read_traffic(root, "model")),
+                "inspection_requests": len(gateway),
+                "local_gateway_id": GATEWAY_ID,
+                "requests_by_profile": {
+                    profile: sum(item["fixture_profile"] == profile for item in gateway)
+                    for profile in PROFILE_REVISIONS
+                },
+                "metadata_only_content_records": len(audit),
+            },
+            indent=2,
+        )
+    )
+
+
+def wait_ready(client, url, headers, *, timeout=45):
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            if client.get(url + "/health/ready", headers=headers).status_code == 200:
+                return
+        except httpx.TransportError:
+            pass
+        time.sleep(0.2)
+    raise RuntimeError(f"{url} did not become ready")
+
+
+def dlp_task(scenario, label, marker):
+    if scenario == "connector-request":
+        return "documents.search", {"collection": "python-sdk-root", "query": marker, "limit": 1}
+    if scenario in {"connector-result", "artifact-release"}:
+        return "documents.read", {"collection": "lasa-docs", "document_id": label + ".md"}
+    if scenario in {"model-response", "delegate-request", "delegate-result"}:
+        objective = f"{label} {marker}" if scenario == "delegate-request" else label
+        return "task.attempt", attempt_input(objective)
+    return "design.review", {
+        "design": marker if scenario in {"caller-intake", "model-request"} else label,
+        "criteria": [{"id": "dlp", "description": "Review the text."}],
+    }
+
+
+def verify_dlp_case(client, root, mode, scenario, reason, marker):
+    group, channel, purpose = DLP_STREAMS[scenario]
+    receiver = f"{group}-{mode}"
+    child = receiver + "-child"
+    label = f"dlp-{scenario}-{reason}"
+    operation = f"{label}-{mode}"
+    blocked = mode == "enforce" and reason != "clean"
+    intake_denied = blocked and scenario == "caller-intake"
+    model_start = len(read_traffic(root, "model"))
+    source_start = len(read_traffic(root, "source"))
+    if scenario.startswith("delegate-"):
+        existing_children = {row[0] for row in state_rows(root, child, "SELECT id FROM tasks")}
+    questions = []
+
+    def answer_question(prompt):
+        assert not blocked and prompt == marker, (operation, prompt)
+        questions.append(prompt)
+        return "The review scope is confirmed."
+
+    capability, inputs = dlp_task(scenario, label, marker)
+    location, task, headers = checked_task(
+        client,
+        root,
+        receiver,
+        capability,
+        inputs,
+        operation,
+        intake_denied=intake_denied,
+        answer_question=answer_question if scenario == "caller-question" else None,
+    )
+    task_id = task.get("task_id")
+    if blocked and scenario != "caller-question":
+        problem = task if intake_denied else task["problem"]
+        expected = "verification_failed" if group == "connectors" else "disclosure_denied"
+        assert problem["code"] == expected and "result" not in task, (operation, task)
+    else:
+        assert task["status"] == "completed", (operation, task)
+    if blocked:
+        assert "question" not in task and marker not in json.dumps(task), operation
+
+    model = [
+        request
+        for request in read_traffic(root, "model")[model_start:]
+        if request["fixture_receiver"] == receiver
+    ]
+    source = read_traffic(root, "source")[source_start:]
+    if scenario in {"caller-intake", "model-request"}:
+        deliveries = sum(marker in json.dumps(request) for request in model)
+        assert not model if blocked else deliveries > 0, (operation, deliveries)
+        if scenario == "caller-intake":
+            admitted = state_rows(
+                root,
+                receiver,
+                "SELECT resource_id FROM operations WHERE operation_id=?",
+                ("task-" + operation,),
+            )
+            assert admitted == ([] if blocked else [(task_id,)]), (operation, admitted)
+    elif scenario == "caller-question":
+        deliveries = len(questions)
+        if blocked:
+            assert state_rows(
+                root,
+                receiver,
+                "SELECT json_extract(result,'$.error.code') FROM actions "
+                "WHERE task_id=? AND json_extract(intent,'$.name')='lasa.request_input'",
+                (task_id,),
+            ) == [("disclosure_denied",)], operation
+    elif scenario == "result-release":
+        assert any(marker in json.dumps(request) for request in model), operation
+        deliveries = int(
+            task.get("result", {}).get("output", {}).get("coverage", [{}])[0].get("evidence")
+            == marker
+        )
+    elif scenario == "model-response":
+        writes = state_rows(
+            root,
+            receiver,
+            "SELECT state,intent FROM actions WHERE task_id=? AND effect='workspace.write'",
+            (task_id,),
+        )
+        assert (
+            writes == []
+            if blocked
+            else (
+                len(writes) == 1
+                and writes[0][0] == "finished"
+                and json.loads(writes[0][1])["arguments"]["text"] == marker
+            )
+        ), (operation, writes)
+        control = client.get(location + "?view=control", headers=headers).raise_for_status().json()
+        assert control["usage"]["model_calls"] >= 1
+        assert control["usage"]["tool_calls"] == int(not blocked)
+        deliveries = len(writes)
+    elif scenario.startswith("delegate-"):
+        ((record,),) = state_rows(
+            root, receiver, "SELECT document FROM children WHERE task_id=?", (task_id,)
+        )
+        delegation = json.loads(record)
+        children = [
+            (document, request)
+            for child_id, document, request in state_rows(
+                root, child, "SELECT id,document,request FROM tasks"
+            )
+            if child_id not in existing_children
+        ]
+        assert len(children) == int(not blocked or scenario == "delegate-result"), (
+            operation,
+            delegation["state"],
+        )
+        if scenario == "delegate-request":
+            assert delegation["dispatched"] == (not blocked), (operation, delegation["state"])
+            deliveries = sum(marker in request for _, request in children)
+        else:
+            ((document, _),) = children
+            assert json.loads(document)["result"]["output"]["summary"] == marker
+            control = (
+                client.get(location + "?view=control", headers=headers).raise_for_status().json()
+            )
+            assert control["effect_disposition"] == "known" and control["usage"]["tool_calls"] == 1
+            deliveries = int(task.get("result", {}).get("output", {}).get("summary") == marker)
+            assert any(marker in json.dumps(request) for request in model) == (not blocked), (
+                operation
+            )
+    elif scenario == "connector-request":
+        deliveries = sum(event.get("query") == marker for event in source)
+        if not blocked:
+            assert task["result"]["output"]["matches"][0]["document_id"] == marker + ".md"
+    else:
+        assert sum(event.get("report_id") == inputs["document_id"] for event in source) == 1
+        artifacts = state_rows(
+            root, receiver, "SELECT id,released FROM artifacts WHERE task_id=?", (task_id,)
+        )
+        if scenario == "connector-result":
+            deliveries = sum(
+                item.get("type") == "function_call_output" and marker in json.dumps(item)
+                for request in model
+                for item in request["input"]
+            )
+            if blocked:
+                assert not artifacts and not any(marker in json.dumps(request) for request in model)
+            else:
+                assert task["result"]["output"]["content"] == marker and artifacts
+        else:
+            ((artifact_id, released),) = artifacts
+            artifact = client.get(location + "/artifacts/" + artifact_id, headers=headers)
+            assert released == (-1 if blocked else 1)
+            assert artifact.status_code == (404 if blocked else 200)
+            deliveries = int(marker in artifact.text)
+            if not blocked:
+                assert artifact.json()["text"] == marker
+    assert deliveries == 0 if blocked else deliveries > 0, (operation, deliveries)
+
+    verdict = "permit" if reason == "clean" else "hard_deny"
+    profile = DLP_ARTIFACT_PROFILE if scenario == "artifact-release" else DLP_PROFILE
+    records = inspection_decisions(
+        root, receiver, None if scenario == "caller-intake" else task_id, channel
+    )
+    inspections = [
+        record
+        for record in records
+        if record["purpose"] == purpose
+        and (scenario != "caller-intake" or record["operation_id"] == "task-" + operation)
+        and record["mode"] == mode
+        and record["profile_id"] == profile
+        and record["gateway_policy_revision"] == DLP_REVISION
+        and record["gateway_id"] == DLP_GATEWAY_ID
+        and "inspection_id" in record
+        and record["reason_code"] == "gateway_" + verdict
+    ]
+    assert inspections, (operation, records)
+    blocked_transfers = {
+        transfer_id
+        for (transfer_id,) in state_rows(
+            root,
+            receiver,
+            "SELECT json_extract(document,'$.transfer_id') FROM audit WHERE kind='content_transfer' "
+            "AND task_id IS ? AND json_extract(document,'$.outcome')='blocked'",
+            (None if scenario == "caller-intake" else task_id,),
+        )
+    }
+    assert all((record["transfer_id"] in blocked_transfers) == blocked for record in inspections), (
+        operation
+    )
+    return {
+        "mode": mode,
+        "scenario": scenario,
+        "case": reason,
+        "verdict": verdict,
+        "blocked": blocked,
+        "status": task.get("status", "denied"),
+        "deliveries": deliveries,
+        "inspection_ids": [record["inspection_id"] for record in inspections],
+    }
+
+
+def verify_dlp(root):
+    ca = ssl.create_default_context(cafile=root / "ca.pem")
+    names = (*DLP_TARGETS, *(f"delegates-{mode}-child" for mode in DLP_MODES))
+    with httpx.Client(verify=ca, trust_env=False, timeout=6) as client:
+        for name in names:
+            token = (root / name / "operator-token.txt").read_text().strip()
+            wait_ready(client, origin(name), {"Authorization": "Bearer " + token})
+        gateway = origin("inspection")
+        token = (root / "inspection/token.txt").read_text().strip()
+        wait_ready(client, gateway, {"Authorization": "Bearer " + token}, timeout=90)
+        assert client.get(gateway + "/health/ready").status_code == 401
+        assert client.post(gateway + "/inspect", json={}).status_code == 401
+        cases = [
+            verify_dlp_case(client, root, mode, scenario, reason, marker)
+            for mode in DLP_MODES
+            for scenario in DLP_STREAMS
+            for reason, marker in DLP_CASES.items()
+        ]
+    audit = [
+        document
+        for name in names
+        for (document,) in state_rows(
+            root,
+            name,
+            "SELECT document FROM audit WHERE kind IN ('content_decision','content_transfer')",
+        )
+    ]
+    assert audit and all(
+        private not in "".join(audit)
+        for private in (*DLP_CASES.values(), token, MODEL_KEY, SOURCE_KEY)
+    )
+    print(json.dumps({"cases": cases, "metadata_only_content_records": len(audit)}))
+
+
+def verify_dlp_logs(output, logs, token):
+    report = json.loads(output)
+    assert all(
+        private not in logs for private in (*DLP_CASES.values(), token, MODEL_KEY, SOURCE_KEY)
+    )
+    events = {
+        event["inspection_id"]: event
+        for line in logs.splitlines()
+        if "inspection {" in line
+        for event in [json.loads(line.split("inspection ", 1)[1])]
+    }
+    for case in report["cases"]:
+        for key in case.pop("inspection_ids"):
+            event = events[key]
+            assert event["verdict"] == case["verdict"], event
+            expected = [] if case["case"] == "clean" else [case["case"]]
+            assert event["reason_codes"] == expected, event
+    report["metadata_only_gateway_records"] = len(events)
+    print(json.dumps(report, indent=2))
+
+
 def verify(root):
     verify_tls = ssl.create_default_context(cafile=root / "ca.pem")
     token = (root / "parent/operator-token.txt").read_text().strip()
     with httpx.Client(
         verify=verify_tls, trust_env=False, timeout=6, headers={"Authorization": "Bearer " + token}
     ) as client:
-        deadline = time.monotonic() + 45
         for name in (*PEERS, "parent"):
             receiver_token = (root / name / "operator-token.txt").read_text().strip()
-            headers = {"Authorization": "Bearer " + receiver_token}
-            while True:
-                try:
-                    if (
-                        client.get(origin(name) + "/health/ready", headers=headers).status_code
-                        == 200
-                    ):
-                        break
-                except httpx.TransportError:
-                    pass
-                if time.monotonic() >= deadline:
-                    raise RuntimeError(f"{name} did not become ready")
-                time.sleep(0.2)
+            wait_ready(client, origin(name), {"Authorization": "Bearer " + receiver_token})
         review_operator = (root / "review/operator-token.txt").read_text().strip()
         review = (
             client.get(
@@ -442,6 +1453,25 @@ def verify(root):
             }
             finished = {call["operation_id"] for call in calls if call["phase"] == "finished"}
             assert len(executions) == 1 and executions <= finished, child
+        seen = inspection_decisions(root, "parent", outcome["task_id"], "delegation.response")
+        for child, name in zip(children, PEERS, strict=True):
+            records = [
+                record
+                for record in seen
+                if record["destination"] == "peer:" + child["service_id"]
+                and record["purpose"] == "result"
+            ]
+            if name == "review":
+                assert len(records) == 1 and records[0]["mode"] == "off"
+                assert records[0]["mode_origin"] == "peer:" + child["service_id"]
+                assert "profile_id" not in records[0]
+            else:
+                assert any(
+                    record["mode"] == "enforce"
+                    and record["profile_id"] == "standard"
+                    and record["mode_origin"] == "delegates.default"
+                    for record in records
+                )
         print(
             json.dumps(
                 {
@@ -454,10 +1484,64 @@ def verify(root):
                     ],
                     "wrong_audience_status": 401,
                     "model_calls": result["usage"]["model_calls"],
+                    "delegate_response_modes": {"review": "off", "attempt": "enforce"},
                 },
                 indent=2,
             )
         )
+
+        verify_content(client, root)
+
+
+def deploy_command(path, action, *, error=None):
+    result = subprocess.run(
+        [sys.executable, "-m", "lasa_service.cli", "deploy", action, "--settings", str(path)],
+        capture_output=True,
+        text=True,
+        timeout=260,
+        check=False,
+    )
+    if error:
+        assert result.returncode == 2 and error in result.stderr, result.stderr
+    elif result.returncode:
+        raise RuntimeError(result.stderr)
+
+
+def start_managed_dlp(path, document):
+    disabled = {"supervisor_network": document["supervisor_network"]}
+    save(path, disabled)
+    deploy_command(path, "apply")
+    assert not DockerDeployment.load(path).compose("ps", "-aq")
+
+    save(path, {**disabled, "supervisors": document["supervisors"]})
+    deploy_command(path, "apply", error="requires local_dlp.enabled=true")
+    assert not DockerDeployment.load(path).compose("ps", "-aq")
+
+    save(path, document)
+    deploy_command(path, "apply")
+    deployment = DockerDeployment.load(path)
+    inspector = deployment.compose("ps", "-q", "inspector")
+    analyzer = deployment.compose("ps", "-q", "presidio")
+    assert inspector and analyzer
+    deploy_command(path, "apply")
+    assert inspector == deployment.compose("ps", "-q", "inspector")
+    assert analyzer == deployment.compose("ps", "-q", "presidio")
+    host_network = document["supervisor_network"]
+    backend = deployment.project + "_backend"
+    assert docker("network", "inspect", "--format", "{{.Internal}}", backend) == "true"
+    for container, expected in ((inspector, {host_network, backend}), (analyzer, {backend})):
+        status = json.loads(docker("inspect", container))[0]
+        assert set(status["NetworkSettings"]["Networks"]) == expected
+        assert not status["HostConfig"]["PortBindings"]
+
+    wrong_revision = {**document["local_dlp"], "policy_revision": "different-revision"}
+    save(path, {**document, "local_dlp": wrong_revision})
+    deploy_command(path, "check", error="must pin")
+    save(path, {**document, "local_dlp": wrong_revision, "supervisors": []})
+    deploy_command(path, "check", error="unexpected gateway ID or policy revision")
+    save(path, document)
+    deploy_command(path, "check")
+    return inspector, analyzer
 
 
 def run(args, root):
@@ -480,19 +1564,52 @@ def run(args, root):
         "%g",
         "/var/run/docker.sock",
     )
-    configs = {name: configure(root, name, namespace) for name in (*PEERS, "parent")}
-    model = root / "model"
-    model.mkdir()
-    certificate(model, dns_name="lasa-model")
+    dlp = args.inspector_image is not None
+    if dlp:
+        configs = {name: configure(root, name, namespace) for name in DLP_TARGETS}
+        for mode in DLP_MODES:
+            parent = f"delegates-{mode}"
+            child = parent + "-child"
+            configs[child] = configure(root, child, namespace, trusted_parent=parent)
+            authorize(root, configs, parent, {child: "task.attempt"})
+    else:
+        configs = {
+            name: configure(
+                root, name, namespace, trusted_parent="parent" if name in PEERS else None
+            )
+            for name in (*PEERS, "parent")
+        }
+        authorize(root, configs)
+    fixtures = ("model", "source") if dlp else ("model", "inspection", "source")
+    certificates = (*fixtures, "inspection") if dlp else fixtures
+    for name in certificates:
+        directory = root / name
+        directory.mkdir()
+        certificate(directory, dns_name="lasa-" + name)
     ca = root / "ca.pem"
     ca.write_bytes(
-        b"".join((root / name / "certificate.pem").read_bytes() for name in (*configs, "model"))
+        b"".join(
+            (root / name / "certificate.pem").read_bytes() for name in (*configs, *certificates)
+        )
     )
-    authorize(root, configs)
+    if dlp:
+        token_file = root / "inspection/token.txt"
+        token_file.write_text(secrets.token_urlsafe(32) + "\n")
+        token_file.chmod(0o600)
+        (root / "inspection/ca.pem").write_bytes((root / "inspection/certificate.pem").read_bytes())
     for name, config in configs.items():
+        if dlp:
+            for executor in config["executors"]:
+                executor["provider_base_url"] = origin("model") + f"/{name}/v1"
+        if name in DLP_TARGETS:
+            configure_dlp(root, name, config, *DLP_TARGETS[name])
+        elif not dlp:
+            configure_content(root, name, configs)
         save(root / name / "config.json", config)
     containers = []
     volumes = []
+    deployment_file = root / "deployment.json"
+    gateway = analyzer = None
     docker("network", "create", "--internal", namespace)
     user = f"{os.getuid()}:{os.getgid()}"
     fixture = [
@@ -504,27 +1621,42 @@ def run(args, root):
         "python",
     ]
     try:
-        containers.append(namespace + "-model")
-        docker(
-            "run",
-            "-d",
-            "--name",
-            containers[-1],
-            "--network",
-            namespace,
-            "--network-alias",
-            "lasa-model",
-            "--user",
-            user,
-            "--mount",
-            mount(model),
-            *fixture,
-            image,
-            "-m",
-            "tests.container_smoke",
-            "model",
-            model,
-        )
+        if dlp:
+            gateway, analyzer = start_managed_dlp(
+                deployment_file,
+                {
+                    "supervisor_network": namespace,
+                    "supervisors": [str(root / name / "config.json") for name in configs],
+                    "local_dlp": {
+                        "enabled": True,
+                        "secrets_directory": str(root / "inspection"),
+                        "inspector_image": args.inspector_image,
+                        "presidio_image": args.presidio_image,
+                    },
+                },
+            )
+        for name in fixtures:
+            containers.append(namespace + "-" + name)
+            docker(
+                "run",
+                "-d",
+                "--name",
+                containers[-1],
+                "--network",
+                namespace,
+                "--network-alias",
+                "lasa-" + name,
+                "--user",
+                user,
+                "--mount",
+                mount(root / name, read_only=False),
+                *fixture,
+                image,
+                "-m",
+                "tests.container_smoke",
+                "fixture",
+                root / name,
+            )
         for name, config in configs.items():
             state = Path(config["storage"]["state_root"])
             state.mkdir(mode=0o700, parents=True)
@@ -612,36 +1744,85 @@ def run(args, root):
                 mount(ca),
                 "--env",
                 "LASA_MODEL_API_KEY=" + MODEL_KEY,
+                "--env",
+                "LASA_GATEWAY_KEY=" + GATEWAY_KEY,
+                "--env",
+                "LASA_SOURCE_KEY=" + SOURCE_KEY,
                 image,
                 "--config",
                 root / name / "config.json",
             )
             mounts = json.loads(docker("inspect", "--format", "{{json .Mounts}}", supervisor))
             assert all(x["Destination"] != "/var/run/docker.sock" for x in mounts)
+            checked = docker(
+                "exec",
+                supervisor,
+                "lasa",
+                "config",
+                "check",
+                "--offline",
+                "--config",
+                root / name / "config.json",
+            )
+            report = json.loads(checked.split("Effective content inspection\n")[1])
+            if dlp:
+                target = DLP_TARGETS.get(name)
+                for group, directions in report["defaults"].items():
+                    for effective in directions.values():
+                        if target and group == target[0]:
+                            assert (
+                                effective["mode"] == target[1]
+                                and effective["profile"] == DLP_PROFILE
+                            )
+                        else:
+                            assert effective["mode"] == "off"
+            elif name == "parent":
+                peer = configs["review"]["service"]["id"]
+                assert report["delegates"][peer]["response"]["mode"] == "off"
+                assert report["delegates"][peer]["request"]["profile"] == "standard"
+            elif name == "review":
+                assert report["connectors"]["fixture-source"]["response"]["mode"] == "off"
+                assert (
+                    report["operations"]["fixture-source/documents.read"]["response"]["profile"]
+                    == "document"
+                )
+            else:
+                assert report["defaults"]["model"]["response"]["mode"] == "observe"
+                assert (
+                    report["defaults"]["connectors"]["request"]["origins"]["mode"] == "unconfigured"
+                )
         client = namespace + "-verify"
         containers.append(client)
-        print(
-            docker(
-                "run",
-                "--rm",
-                "--name",
-                client,
-                "--network",
-                namespace,
-                "--user",
-                user,
-                "--mount",
-                mount(root),
-                *fixture,
-                image,
-                "-m",
-                "tests.container_smoke",
-                "verify",
-                root,
-                timeout=165,
-            )
+        output = docker(
+            "run",
+            "--rm",
+            "--name",
+            client,
+            "--network",
+            namespace,
+            "--user",
+            user,
+            "--mount",
+            mount(root),
+            *fixture,
+            image,
+            "-m",
+            "tests.container_smoke",
+            "verify-dlp" if dlp else "verify",
+            root,
+            timeout=480 if dlp else 240,
         )
-        for config in configs.values():
+        if dlp:
+            token = (root / "inspection/token.txt").read_text().strip()
+            verify_dlp_logs(output, docker("logs", gateway), token)
+            analyzer_logs = docker("logs", analyzer)
+            assert all(
+                private not in analyzer_logs
+                for private in (*DLP_CASES.values(), token, MODEL_KEY, SOURCE_KEY)
+            )
+        else:
+            print(output)
+        for name, config in configs.items():
             label = (
                 "label=com.lasa.launcher="
                 + hashlib.sha256(config["service"]["id"].encode()).hexdigest()
@@ -650,9 +1831,12 @@ def run(args, root):
             state = Path(config["storage"]["state_root"])
             with sqlite3.connect(state / "private" / "tasks.sqlite3") as store:
                 assert store.execute("SELECT count(*) FROM runtimes").fetchone() == (0,)
-            assert any((state / "workspaces").iterdir())
+            if not dlp or name not in {f"delegates-{mode}" for mode in DLP_MODES}:
+                assert any((state / "workspaces").iterdir())
     except Exception:
-        for container in containers:
+        for container in (gateway, analyzer, *containers):
+            if not container:
+                continue
             logs = docker("logs", "--tail", "80", container, check=False)
             if logs:
                 print(f"{container}\n{logs}", file=sys.stderr)
@@ -671,19 +1855,35 @@ def run(args, root):
                 docker("rm", "-f", *remaining)
         for volume in volumes:
             docker("volume", "rm", volume)
+        if dlp:
+            save(
+                deployment_file, {"supervisor_network": namespace, "local_dlp": {"enabled": False}}
+            )
+            deploy_command(deployment_file, "apply")
+            deployment = DockerDeployment.load(deployment_file)
+            assert not deployment.compose("ps", "-aq")
+            assert not docker(
+                "network", "ls", "-q", "--filter", f"name=^{deployment.project}_backend$"
+            )
         docker("network", "rm", namespace)
 
 
 if __name__ == "__main__":
-    if sys.argv[1:2] == ["model"]:
-        serve_model(Path(sys.argv[2]))
+    if sys.argv[1:2] == ["fixture"]:
+        serve_fixture(Path(sys.argv[2]))
     elif sys.argv[1:2] == ["verify"]:
         verify(Path(sys.argv[2]))
+    elif sys.argv[1:2] == ["verify-dlp"]:
+        verify_dlp(Path(sys.argv[2]))
     else:
         parser = argparse.ArgumentParser(description=__doc__)
         parser.add_argument("--service-image", default="lasa-supervisor:1.0.0")
         parser.add_argument("--launcher-image", default="lasa-launcher:1.0.0")
         parser.add_argument("--runtime-image", default="lasa-codex-worker:1.0.0")
+        parser.add_argument(
+            "--inspector-image", help="Verify the real local DLP gateway with this image."
+        )
+        parser.add_argument("--presidio-image", default=PRESIDIO_IMAGE)
         parser.add_argument("--docker-socket", type=Path, default=Path("/var/run/docker.sock"))
         with tempfile.TemporaryDirectory(prefix="lasa-container-") as directory:
             run(parser.parse_args(), Path(directory).resolve())

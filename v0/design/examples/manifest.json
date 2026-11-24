@@ -120,6 +120,16 @@
     "visibility": "private"
   },
   {
+    "file": "content-security-all-channels.json",
+    "schema": "private.schema.json#/$defs/ContentSecurity",
+    "visibility": "private"
+  },
+  {
+    "file": "docker-deployment.json",
+    "schema": "private.schema.json#/$defs/DockerDeployment",
+    "visibility": "private"
+  },
+  {
     "file": "child-plan.json",
     "schema": "contracts.schema.json#/$defs/ResponsibilityPlan",
     "visibility": "private"

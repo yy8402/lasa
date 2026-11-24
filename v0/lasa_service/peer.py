@@ -15,7 +15,7 @@ from . import PROTOCOL_VERSION
 from .auth import WORKLOAD_IDENTITY_HEADER, peer_workload_identity
 from .capabilities import epoch, offer_terms, require, validate_definition
 from .config import within_url
-from .contracts import digest, parse_json
+from .contracts import canonical, digest, parse_json
 from .errors import LasaError
 
 
@@ -88,9 +88,11 @@ class PeerClient:
             headers["Idempotency-Key"] = key
         if etag:
             headers["If-Match"] = etag
+        if body is not None:
+            headers["Content-Type"] = "application/json"
         try:
             async with self.client.stream(
-                method, url, json=body if body is not None else None, headers=headers
+                method, url, content=canonical(body) if body is not None else None, headers=headers
             ) as response:
                 chunks = []
                 total = 0

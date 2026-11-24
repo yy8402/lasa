@@ -1,0 +1,8 @@
+{
+  "supervisor_network": "lasa-supervisors",
+  "supervisors": ["/etc/lasa/review/config.json"],
+  "local_dlp": {
+    "enabled": true,
+    "secrets_directory": "/run/secrets/lasa/inspection"
+  }
+}

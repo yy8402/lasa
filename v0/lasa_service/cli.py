@@ -1,6 +1,7 @@
 """Start the service or manage its deployment configuration."""
 
 import argparse
+import json
 import os
 import sys
 from pathlib import Path
@@ -10,6 +11,7 @@ from jsonschema import ValidationError
 
 from .api import create_app
 from .config import Configuration, ConfigurationError
+from .deployment import DockerDeployment
 from .errors import LasaError
 from .provisioning import (
     check_deployment,
@@ -132,6 +134,15 @@ def main():
     parser = argparse.ArgumentParser(description="LASA service using Codex App Server")
     add_config_path(parser)
     commands = parser.add_subparsers(dest="command")
+    deploy = commands.add_parser("deploy", help="Manage optional Docker deployment components")
+    deploy_actions = deploy.add_subparsers(dest="action", required=True)
+    for action, help_text in (
+        ("check", "Validate the deployment and check managed HTTPS readiness"),
+        ("apply", "Apply the Docker deployment settings"),
+    ):
+        deploy_actions.add_parser(action, help=help_text).add_argument(
+            "--settings", type=Path, required=True, help="Path to the deployment JSON file"
+        )
     config_command = commands.add_parser("config", help="Scaffold or check service configuration")
     config_commands = config_command.add_subparsers(dest="action", required=True)
     add_init_options(
@@ -150,6 +161,14 @@ def main():
     args = parser.parse_args()
     os.umask(0o077)
     try:
+        if args.command == "deploy":
+            deployment = DockerDeployment.load(args.settings)
+            if args.action == "apply":
+                deployment.apply()
+            else:
+                deployment.check()
+            print("Local DLP is ready." if deployment.enabled else "Local DLP is disabled.")
+            return
         if args.command == "config" and args.action == "init":
             initialize(args)
             return
@@ -167,6 +186,8 @@ def main():
                 f"Configuration valid{mode}. Deployment revision {config.document['service']['deployment_revision']}."
             )
             print(f"Verifier revision {config.verifier_revision}.")
+            print("Effective content inspection")
+            print(json.dumps(config.inspection.report(), indent=2, sort_keys=True))
         else:
             run_service(config)
     except (OSError, ValueError, LasaError) as exc:

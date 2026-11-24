@@ -7,6 +7,7 @@ import shutil
 import time
 
 from .capabilities import instant
+from .content_security import CONTENT_RETENTION_SECONDS
 
 LOG = logging.getLogger(__name__)
 INTERVAL_SECONDS = 30
@@ -23,6 +24,11 @@ class Maintenance:
 
     async def collect(self):
         self.store.retire_sessions(instant(), RETENTION_BATCH)
+        self.store.db.execute(
+            "DELETE FROM audit WHERE rowid IN "
+            "(SELECT rowid FROM audit WHERE task_id IS NULL AND created_at<=? LIMIT ?)",
+            (instant(time.time() - CONTENT_RETENTION_SECONDS), PATH_BATCH),
+        )
         for (resource_id,) in self.store.due_paths(instant(), PATH_BATCH):
             try:
                 if not re.fullmatch(r"session-[0-9a-f]{32}", resource_id):
