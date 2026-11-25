@@ -1640,6 +1640,26 @@ def verify_scanner_recovery(client, root, fault):
     }, real
 
 
+def verify_required_document_read(client, root):
+    name = "connectors-enforce"
+    reason = "credential_detected"
+    document_id = DLP_CASES[reason] + ".md"
+    before = len(read_traffic(root, "source"))
+    location, task, headers = checked_task(
+        client, root, name, "documents.read",
+        {"collection": "lasa-docs", "document_id": document_id}, "required-document-denied",
+    )
+    assert task["status"] == "failed" and task["problem"]["code"] in {"disclosure_denied", "verification_failed"}
+    control = client.get(location + "?view=control", headers=headers).raise_for_status().json()
+    assert control["usage"]["tool_calls"] == 0
+    assert all(item.get("report_id") != document_id for item in read_traffic(root, "source")[before:])
+    (denial,) = [row for row in inspection_decisions(root, name, task["task_id"], "tool.invoke")
+                 if "inspection_id" in row and row["reason_code"] == "gateway_hard_deny"]
+    assert denial["destination"] == "connector:documents.read" and denial["mode"] == "enforce"
+    return {"scenario": "required-documents.read", "case": reason, "verdict": "hard_deny",
+            "destination_calls": 0, "inspection_ids": [denial["inspection_id"]]}
+
+
 def verify_recovery_canary(root):
     names = ("model-enforce", "delegates-enforce", "delegates-enforce-child", "connectors-enforce")
     recovering, inspections = [], []
@@ -1669,6 +1689,7 @@ def verify_recovery_canary(root):
             )
             for reason in ("clean", "pii_detected", "credential_detected")
         ]
+        cases.append(verify_required_document_read(client, root))
     token = (root / "inspection/token.txt").read_text().strip()
     audit = [
         document

@@ -97,6 +97,10 @@ CREATE TABLE IF NOT EXISTS events(task_id TEXT,sequence INTEGER,document TEXT,PR
 CREATE TABLE IF NOT EXISTS audit(task_id TEXT,kind TEXT,document TEXT,created_at TEXT);
 CREATE TABLE IF NOT EXISTS content_classes(task_id TEXT, class TEXT, PRIMARY KEY(task_id,class));
 CREATE TABLE IF NOT EXISTS content_releases(task_id TEXT, component TEXT, destination TEXT, digest TEXT, policy_revision TEXT, PRIMARY KEY(task_id,component));
+CREATE TABLE IF NOT EXISTS content_release_scopes(
+  task_id TEXT, component TEXT, revision TEXT NOT NULL, PRIMARY KEY(task_id,component),
+  FOREIGN KEY(task_id,component) REFERENCES content_releases(task_id,component) ON DELETE CASCADE
+);
 CREATE TABLE IF NOT EXISTS artifacts(id TEXT PRIMARY KEY,task_id TEXT,manifest TEXT,content BLOB,released INTEGER);
 CREATE TABLE IF NOT EXISTS runtimes(task_id TEXT PRIMARY KEY REFERENCES tasks(id),attempt_id TEXT UNIQUE NOT NULL);
 CREATE TABLE IF NOT EXISTS retired_paths(id TEXT PRIMARY KEY,retry_at TEXT);

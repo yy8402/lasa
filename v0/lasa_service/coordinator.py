@@ -135,6 +135,7 @@ class Coordinator:
             )
         await self.broker.start()
         await self.runtime.probe(self)
+        self.content.adopt_release_scopes()
         self.ready = True
         self.maintenance_job = asyncio.create_task(self.maintenance.run(), name="lasa-maintenance")
 
@@ -1071,14 +1072,19 @@ class Coordinator:
         row, _ = self.store.task(task_id, principal["subject"])
         self.check_read_authority(row, principal)
         grant = self.store.db.execute(
-            "SELECT * FROM content_releases WHERE task_id=? AND component=?",
+            "SELECT r.destination,r.digest,s.revision FROM content_releases r "
+            "JOIN content_release_scopes s USING(task_id,component) WHERE task_id=? AND component=?",
             (task_id, component),
         ).fetchone()
         require(
             grant is not None
             and grant["destination"] == self.release_destination(principal)
             and grant["digest"] == payload_digest(value)
-            and grant["policy_revision"] == self.content.release_revision(),
+            and grant["revision"]
+            == self.content.release_scope(
+                artifact=component != "result",
+                disclosure_revision=digest(self.content.disclosure()),
+            ),
             "disclosure_denied",
             403,
         )
@@ -1149,9 +1155,16 @@ class Coordinator:
         )
         permits.append(("result", permit))
         _, task = self.check_active(task_id)
-        revision = self.content.release_revision()
+        disclosure_revision = digest(self.content.disclosure())
+        legacy_revision = self.content.legacy_release_revision(disclosure_revision)
         require(
-            all(decision["release_revision"] == revision for _, decision in permits),
+            all(
+                decision["release_scope"]
+                == self.content.release_scope(
+                    artifact=component != "result", disclosure_revision=disclosure_revision
+                )
+                for component, decision in permits
+            ),
             "disclosure_denied",
             403,
         )
@@ -1176,8 +1189,12 @@ class Coordinator:
                         component,
                         destination,
                         decision["payload_digest"],
-                        revision,
+                        legacy_revision,
                     ),
+                )
+                self.store.db.execute(
+                    "INSERT INTO content_release_scopes VALUES(?,?,?)",
+                    (task_id, component, decision["release_scope"]),
                 )
                 self.content.outcome(decision, "released")
             self.hit("before_release_commit", task_id)

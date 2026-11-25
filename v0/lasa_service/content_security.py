@@ -80,7 +80,7 @@ class Transfer:
 class ContentSecurity:
     def __init__(self, coordinator, transport):
         self.c = coordinator
-        self.revision = digest(coordinator.config.document.get("content_security", {}))
+        self.inspection_revision = digest(coordinator.config.document.get("content_security", {}))
         self.bindings = coordinator.config.inspection
         self.recovery = coordinator.config.document["limits"]["content_recovery"]
         self.clients = {
@@ -96,10 +96,30 @@ class ContentSecurity:
         except (OSError, ValueError, LasaError):
             raise LasaError("content_gateway_unavailable", 503) from None
 
-    def release_revision(self, disclosure_revision=None):
-        if disclosure_revision is None:
-            disclosure_revision = digest(self.disclosure())
-        return digest({"inspection": self.revision, "disclosure": disclosure_revision})
+    def legacy_release_revision(self, disclosure_revision):
+        return digest({"inspection": self.inspection_revision, "disclosure": disclosure_revision})
+
+    def release_scope(self, *, artifact, disclosure_revision):
+        binding = self.bindings.defaults["caller"]["response"]
+        enforced = None
+        if binding.fields["mode"] == "enforce":
+            enforced = self.bindings.profiles[binding.profile_for(artifact=artifact)]
+        return digest({"enforced_inspection": enforced, "disclosure": disclosure_revision})
+
+    def adopt_release_scopes(self):
+        # Only a legacy grant valid under this exact configuration can acquire a scope.
+        policy = digest(self.disclosure())
+        self.c.store.db.execute(
+            "INSERT INTO content_release_scopes SELECT task_id,component, "
+            "CASE WHEN component='result' THEN ? ELSE ? END "
+            "FROM content_releases WHERE policy_revision=? "
+            "ON CONFLICT(task_id,component) DO NOTHING",
+            (
+                self.release_scope(artifact=False, disclosure_revision=policy),
+                self.release_scope(artifact=True, disclosure_revision=policy),
+                self.legacy_release_revision(policy),
+            ),
+        )
 
     @staticmethod
     def source_classes(source, disclosure):
@@ -310,7 +330,6 @@ class ContentSecurity:
             "destination": transfer.destination,
             "purpose": transfer.purpose,
             "policy_revision": policy_revision,
-            "release_revision": self.release_revision(policy_revision),
             "binding_revision": binding.revision,
             "mode": mode,
             "mode_origin": binding.origins["mode"],
@@ -318,6 +337,10 @@ class ContentSecurity:
             "payload_digest": payload_digest(value if wire is None else wire),
             "timestamp": instant(),
         }
+        if transfer.channel == "candidate.release":
+            decision["release_scope"] = self.release_scope(
+                artifact=artifact, disclosure_revision=policy_revision
+            )
         profile = self.bindings.profiles[profile_id] if profile_id is not None else None
         if profile is not None:
             decision.update(

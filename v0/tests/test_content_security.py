@@ -7,6 +7,7 @@ import httpx
 import pytest
 
 from lasa_service.contracts import digest
+from lasa_service.inspection import InspectionBindings
 
 from .conftest import FakeRuntime, documents, new_session, settled, submit, task_request
 from .protocol_helpers import sse_final
@@ -287,7 +288,8 @@ async def test_exact_release_and_replay_visibility(services, tmp_path, blocked):
         assert task["status"] == "completed"
         assert (await client.get(artifact_url)).text == "allowable snapshot"
         if blocked == "revocation":
-            c.content.revision = digest({"revoked": True})
+            configure_inspection(raw, "caller", "response")
+            c.content.bindings = InspectionBindings.from_manifest(raw)
         else:
             path = policy_for(raw)
             policy = json.loads(path.read_text())
@@ -302,6 +304,87 @@ async def test_exact_release_and_replay_visibility(services, tmp_path, blocked):
         assert (await client.get(artifact_url)).status_code == 404
         assert "result" not in (await submit(client, app, request, session)).json()
         assert not c.store.db.execute("SELECT * FROM content_releases").fetchall()
+        assert not c.store.db.execute("SELECT * FROM content_release_scopes").fetchall()
+
+
+@pytest.mark.parametrize("change", ["connector", "artifact", "observe_profile", "revoked_legacy"])
+async def test_release_scope_preserves_current_grants_across_unrelated_changes(
+    services, tmp_path, change
+):
+    from .test_source_outcomes import register_read
+
+    raw = configure_inspection(
+        documents(tmp_path),
+        "caller",
+        "response",
+        mode="observe" if change == "observe_profile" else "enforce",
+    )
+    configure_inspection(raw, "connectors", "request", mode="observe")
+    register_read(raw)
+    security = raw["content_security"]
+    profiles = security["inspection_profiles"]
+    profiles.append(
+        {**profiles[0], "id": "artifact-profile", "policy_revision": "artifact-revision"}
+    )
+    security["bindings"]["caller"]["response"]["artifact_profile"] = "artifact-profile"
+    inspected = []
+
+    async def scanner(request):
+        body = json.loads(request.content)
+        inspected.append(body)
+        return verdict(body)
+
+    async def execute(context):
+        result = await FakeRuntime().run(context)
+        artifact = context.coordinator.snapshot_artifact(
+            context.task_id, "text/plain", "approved text"
+        )
+        result["artifact_ids"] = [artifact["artifact_id"]]
+        return result
+
+    client, app = await services(
+        raw=raw, runtime=FakeRuntime(execute), inspection_transport=httpx.MockTransport(scanner)
+    )
+    c = app.state.coordinator
+    request = await task_request(client, app)
+    session = await new_session(client, app)
+    response = await submit(client, app, request, session)
+    task = await settled(client, response)
+    assert task["status"] == "completed" and len(inspected) == 2
+    location = response.headers["Location"]
+    artifact_url = location + "/artifacts/" + task["result"]["artifacts"][0]["artifact_id"]
+    # Simulate starting with a legacy store under its unchanged inspection config.
+    c.store.db.execute("DELETE FROM content_release_scopes")
+    if change == "revoked_legacy":
+        c.store.db.execute("UPDATE content_releases SET policy_revision='revoked'")
+    c.content.adopt_release_scopes()
+    c.content.adopt_release_scopes()
+    if change == "connector":
+        security["bindings"]["connectors"]["overrides"] = [
+            {
+                "connector_id": "document-source",
+                "operation_id": "documents.read",
+                "request": {"mode": "enforce"},
+            }
+        ]
+    elif change == "artifact":
+        profiles[-1]["policy_revision"] = "new-artifact-revision"
+    elif change == "observe_profile":
+        profiles[0]["policy_revision"] = "new-observed-revision"
+    c.content.bindings = InspectionBindings.from_manifest(raw)
+    c.content.inspection_revision = digest(security)
+    result = await client.get(location)
+    artifact = await client.get(artifact_url)
+    replay = await submit(client, app, request, session)
+    if change == "revoked_legacy":
+        assert result.status_code == artifact.status_code == replay.status_code == 403
+    else:
+        assert result.json()["result"] == replay.json()["result"] == task["result"]
+        if change == "artifact":
+            assert artifact.status_code == 403
+        else:
+            assert artifact.status_code == 200 and artifact.text == "approved text"
+    assert len(inspected) == 2
 
 
 async def test_inconsistent_earlier_sse_part_never_reaches_worker(services, tmp_path):
@@ -471,14 +554,16 @@ async def test_child_bodies_and_disposition_have_independent_policy(services, tm
             ]
         return result
 
-    _, child_app = await services(
-        raw=documents(tmp_path / "child", "layer2"), runtime=FakeRuntime(execute)
-    )
+    child_raw = documents(tmp_path / "child", "layer2")
+    _, child_app = await services(raw=child_raw, runtime=FakeRuntime(execute))
     if blocked == "revoked":
 
         def revoke(point, _task_id):
             if point == "after_release":
-                child_app.state.coordinator.content.revision = digest({"revoked": True})
+                configure_inspection(child_raw, "caller", "response")
+                child_app.state.coordinator.content.bindings = InspectionBindings.from_manifest(
+                    child_raw
+                )
 
         child_app.state.coordinator.fault = revoke
     transport = httpx.ASGITransport(app=child_app)
