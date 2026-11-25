@@ -10,7 +10,7 @@ import pytest
 from lasa_service.capabilities import reference
 from lasa_service.config import Configuration
 from lasa_service.content_security import Transfer
-from lasa_service.contracts import canonical
+from lasa_service.contracts import canonical, digest
 from lasa_service.errors import LasaError
 from lasa_service.gateway import TaskGateway
 from lasa_service.store import Store
@@ -75,7 +75,28 @@ async def test_model_recovery_dispatches_only_the_permitted_candidate(
         )
 
     async def provider(request):
-        calls.append(json.loads(request.content))
+        body = json.loads(request.content)
+        calls.append(body)
+        if body.get("text", {}).get("format", {}).get("name") == "lasa_verification":
+            return httpx.Response(
+                200,
+                json={
+                    "output": [
+                        {
+                            "type": "message",
+                            "content": [
+                                {
+                                    "type": "output_text",
+                                    "text": json.dumps(
+                                        {"passed": True, "reason": "Required output was verified."}
+                                    ),
+                                }
+                            ],
+                        }
+                    ],
+                    "usage": {"total_tokens": 4},
+                },
+            )
         return httpx.Response(200, json={"output": [], "usage": {"total_tokens": 4}})
 
     async def execute(context):
@@ -116,6 +137,9 @@ async def test_model_recovery_dispatches_only_the_permitted_candidate(
         model_transport=httpx.MockTransport(provider),
         inspection_transport=httpx.MockTransport(scanner),
     )
+    c = app.state.coordinator
+    if mode == "enforce" and limit:
+        c.planner.verifier = None
     task = await settled(
         client,
         await submit(
@@ -127,20 +151,49 @@ async def test_model_recovery_dispatches_only_the_permitted_candidate(
     if mode == "observe":
         assert task["status"] == "completed" and MARKER in json.dumps(calls[0])
         assert len(inspections) == len(calls) == 1 and not records(app, "content_recovery")
+        assert not records(app, "model_input_revision")
     elif not limit:
         assert task["problem"]["code"] == "disclosure_denied" and not calls
         assert len(inspections) == 1 and not records(app, "content_recovery")
+        assert not records(app, "model_input_revision")
     else:
-        assert task["status"] == "completed" and len(calls) == 1
+        assert task["status"] == "completed" and len(calls) == 2
         assert MARKER not in json.dumps(calls) and ATTEMPT_INPUT["objective"] in json.dumps(calls)
-        assert len(inspections) == 3
+        assert len(inspections) == 4
         assert inspections[0]["inspection_digest"] == inspections[1]["inspection_digest"]
-        assert len({value["inspection_id"] for value in inspections}) == 3
+        assert len({value["inspection_id"] for value in inspections}) == 4
         assert MARKER not in json.dumps(inspections[-1])
         audit = records(app, "content_recovery")
         assert [value["action"] for value in audit] == ["inspection_retry", "candidate_revision"]
         assert len({value["transfer_id"] for value in audit}) == 1
         assert MARKER not in json.dumps(audit)
+        (receipt,) = records(app, "model_input_revision")
+        verifier = json.loads(calls[-1]["input"][-2]["content"][0]["text"])
+        (step_input,) = verifier["trusted_execution_evidence"]["step_inputs"]
+        (approved,) = [
+            row
+            for row in records(app, "content_decision")
+            if row["transfer_id"] == receipt["transfer_id"]
+            and row["reason_code"] == "policy_permit"
+        ]
+        assert any(
+            row["transfer_id"] == receipt["transfer_id"] and row["outcome"] == "delivered"
+            for row in records(app, "content_transfer")
+        )
+        original_plan = json.loads(c.store.task(task["task_id"])[0]["plan"])
+        revised = {key: value for key, value in ATTEMPT_INPUT.items() if key != "context"}
+        assert original_plan["inputs"][receipt["step_id"]] == ATTEMPT_INPUT
+        assert verifier["input"] == revised
+        assert step_input == {
+            "step_id": receipt["step_id"],
+            "content": revised,
+            **verifier["input_revision"],
+        }
+        assert receipt["admitted_input_digest"] == digest(ATTEMPT_INPUT)
+        assert receipt["input_digest"] == digest(revised)
+        assert receipt["model_request_digest"] == approved["payload_digest"] == digest(calls[0])
+        assert receipt["operation_id"] == approved["operation_id"]
+        assert MARKER not in json.dumps(receipt)
 
 
 async def test_delegate_recovery_keeps_receiver_and_required_input(services, tmp_path):

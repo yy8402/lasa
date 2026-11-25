@@ -168,6 +168,8 @@ Use a stable transfer ID across attempts. Link the original and revised candidat
 
 Capability publishers mark eligible top-level input properties with `"x-lasa-optional-context": true` in the trusted definition's `input_schema`. A marked property must be optional and outside required artifact preconditions. Model recovery revises only matching supervisor-built user context. Connector operators list eligible arguments in `optional_context_arguments` on the private operation, alongside the pinned upstream schema. Revalidation also checks conditional requirements and task input constraints.
 
+When a revised model request for a plan step is confirmed delivered, record the model operation and transfer IDs, the accepted request digest, and the admitted and revised step input digests. Verification reconstructs the revised input from the admitted plan and checks its digest against this receipt before presenting it as step evidence. The admitted plan and its digest retain the original input. A candidate that was withheld or whose delivery is uncertain provides no such receipt.
+
 ### Behavior by binding
 
 | Binding | Behavior when content is held |

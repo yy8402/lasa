@@ -966,6 +966,7 @@ class Coordinator:
                         requirements=plan["requirements"],
                         artifact_ids=final["artifact_ids"],
                         include_step_inputs=True,
+                        input_step_id=plan["steps"][0]["step_id"] if reuse_step else None,
                         verified_steps={
                             step["step_id"]: completed[step["step_id"]]
                             for step in plan["steps"]

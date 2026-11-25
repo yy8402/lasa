@@ -323,7 +323,16 @@ class ModelTransport:
         self.opaque.pop(task_id, None)
 
     async def exchange(
-        self, task_id, executor, body, purpose, *, suffix="/responses", worker=False, revise=None
+        self,
+        task_id,
+        executor,
+        body,
+        purpose,
+        *,
+        suffix="/responses",
+        worker=False,
+        revise=None,
+        input_revision=None,
     ):
         c = self.c
         operation = identity("model")
@@ -356,7 +365,21 @@ class ModelTransport:
         except asyncio.CancelledError:
             c.content.outcome(outgoing, "delivery_unknown")
             raise
-        c.content.outcome(outgoing, "delivered")
+        if input_revision is not None and outgoing["candidate_revision"] == 1:
+            with c.store.transaction():
+                c.content.outcome(outgoing, "delivered")
+                c.content.record(
+                    {
+                        **input_revision,
+                        "task_id": task_id,
+                        "operation_id": operation,
+                        "transfer_id": outgoing["transfer_id"],
+                        "model_request_digest": outgoing["payload_digest"],
+                    },
+                    "model_input_revision",
+                )
+        else:
+            c.content.outcome(outgoing, "delivered")
         result = decode_sse(raw) if media_type == "text/event-stream" else decode_json(raw)
         incoming = Transfer("reasoning.response", destination, purpose, operation, task_id, source)
         elapsed = int((time.monotonic() - started) * 1000)

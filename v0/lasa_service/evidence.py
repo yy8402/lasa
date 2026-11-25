@@ -8,6 +8,7 @@ import hashlib
 
 from .capabilities import require
 from .contracts import canonical, digest, parse_json, request_digest
+from .recovery import capability_context
 
 MAX_BYTES = 16384
 MAX_OPERATIONS = 32
@@ -152,6 +153,35 @@ def append_evidence(c, task_id, material, kind, receipt, content):
         material["truncated"] = True
 
 
+def approved_model_input(c, task_id, step_id, contract, inputs):
+    if step_id is None:
+        return inputs, None
+    admitted_digest = digest(inputs)
+    row = c.store.db.execute(
+        "SELECT document FROM audit WHERE task_id=? AND kind='model_input_revision' "
+        "AND json_extract(document,'$.step_id')=? AND json_extract(document,'$.contract_digest')=? "
+        "AND json_extract(document,'$.admitted_input_digest')=? ORDER BY rowid LIMIT 1",
+        (task_id, step_id, contract["digest"], admitted_digest),
+    ).fetchone()
+    if row is None:
+        return inputs, None
+    receipt = parse_json(row["document"])
+    revised = capability_context(c.registry.get(contract), inputs)
+    require(
+        revised != inputs and digest(revised) == receipt["input_digest"], "verification_failed", 422
+    )
+    return revised, {
+        key: receipt[key]
+        for key in (
+            "admitted_input_digest",
+            "input_digest",
+            "operation_id",
+            "transfer_id",
+            "model_request_digest",
+        )
+    }
+
+
 def add_workflow_evidence(c, task_id, material, verified_steps, *, include_step_inputs):
     row, task = c.store.task(task_id)
     request = parse_json(row["request"])
@@ -218,12 +248,14 @@ def add_workflow_evidence(c, task_id, material, verified_steps, *, include_step_
             )
             append_evidence(c, task_id, material, "dependencies", receipt, output)
     if include_step_inputs and start_evidence_list(material, "step_inputs"):
-        for step_id in steps:
+        for step_id, step in steps.items():
             inputs = admitted_plan["inputs"][step_id]
-            receipt = c.diagnostics.redact(
-                {"step_id": step_id, "input_digest": digest(inputs)}, task_id
+            revised, provenance = approved_model_input(
+                c, task_id, step_id, step["contract"], inputs
             )
-            append_evidence(c, task_id, material, "step_inputs", receipt, inputs)
+            receipt = {"step_id": step_id, **(provenance or {"input_digest": digest(revised)})}
+            receipt = c.diagnostics.redact(receipt, task_id)
+            append_evidence(c, task_id, material, "step_inputs", receipt, revised)
 
 
 def start_evidence_list(material, kind):

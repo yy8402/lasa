@@ -1,6 +1,7 @@
 """Verify an installed LASA image using isolated services and local HTTPS fixtures."""
 
 import argparse
+import copy
 import hashlib
 import json
 import os
@@ -21,7 +22,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import Response
 
 from lasa_service.auth import static_token_digest
-from lasa_service.config import builtin_capabilities, reference
+from lasa_service.config import builtin_capabilities, local_bindings, reference
 from lasa_service.contracts import digest
 from lasa_service.deployment import GATEWAY_ID as DLP_GATEWAY_ID
 from lasa_service.deployment import POLICY_REVISION as DLP_REVISION
@@ -390,6 +391,36 @@ def configure_dlp(root, name, config, group, mode):
         configure_connectors(root, name, config)
 
 
+def configure_recovery_contract(root, name, config):
+    definition = copy.deepcopy(builtin_capabilities()["task.attempt"][0])
+    original = reference(definition)
+    definition["version"] = "1.0.1"
+    definition["input_schema"]["properties"]["context"]["x-lasa-optional-context"] = True
+    recovered = reference(definition)
+    directory = root / name
+    registry = directory / "recovery-contracts.json"
+    save(registry, [definition])
+    config["contract_publishers"] = [
+        {
+            "namespace": definition["id"].rsplit("/", 1)[0] + "/",
+            "trusted_registry_file": str(registry),
+        }
+    ]
+    config["verifiers"] = [{"contract": recovered, "verifier_id": "task-attempt-v1"}]
+    contracts = [reference(builtin_capabilities()["design.review"][0]), original]
+    config["published_contracts"] = [contracts[0], recovered]
+    config["bindings"] = local_bindings(contracts, config["executors"][0]["id"])
+    for binding in config["bindings"]:
+        if binding["contract"] == original:
+            binding["contract"] = recovered
+    path = directory / "authorization.json"
+    policy = read(path)
+    for principal in policy["principals"]:
+        for rule in principal["rules"]:
+            rule["contracts"] = [recovered if ref == original else ref for ref in rule["contracts"]]
+    save(path, policy)
+
+
 def authorize(root, configs, parent_name="parent", peers=PEERS):
     parent = configs[parent_name]
     policy_path = root / parent_name / "authorization.json"
@@ -457,7 +488,7 @@ def propose_plan(context):
     request = context["request"]
     requirements = [requirement["requirement_id"] for requirement in context["requirements"]]
     objective = request["input"]["objective"]
-    if objective.startswith("dlp-delegate-"):
+    if objective.startswith(("dlp-delegate-", "dlp-recovery-delegate-")):
         return {
             "steps": [
                 {
@@ -539,7 +570,9 @@ def execute_fixture(context):
         )
         if marker := dlp_fixture_text(objective, "delegate-result"):
             summary = marker
-        elif objective.startswith(("dlp-model-response-", "dlp-delegate-request-")):
+        elif objective.startswith(
+            ("dlp-model-response-", "dlp-delegate-request-", "dlp-recovery-")
+        ):
             summary = "The requested execution completed."
         elif flagged:
             summary = flagged
@@ -585,6 +618,42 @@ def capture(directory, document):
 def serve_fixture(directory):
     app = FastAPI()
     transient_sent = False
+    recovery_faults = set()
+
+    @app.post("/recovery-inspect")
+    async def recovery_inspect(request: Request):
+        body = await request.json()
+        context = json.dumps(body["content"])
+        fault = "forwarded"
+        if body["channel"] == "reasoning.request" and body["purpose"] == "execution":
+            if "dlp-recovery-scanner-persistent" in context:
+                fault = "persistent_503"
+            elif "dlp-recovery-scanner-transient" in context and "transient" not in recovery_faults:
+                recovery_faults.add("transient")
+                fault = "transient_503"
+            elif "dlp-recovery-scanner-invalid" in context:
+                fault = "invalid_digest"
+        with (directory / "recovery-shim.jsonl").open("a") as output:
+            output.write(
+                json.dumps({"inspection_id": body["inspection_id"], "fault": fault}) + "\n"
+            )
+        if fault.endswith("_503"):
+            return Response(status_code=503)
+        ca = ssl.create_default_context(cafile=directory.parent / "ca.pem")
+        async with httpx.AsyncClient(verify=ca, trust_env=False, timeout=3) as client:
+            response = await client.post(
+                origin("inspection") + "/inspect",
+                content=await request.body(),
+                headers={
+                    "Authorization": request.headers["Authorization"],
+                    "Content-Type": "application/json",
+                },
+            )
+        if fault == "invalid_digest" and response.status_code == 200:
+            return {**response.json(), "inspection_digest": "sha256:" + "0" * 64}
+        return Response(
+            response.content, status_code=response.status_code, media_type="application/json"
+        )
 
     @app.post("/inspect/{profile}")
     async def inspect_content(request: Request, profile: str):
@@ -624,9 +693,9 @@ def serve_fixture(directory):
         }
 
     @app.get("/documents")
-    async def source(request: Request, report_id: str):
+    async def source(request: Request, report_id: str, note: str | None = None):
         assert request.headers["Authorization"] == "Bearer " + SOURCE_KEY
-        capture(directory, {"report_id": report_id})
+        capture(directory, {"report_id": report_id, **({"note": note} if note is not None else {})})
         return {
             "text": dlp_fixture_text(report_id, "connector-result")
             or dlp_fixture_text(report_id, "artifact-release")
@@ -664,7 +733,10 @@ def serve_fixture(directory):
                 item.get("type") == "function_call_output" for item in body["input"]
             )
             if first_turn and contract.endswith("/documents.read"):
-                data = sse_tool("documents_read", {"report_id": inputs["document_id"]}, 1)
+                arguments = {"report_id": inputs["document_id"]}
+                if note := dlp_fixture_text(inputs["document_id"], "recovery-connector"):
+                    arguments["note"] = note
+                data = sse_tool("documents_read", arguments, 1)
             elif first_turn and contract.endswith("/documents.search"):
                 data = sse_tool("documents_search", {"query": inputs["query"]}, 1)
             elif first_turn and (
@@ -1362,6 +1434,266 @@ def verify_dlp(root):
     print(json.dumps({"cases": cases, "metadata_only_content_records": len(audit)}))
 
 
+def recovery_records(root, receiver, task_id):
+    return [
+        json.loads(document)
+        for (document,) in state_rows(
+            root,
+            receiver,
+            "SELECT document FROM audit WHERE task_id=? AND kind='content_recovery'",
+            (task_id,),
+        )
+    ]
+
+
+def real_inspection(decision, verdict, reason=None):
+    return {
+        "inspection_id": decision["inspection_id"],
+        "inspection_digest": decision["inspection_digest"],
+        "verdict": verdict,
+        "reason_codes": [reason] if reason else [],
+    }
+
+
+def shim_records(root):
+    return {
+        item["inspection_id"]: item
+        for item in map(json.loads, (root / "model/recovery-shim.jsonl").read_text().splitlines())
+    }
+
+
+def verify_revision(client, root, group, reason):
+    marker = DLP_CASES[reason]
+    receiver = group + "-enforce"
+    child = "delegates-enforce-child"
+    scenario = f"dlp-recovery-{group}-{reason}"
+    model_start = len(read_traffic(root, "model"))
+    source_start = len(read_traffic(root, "source"))
+    child_start = state_rows(root, child, "SELECT count(*) FROM tasks")[0][0]
+    if group == "connectors":
+        inputs = {"collection": "lasa-docs", "document_id": f"dlp-recovery-connector-{reason}.md"}
+        profile, channel = "documents.read", "tool.invoke"
+    else:
+        inputs = {**attempt_input(scenario.replace("delegates", "delegate")), "context": marker}
+        profile = "task.attempt"
+        channel = "reasoning.request" if group == "model" else "delegation.request"
+    _, task, _ = checked_task(client, root, receiver, profile, inputs, scenario)
+    task_id = task["task_id"]
+    assert task["status"] == "completed", (group, reason, task.get("problem"))
+    if group == "model":
+        model = [
+            item
+            for item in read_traffic(root, "model")[model_start:]
+            if item.get("fixture_receiver") == receiver
+        ]
+        assert all(marker not in json.dumps(item) for item in model)
+        dispatched = [item for item in model if item.get("stream")]
+        assert len(dispatched) == 1 and payload(dispatched[0])["input"] == {
+            key: value for key, value in inputs.items() if key != "context"
+        }
+        (verification,) = [
+            item
+            for item in model
+            if item.get("text", {}).get("format", {}).get("name") == "lasa_verification"
+        ]
+        material = json.loads(verification["input"][-2]["content"][0]["text"])
+        (step_input,) = material["trusted_execution_evidence"]["step_inputs"]
+        revised_input = payload(dispatched[0])["input"]
+        assert material["input"] == step_input["content"] == revised_input
+        ((document,),) = state_rows(
+            root,
+            receiver,
+            "SELECT document FROM audit WHERE task_id=? AND kind='model_input_revision'",
+            (task_id,),
+        )
+        receipt = json.loads(document)
+        assert step_input == {
+            "content": revised_input,
+            "step_id": receipt["step_id"],
+            **material["input_revision"],
+        }
+        assert material["input_revision"] == {
+            key: receipt[key]
+            for key in (
+                "admitted_input_digest",
+                "input_digest",
+                "operation_id",
+                "transfer_id",
+                "model_request_digest",
+            )
+        }
+        assert receipt["admitted_input_digest"] == digest(inputs)
+        assert receipt["input_digest"] == digest(revised_input)
+        assert receipt["model_request_digest"] == digest(
+            {key: item for key, item in dispatched[0].items() if key != "fixture_receiver"}
+        )
+    elif group == "delegates":
+        ((document,),) = state_rows(
+            root, receiver, "SELECT document FROM children WHERE task_id=?", (task_id,)
+        )
+        receipt = json.loads(document)
+        assert receipt["dispatched"] and receipt["state"] == "completed"
+        assert state_rows(root, child, "SELECT count(*) FROM tasks")[0][0] == child_start + 1
+        ((request,),) = state_rows(
+            root, child, "SELECT request FROM tasks WHERE id=?", (receipt["task_id"],)
+        )
+        dispatched = [json.loads(request)]
+        assert dispatched[0]["input"] == {
+            key: value for key, value in inputs.items() if key != "context"
+        }
+        assert marker not in request
+    else:
+        dispatched = [
+            item
+            for item in read_traffic(root, "source")[source_start:]
+            if item.get("report_id") == inputs["document_id"]
+        ]
+        assert dispatched == [{"report_id": inputs["document_id"]}]
+        assert task["result"]["output"]["document_id"] == inputs["document_id"]
+    decisions = inspection_decisions(root, receiver, task_id, channel)
+    attempts = recovery_records(root, receiver, task_id)
+    revisions = [attempt for attempt in attempts if attempt["action"] == "candidate_revision"]
+    assert (
+        revisions
+        and len(attempts) <= 4
+        and len({r["transfer_id"] for r in revisions}) == len(revisions)
+    )
+    real = []
+    for revision in revisions:
+        same_transfer = [
+            row
+            for row in decisions
+            if row["transfer_id"] == revision["transfer_id"] and "inspection_id" in row
+        ]
+        (denied,) = [
+            row
+            for row in same_transfer
+            if row["candidate_revision"] == 0 and row["reason_code"] == "gateway_hard_deny"
+        ]
+        (revised,) = [
+            row
+            for row in same_transfer
+            if row["candidate_revision"] == 1 and row["reason_code"] != "scanner_disclosure"
+        ]
+        assert denied["payload_digest"] == revision["payload_digest"]
+        assert denied["inspection_digest"] != revised["inspection_digest"]
+        assert denied["candidate_revision"] == 0
+        assert revised["reason_code"] == "gateway_permit"
+        real.extend(
+            (real_inspection(denied, "hard_deny", reason), real_inspection(revised, "permit"))
+        )
+    return {
+        "binding": group + ".request",
+        "case": reason,
+        "status": task["status"],
+        "revisions": len(revisions),
+        "execution_dispatches": len(dispatched),
+    }, real
+
+
+def verify_scanner_recovery(client, root, fault):
+    receiver = "model-enforce"
+    case = f"dlp-recovery-scanner-{fault}"
+    model_start = len(read_traffic(root, "model"))
+    _, task, _ = checked_task(client, root, receiver, "task.attempt", attempt_input(case), case)
+    decisions = inspection_decisions(root, receiver, task["task_id"], "reasoning.request")
+    execution = [
+        row
+        for row in decisions
+        if row["purpose"] == "execution"
+        and row.get("inspection_id")
+        and row["reason_code"] != "scanner_disclosure"
+    ]
+    shim = {key: row["fault"] for key, row in shim_records(root).items()}
+    dispatches = [
+        row
+        for row in read_traffic(root, "model")[model_start:]
+        if row.get("fixture_receiver") == receiver and row.get("stream")
+    ]
+    attempts = recovery_records(root, receiver, task["task_id"])
+    expected = 0 if fault == "invalid" else 1
+    assert len(attempts) == expected and all(
+        row["action"] == "inspection_retry" for row in attempts
+    )
+    assert len(execution) == 1 + expected
+    assert len({row["inspection_digest"] for row in execution}) == 1
+    assert len({row["transfer_id"] for row in execution}) == 1
+    assert len({row["inspection_id"] for row in execution}) == len(execution)
+    real = []
+    if fault == "transient":
+        assert task["status"] == "completed" and len(dispatches) == 1
+        assert [shim[row["inspection_id"]] for row in execution] == ["transient_503", "forwarded"]
+        assert execution[-1]["reason_code"] == "gateway_permit"
+        real.append(real_inspection(execution[-1], "permit"))
+    else:
+        assert task["problem"]["code"] == "content_gateway_unavailable" and not dispatches
+        if fault == "invalid":
+            assert shim[execution[0]["inspection_id"]] == "invalid_digest"
+            real.append(real_inspection(execution[0], "permit"))
+        else:
+            assert all(shim[row["inspection_id"]] == "persistent_503" for row in execution)
+    return {
+        "fault": fault,
+        "status": task["status"],
+        "retries": expected,
+        "execution_dispatches": len(dispatches),
+    }, real
+
+
+def verify_recovery_canary(root):
+    names = ("model-enforce", "delegates-enforce", "delegates-enforce-child", "connectors-enforce")
+    recovering, inspections = [], []
+    tls = ssl.create_default_context(cafile=root / "ca.pem")
+    with httpx.Client(verify=tls, trust_env=False, timeout=6) as client:
+        for name in names:
+            token = (root / name / "operator-token.txt").read_text().strip()
+            wait_ready(client, origin(name), {"Authorization": "Bearer " + token})
+        for group in ("model", "delegates", "connectors"):
+            for reason in ("pii_detected", "credential_detected"):
+                report, checks = verify_revision(client, root, group, reason)
+                recovering.append(report)
+                inspections.extend(checks)
+        for fault in ("transient", "persistent", "invalid"):
+            report, checks = verify_scanner_recovery(client, root, fault)
+            recovering.append(report)
+            inspections.extend(checks)
+        cases = [
+            verify_dlp_case(client, root, "enforce", scenario, reason, DLP_CASES[reason])
+            for scenario in (
+                "model-request",
+                "delegate-request",
+                "connector-request",
+                "model-response",
+                "delegate-result",
+                "connector-result",
+            )
+            for reason in ("clean", "pii_detected", "credential_detected")
+        ]
+    token = (root / "inspection/token.txt").read_text().strip()
+    audit = [
+        document
+        for name in names
+        for (document,) in state_rows(
+            root,
+            name,
+            "SELECT document FROM audit WHERE kind IN ('content_decision','content_transfer','content_recovery','model_input_revision')",
+        )
+    ]
+    assert audit and all(
+        value not in "".join(audit) for value in (*DLP_CASES.values(), token, MODEL_KEY, SOURCE_KEY)
+    )
+    print(
+        json.dumps(
+            {
+                "cases": cases,
+                "recovery": recovering,
+                "recovery_inspections": inspections,
+                "metadata_only_content_records": len(audit),
+            }
+        )
+    )
+
+
 def verify_dlp_logs(output, logs, token):
     report = json.loads(output)
     assert all(
@@ -1379,6 +1711,9 @@ def verify_dlp_logs(output, logs, token):
             assert event["verdict"] == case["verdict"], event
             expected = [] if case["case"] == "clean" else [case["case"]]
             assert event["reason_codes"] == expected, event
+    for expected in report.pop("recovery_inspections", ()):
+        event = events[expected["inspection_id"]]
+        assert all(event[key] == value for key, value in expected.items()), (event, expected)
     report["metadata_only_gateway_records"] = len(events)
     print(json.dumps(report, indent=2))
 
@@ -1605,12 +1940,21 @@ def run(args, root):
         "/var/run/docker.sock",
     )
     dlp = args.inspector_image is not None
+    recovery = args.recovery_canary
     if dlp:
-        configs = {name: configure(root, name, namespace) for name in DLP_TARGETS}
-        for mode in DLP_MODES:
+        targets = (
+            ("model-enforce", "delegates-enforce", "connectors-enforce")
+            if recovery
+            else DLP_TARGETS
+        )
+        configs = {name: configure(root, name, namespace) for name in targets}
+        for mode in ("enforce",) if recovery else DLP_MODES:
             parent = f"delegates-{mode}"
             child = parent + "-child"
             configs[child] = configure(root, child, namespace, trusted_parent=parent)
+            if recovery:
+                for name in (parent, child, "model-enforce"):
+                    configure_recovery_contract(root, name, configs[name])
             authorize(root, configs, parent, {child: "task.attempt"})
     else:
         configs = {
@@ -1645,6 +1989,14 @@ def run(args, root):
             configure_dlp(root, name, config, *DLP_TARGETS[name])
         elif not dlp:
             configure_content(root, name, configs)
+        if recovery and name == "connectors-enforce":
+            operation = config["executors"][0]["connectors"][0]["operations"][0]
+            assert operation["operation_id"] == "documents.read"
+            operation["optional_context_arguments"] = ["note"]
+            operation["input_schema"]["properties"]["note"] = {"type": "string"}
+        if recovery and name == "model-enforce":
+            profile = config["content_security"]["inspection_profiles"][0]
+            profile["url"] = origin("model") + "/recovery-inspect"
         save(root / name / "config.json", config)
     containers = []
     volumes = []
@@ -1690,6 +2042,8 @@ def run(args, root):
                 user,
                 "--mount",
                 mount(root / name, read_only=False),
+                "--mount",
+                mount(ca),
                 *fixture,
                 image,
                 "-m",
@@ -1848,7 +2202,7 @@ def run(args, root):
             image,
             "-m",
             "tests.container_smoke",
-            "verify-dlp" if dlp else "verify",
+            "verify-recovery" if recovery else "verify-dlp" if dlp else "verify",
             root,
             timeout=480 if dlp else 240,
         )
@@ -1915,6 +2269,8 @@ if __name__ == "__main__":
         verify(Path(sys.argv[2]))
     elif sys.argv[1:2] == ["verify-dlp"]:
         verify_dlp(Path(sys.argv[2]))
+    elif sys.argv[1:2] == ["verify-recovery"]:
+        verify_recovery_canary(Path(sys.argv[2]))
     else:
         parser = argparse.ArgumentParser(description=__doc__)
         parser.add_argument("--service-image", default="lasa-supervisor:1.0.0")
@@ -1923,7 +2279,15 @@ if __name__ == "__main__":
         parser.add_argument(
             "--inspector-image", help="Verify the real local DLP gateway with this image."
         )
+        parser.add_argument(
+            "--recovery-canary",
+            action="store_true",
+            help="Exercise enforce recovery with the real local gateway.",
+        )
         parser.add_argument("--presidio-image", default=PRESIDIO_IMAGE)
         parser.add_argument("--docker-socket", type=Path, default=Path("/var/run/docker.sock"))
+        args = parser.parse_args()
+        if args.recovery_canary and not args.inspector_image:
+            parser.error("--recovery-canary requires --inspector-image")
         with tempfile.TemporaryDirectory(prefix="lasa-container-") as directory:
-            run(parser.parse_args(), Path(directory).resolve())
+            run(args, Path(directory).resolve())

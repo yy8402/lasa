@@ -11,7 +11,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, Response
 
 from .capabilities import require
-from .contracts import parse_json
+from .contracts import digest, parse_json
 from .errors import LasaError
 from .recovery import capability_context, revise_model_context
 
@@ -90,6 +90,14 @@ class TaskGateway:
             **prompt,
             "input": capability_context(self.context.definition, prompt["input"]),
         }
+        input_revision = None
+        if self.context.step_id is not None and revised_prompt != prompt:
+            input_revision = {
+                "step_id": self.context.step_id,
+                "contract_digest": prompt["contract"]["digest"],
+                "admitted_input_digest": digest(prompt["input"]),
+                "input_digest": digest(revised_prompt["input"]),
+            }
         c.diagnostics.register_secret(task_id, self.token)
         app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 
@@ -136,6 +144,7 @@ class TaskGateway:
                 suffix=suffix,
                 worker=True,
                 revise=revise_model_context(value, prompt, revised_prompt),
+                input_revision=input_revision,
             )
             return Response(result.body, media_type=result.media_type)
 

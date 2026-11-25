@@ -26,6 +26,12 @@ docker build -t dlplite:0.1.0 ../dlplite
 (cd v0 && .venv/bin/python -m tests.container_smoke --inspector-image dlplite:0.1.0)
 ```
 
+Run the enforce recovery canary against the same real inspector image. It uses fresh state, checks optional-context revisions against captured destination requests, and injects scanner faults through a private HTTPS fixture. For model revisions it verifies that the final verifier receives the approved input and that the input evidence links back to the admitted plan and the delivered request.
+
+```sh
+(cd v0 && .venv/bin/python -m tests.container_smoke --inspector-image dlplite:0.1.0 --recovery-canary)
+```
+
 ```sh
 release_dir=$(mktemp -d)
 uv build --project v0 --out-dir "$release_dir"
