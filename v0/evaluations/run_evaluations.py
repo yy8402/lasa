@@ -22,18 +22,21 @@ from lasa_service.config import Configuration
 from lasa_service.enclosure import Enclosure
 from lasa_service.launcher import Launcher
 from lasa_service.launcher_client import launcher_scope
-from tests.conftest import documents, new_session, task_request, token
+from tests.conftest import EXECUTION_KEY, documents, new_session, task_request, token
 from tests.http_helpers import certificate, live_http
 
 EVALUATION_ROOT = Path(__file__).resolve().parents[1]
 
 CORPUS = json.loads(Path(__file__).with_name("assessment-corpus.json").read_text())
-ROUTE_CASES = ["local_first", "delegate_first", "fallback_disabled", "fallback_enabled", "no_peer"]
+ROUTE_CASES = ["local_first", "delegate_first", "unclaimed_typed", "explicit_attempt", "no_peer"]
 CASES = ROUTE_CASES + ["assessment_" + x["id"] for x in CORPUS]
 
 
-def configure(directory, layer, case, key, launcher_socket):
+def configure(directory, layer, case, key, launcher_socket, service_ids):
     raw = documents(directory, layer, peer=(layer == "layer1" and case != "no_peer"))
+    raw["service"]["id"] = service_ids[layer]
+    if raw["peers"]:
+        raw["peers"][0]["expected_service_id"] = service_ids["layer2"]
     raw["runtime"]["launcher_socket"] = str(launcher_socket)
     raw["service"]["deployment_revision"] = "evaluation-" + case
     raw["discovery_cache"]["catalog_max_age_seconds"] = 300
@@ -62,17 +65,19 @@ def configure(directory, layer, case, key, launcher_socket):
         "preferred_executor": "local"
         if case == "local_first" or case.startswith("assessment_")
         else "peer",
-        "unclaimed_peer_fallback": "attempt"
-        if case in {"fallback_enabled", "no_peer"}
-        else "reject",
     }
     path = Path(raw["authorization"]["policy_file"])
     policy = json.loads(path.read_text())
     for principal in policy["principals"]:
+        if principal["kind"] == "peer":
+            principal["service_id"] = service_ids["layer1"]
         for rule in principal["rules"]:
             rule["budget"] = copy.deepcopy(budget)
+            for grant in rule["delegation_grants"]:
+                grant["sender_service_id"] = service_ids[layer]
+                grant["receiver_service_id"] = service_ids["layer2"]
     path.write_text(json.dumps(policy))
-    if case.startswith("fallback"):
+    if case in {"unclaimed_typed", "explicit_attempt"}:
         if layer == "layer1":
             raw["bindings"] = [
                 x for x in raw["bindings"] if x["contract"]["id"].endswith("/task.attempt")
@@ -83,16 +88,20 @@ def configure(directory, layer, case, key, launcher_socket):
             ]
     env = {
         "MODEL_KEY": key,
-        "PEER_TOKEN": token("peer-layer1", "https://identity.example.net/services/layer2"),
+        "LASA_EXECUTION_KEY": EXECUTION_KEY,
+        "PEER_TOKEN": token("peer-layer1", service_ids["layer2"]),
     }
     return raw, env
 
 
-async def events(client, url):
+async def events(client, url, *, credential=None):
     collected = []
     after = 0
     while True:
-        response = await client.get(url, params={"after_sequence": after, "limit": 100})
+        headers = {"Authorization": "Bearer " + credential} if credential else None
+        response = await client.get(
+            url, params={"after_sequence": after, "limit": 100}, headers=headers
+        )
         response.raise_for_status()
         page = response.json()
         collected += page["events"]
@@ -101,18 +110,46 @@ async def events(client, url):
         after = page["next_sequence"] - 1
 
 
+def outcome_matches(case, task):
+    expected = case["expected_disposition"]
+    if task["status"] == "rejected":
+        return expected == "unable" and task["problem"]["code"] in {
+            "precondition_failed",
+            "unsupported_contract",
+            "verification_failed",
+        }
+    if task["status"] != "completed":
+        return False
+    output = task["result"]["output"]
+    if output["disposition"] != expected:
+        return False
+    if expected == "unable":
+        return case["requirement_id"] in output["unsatisfied_requirements"]
+    if case["requirement_id"] not in {item["id"] for item in output["requirement_evidence"]}:
+        return False
+    text = json.dumps(output).casefold()
+    return all(term in text for term in case.get("required_terms", [])) and all(
+        term not in text for term in case.get("excluded_terms", [])
+    )
+
+
 async def run_case(directory, case, key, runtime_image):
     tls = certificate(directory)
+    namespace = uuid4().hex
+    service_ids = {
+        role: f"https://identity.example.net/services/{namespace}/{role}"
+        for role in ("layer1", "layer2")
+    }
     async with AsyncExitStack() as stack:
         sockets = Path(
             stack.enter_context(tempfile.TemporaryDirectory(prefix="lasa-eval-", dir="/tmp"))
         )
         for role, layer in (("child", "layer2"), ("parent", "layer1")):
-            scope = launcher_scope("https://identity.example.net/services/" + layer)
+            scope = launcher_scope(service_ids[layer])
             launcher = Launcher(Enclosure(runtime_image, scope))
             await stack.enter_async_context(launcher.serve(sockets / f"{role}.sock"))
         child_raw, child_env = configure(
-            directory / "child", "layer2", case, key, sockets / "child.sock"
+            directory / "child", "layer2", case, key, sockets / "child.sock", service_ids
         )
         child_cfg = Configuration.from_document(child_raw, environ=child_env)
         child_app = create_app(child_cfg)
@@ -120,7 +157,9 @@ async def run_case(directory, case, key, runtime_image):
         child_origin = await stack.enter_async_context(live_http(child_app, tls=tls))
         prefix = "/prefix/lasa/v1"
         child_cfg.document["service"].update(base_url=child_origin + prefix)
-        raw, env = configure(directory / "parent", "layer1", case, key, sockets / "parent.sock")
+        raw, env = configure(
+            directory / "parent", "layer1", case, key, sockets / "parent.sock", service_ids
+        )
         if raw["peers"]:
             raw["peers"][0].update(
                 descriptor_url=child_origin + prefix + "/descriptor",
@@ -142,33 +181,35 @@ async def run_case(directory, case, key, runtime_image):
             )
         )
         corpus = next((x for x in CORPUS if "assessment_" + x["id"] == case), None)
-        request = await task_request(
-            client,
-            app,
-            profile="design.review",
-            inputs={
-                "design": "The parent accepts a caller objective, sends bounded child work over authenticated HTTPS, checks returned evidence against the original criteria, and retains responsibility for final completion. The child works in its own workspace.",
-                "criteria": [
-                    {
-                        "id": "criterion-accountability",
-                        "description": "Determine whether the parent retains responsibility for final completion and support the answer from the supplied design.",
-                    }
-                ],
-            },
-        )
-        if corpus:
+        if corpus or case == "explicit_attempt":
+            scenario = corpus or CORPUS[0]
             request = await task_request(
                 client,
                 app,
                 profile="task.attempt",
                 inputs={
-                    "objective": corpus["objective"],
-                    "context": corpus["context"],
+                    "objective": scenario["objective"],
+                    "context": scenario["context"],
                     "requirements": [
                         {
-                            "id": corpus["requirement_id"],
-                            "description": corpus["requirement"],
-                            "acceptance": [corpus["acceptance"]],
+                            "id": scenario["requirement_id"],
+                            "description": scenario["requirement"],
+                            "acceptance": [scenario["acceptance"]],
+                        }
+                    ],
+                },
+            )
+        else:
+            request = await task_request(
+                client,
+                app,
+                profile="design.review",
+                inputs={
+                    "design": "The parent retains responsibility for final completion and verifies the result. The child performs its bounded assignment.",
+                    "criteria": [
+                        {
+                            "id": "criterion-accountability",
+                            "description": "Explain who retains responsibility and cite the design.",
                         }
                     ],
                 },
@@ -199,7 +240,12 @@ async def run_case(directory, case, key, runtime_image):
                 }:
                     break
                 await asyncio.sleep(0.2)
-        trace = await events(client, task_url + "/events")
+        public_events = await events(client, task_url + "/events")
+        operator_url = task_url.replace("/tasks/", "/operator/tasks/", 1)
+        assert (await client.get(operator_url + "/events")).status_code == 403
+        trace = await events(
+            client, operator_url + "/events", credential=token("operator", cfg.service_id)
+        )
         children = app.state.coordinator.store.children(task["task_id"])
         child_traces = []
         for child in children:
@@ -213,7 +259,9 @@ async def run_case(directory, case, key, runtime_image):
                 )
             )
             child_trace = await events(
-                child_client, child_origin + prefix + "/tasks/" + child["task_id"] + "/events"
+                child_client,
+                child_origin + prefix + "/operator/tasks/" + child["task_id"] + "/events",
+                credential=token("operator", child_cfg.service_id),
             )
             child_task = (
                 await child_client.get(child_origin + prefix + "/tasks/" + child["task_id"])
@@ -221,80 +269,67 @@ async def run_case(directory, case, key, runtime_image):
             child_traces.append(
                 {"service_id": child["service_id"], "task": child_task, "events": child_trace}
             )
-        selected = [x["payload"]["selected_executor"] for x in trace if x["kind"] == "routing"]
-        expected = (
-            "local"
-            if case in {"local_first", "no_peer"}
-            else "none"
-            if case == "fallback_disabled"
-            else "peer"
-        )
-        expected_status = "rejected" if case == "fallback_disabled" else "completed"
-        passed = (
-            task["status"] == expected_status
-            and selected
-            and selected[0] == expected
-            and bool(children) == (expected == "peer")
-        )
-        routing = [e["payload"] for e in trace if e["kind"] == "routing"]
-        expected_peer_state = (
-            "not_configured"
-            if case == "no_peer"
-            else "not_claimed"
-            if case.startswith("fallback")
-            else "matched"
-        )
-        if not corpus:
-            passed = (
-                passed and bool(routing) and routing[0]["peer_assessment"] == expected_peer_state
-            )
-        if expected == "peer":
-            passed = passed and all(
-                any(
-                    e["kind"] == "call" and e["payload"]["call_type"] == "model"
-                    for e in child["events"]
-                )
-                for child in child_traces
-            )
-        assessments = []
-        for row in app.state.coordinator.store.db.execute(
-            "SELECT document FROM audit WHERE task_id=? AND kind='planning_proposal'",
-            (task["task_id"],),
-        ):
-            assessments += [
-                {
-                    k: v
-                    for k, v in step.items()
-                    if k
-                    in {
-                        "step_id",
-                        "requirement_ids",
-                        "local_assessment",
-                        "assessment_summary",
-                        "contract_digest",
-                    }
-                }
-                for step in json.loads(row[0])["steps"]
-            ]
+        routing = [event["payload"] for event in trace if event["kind"] == "routing"]
+        selected = [event["selected_executor"] for event in routing]
+        expected = {
+            "local_first": ("completed", "local", "matched"),
+            "delegate_first": ("completed", "peer", "matched"),
+            "unclaimed_typed": ("rejected", "none", "not_claimed"),
+            "explicit_attempt": ("completed", "peer", "matched"),
+            "no_peer": ("completed", "local", "not_configured"),
+        }.get(case)
         if corpus:
-            covered = {r for step in assessments for r in step["requirement_ids"]}
             passed = (
-                bool(assessments)
-                and all(
-                    step["local_assessment"] in corpus["expected_local_assessment"]
-                    for step in assessments
-                )
-                and corpus["requirement_id"] in covered
-                and task["status"] in corpus["expected_task_status"]
+                not children
+                and all(executor in {"none", "local"} for executor in selected)
+                and (task["status"] != "completed" or selected == ["local"])
+                and outcome_matches(corpus, task)
             )
+        else:
+            status, executor, peer_state = expected
+            passed = (
+                task["status"] == status
+                and selected == [executor]
+                and routing[0]["peer_assessment"] == peer_state
+                and len(children) == int(executor == "peer")
+            )
+            if case == "explicit_attempt":
+                passed = passed and outcome_matches(CORPUS[0], task)
+            elif case == "unclaimed_typed":
+                passed = passed and task["problem"]["code"] == "unsupported_contract"
+            else:
+                output = task.get("result", {}).get("output", {})
+                passed = passed and any(
+                    item["criterion_id"] == "criterion-accountability"
+                    and item["disposition"] == "reviewed"
+                    and "parent" in item["evidence"].casefold()
+                    for item in output.get("coverage", [])
+                )
+            if executor == "peer":
+                passed = (
+                    passed
+                    and len(child_traces) == 1
+                    and any(
+                        event["kind"] == "call" and event["payload"]["call_type"] == "model"
+                        for event in child_traces[0]["events"]
+                    )
+                )
+        assessments = [
+            json.loads(row[0])
+            for row in app.state.coordinator.store.db.execute(
+                "SELECT document FROM audit WHERE task_id=? AND kind='plan_semantic_verdict'",
+                (task["task_id"],),
+            )
+        ]
         result = {
             "case": case,
             "runtime_image": runtime_image,
             "passed": bool(passed),
-            "expected_status": expected_status,
+            "expected_route": expected,
             "assessment_expectation": corpus,
-            "actual_model_assessments": assessments,
+            "plan_verdicts": assessments,
             "task": task,
+            "consumer_events": public_events,
             "layer1_events": trace,
             "layer2": child_traces,
             "execution": "actual Codex App Server, actual gpt-5.5 API inference, real isolated HTTPS sockets; no planner/verifier/model mocks",

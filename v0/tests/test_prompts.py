@@ -5,7 +5,7 @@ import pytest
 from lasa_service.config import Configuration
 from lasa_service.errors import LasaError
 
-from .conftest import configuration, documents
+from .conftest import EXECUTION_KEY, configuration, documents
 
 
 def test_prompt_file_is_loaded_from_service_config_at_startup(tmp_path):
@@ -18,7 +18,9 @@ def test_prompt_file_is_loaded_from_service_config_at_startup(tmp_path):
     config_path = tmp_path / "config.json"
     config_path.write_text(json.dumps(raw), encoding="utf-8")
 
-    loaded = Configuration.load(config_path, environ={"MODEL_KEY": "test-model-key"})
+    loaded = Configuration.load(
+        config_path, environ={"MODEL_KEY": "test-model-key", "LASA_EXECUTION_KEY": EXECUTION_KEY}
+    )
     prompt_path.unlink()
 
     assert loaded.prompts == prompts

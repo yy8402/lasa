@@ -13,9 +13,6 @@ from .recovery import capability_context
 MAX_BYTES = 16384
 MAX_OPERATIONS = 32
 MAX_ARTIFACTS = 16
-MAX_READBACKS = 8
-MAX_READBACK_BYTES = 8192
-MAX_QUOTE_BYTES = 512
 
 
 def permitted(authority, rule, effect, resource, action):
@@ -29,117 +26,8 @@ def permitted(authority, rule, effect, resource, action):
     )
 
 
-def may_share_readbacks(authority, rule):
-    return permitted(authority, rule, "workspace.write", "workspace:self", "update") and permitted(
-        authority, rule, "workspace.read", "workspace:self", "read"
-    )
-
-
-def child_readbacks(c, task_id, step_id):
-    for child in c.store.children(task_id):
-        if step_id is None or child.get("step_id") == step_id:
-            yield from child.get("workspace_readbacks", ())
-
-
 def content_digest(data):
     return "sha256:" + hashlib.sha256(data).hexdigest()
-
-
-def quotes_text(output, text):
-    return canonical(text)[1:-1] in output
-
-
-def validate_child_readbacks(result):
-    receipts = result.get("workspace_readbacks", [])
-    require(
-        not receipts
-        or (
-            result["effect_disposition"] == "known"
-            and len(canonical(receipts)) <= MAX_READBACK_BYTES
-        ),
-        "verification_failed",
-        502,
-    )
-    output = canonical(result["output"])
-    for receipt in receipts:
-        require(
-            receipt["write_operation_id"] != receipt["read_operation_id"],
-            "verification_failed",
-            502,
-        )
-        if "quoted_text" in receipt:
-            text = receipt["quoted_text"]
-            data = text.encode()
-            require(
-                len(data) <= MAX_QUOTE_BYTES
-                and len(data) == receipt["bytes"]
-                and content_digest(data) == receipt["content_digest"]
-                and quotes_text(output, text),
-                "verification_failed",
-                502,
-            )
-    return receipts
-
-
-def release_readbacks(c, task_id, output):
-    authority = c.authority(task_id)
-    rule = c.authorization.rule(c.principal(task_id), c.request(task_id)["authorization_ref"])
-    if not may_share_readbacks(authority, rule):
-        return []
-    writes, local = {}, {}
-    output = canonical(output)
-    rows = c.store.db.execute(
-        "SELECT operation_id,digest,intent,result FROM actions "
-        "WHERE task_id=? AND state='finished' AND "
-        "json_extract(intent,'$.name') IN ('workspace.write','workspace.read') "
-        "ORDER BY rowid LIMIT ?",
-        (task_id, MAX_OPERATIONS),
-    )
-    for row in rows:
-        intent = parse_json(row["intent"])
-        require(digest(intent) == row["digest"], "verification_failed", 422)
-        value = parse_json(row["result"]).get("value")
-        path = intent["arguments"]["relative_path"]
-        if value is None or c.diagnostics.redact(path, task_id) != path:
-            continue
-        if intent["name"] == "workspace.write":
-            local.pop(path, None)
-            text = intent["arguments"]["text"]
-            writes.pop(path, None)
-            if value.get("bytes_written") == len(text.encode()):
-                writes[path] = (row["operation_id"], text)
-            continue
-        if path not in writes or writes[path][1] != value["text"]:
-            continue
-        write_id, text = writes[path]
-        data = text.encode()
-        receipt = {
-            "service_id": c.config.service_id,
-            "task_id": task_id,
-            "relative_path": path,
-            "write_operation_id": write_id,
-            "read_operation_id": row["operation_id"],
-            "content_digest": content_digest(data),
-            "bytes": len(data),
-        }
-        if len(data) <= MAX_QUOTE_BYTES and quotes_text(output, text):
-            receipt["quoted_text"] = text
-        local[path] = receipt
-    bounded = []
-    for stored in [*local.values(), *child_readbacks(c, task_id, None)]:
-        receipt = dict(stored)
-        text = receipt.pop("quoted_text", None)
-        if c.diagnostics.redact(receipt, task_id) != receipt:
-            continue
-        if text is not None and (
-            c.diagnostics.redact(text, task_id) == text and quotes_text(output, text)
-        ):
-            receipt["quoted_text"] = text
-        if len(bounded) == MAX_READBACKS:
-            break
-        if len(canonical([*bounded, receipt])) <= MAX_READBACK_BYTES:
-            bounded.append(receipt)
-    return bounded
 
 
 def append_evidence(c, task_id, material, kind, receipt, content):
@@ -185,7 +73,7 @@ def approved_model_input(c, task_id, step_id, contract, inputs):
 def add_workflow_evidence(c, task_id, material, verified_steps, *, include_step_inputs):
     row, task = c.store.task(task_id)
     request = parse_json(row["request"])
-    inherited = request.get("dependency_results", {})
+    inherited = request.get("imports", [])
     if not inherited and not verified_steps and not include_step_inputs:
         return
     if verified_steps or include_step_inputs:
@@ -196,35 +84,27 @@ def add_workflow_evidence(c, task_id, material, verified_steps, *, include_step_
         steps = {step["step_id"]: step for step in admitted_plan["document"]["steps"]}
     records = []
     if inherited:
-        envelope = request.get("delegation")
         principal = parse_json(row["principal"])
         authority = parse_json(row["authority"])
         require(
-            envelope
-            and principal["kind"] == "peer"
-            and principal["subject"] == authority["principal_id"]
-            and principal.get("service_id") == envelope["parent_service_id"]
-            and principal["service_id"] in c.config.policy()["trusted_delegator_service_ids"]
-            and envelope["recipient_service_id"]
-            == authority["receiver_service_id"]
-            == c.config.service_id
-            and envelope["request_digest"]
-            == authority["request_digest"]
-            == task["request_digest"]
-            == request_digest(request),
+            principal["id"] == authority["principal_id"]
+            and authority["receiver_service_id"] == c.config.service_id
+            and authority["request_digest"] == task["request_digest"] == request_digest(request),
             "verification_failed",
             422,
         )
-        # These outputs were disclosed as request data by the authenticated parent.
-        # They grant no authority to read the parent's source resources.
-        attestation = {
-            "source": "authenticated_parent_request",
-            "service_id": envelope["parent_service_id"],
-            "task_id": envelope["parent_task_id"],
-            "delegation_id": envelope["delegation_id"],
-            "request_digest": envelope["request_digest"],
-        }
-        records.extend((key, output, attestation) for key, output in inherited.items())
+        records.extend(
+            (
+                item["label"],
+                item["output"],
+                {
+                    "source": "authenticated_consumer_request",
+                    "contract": item["contract"],
+                    "request_digest": task["request_digest"],
+                },
+            )
+            for item in inherited
+        )
     for key, result in verified_steps.items():
         step = steps[key]
         records.append(
@@ -269,7 +149,7 @@ def start_evidence_list(material, kind):
 def verification_material(coordinator, task_id, *, step_id=None, artifact_ids=()):
     c = coordinator
     authority = c.authority(task_id)
-    rule = c.authorization.rule(c.principal(task_id), c.request(task_id)["authorization_ref"])
+    rule = c.current_rule(task_id)
     material = {
         "source": "receiver_durable_store",
         "service_id": c.config.service_id,
@@ -277,7 +157,6 @@ def verification_material(coordinator, task_id, *, step_id=None, artifact_ids=()
         "step_id": step_id,
         "operations": [],
         "artifacts": [],
-        "workspace_readbacks": [],
         "truncated": False,
     }
 
@@ -313,24 +192,6 @@ def verification_material(coordinator, task_id, *, step_id=None, artifact_ids=()
             {"manifest": manifest, "bytes_verified": True},
             {"text": data.decode("utf-8", errors="replace")},
         )
-    if may_share_readbacks(authority, rule):
-        for receipt in child_readbacks(c, task_id, step_id):
-            redacted = c.diagnostics.redact(receipt, task_id)
-            if redacted != receipt:
-                continue
-            record = {
-                **receipt,
-                "source": "authenticated_child_result",
-                "matching_artifact_ids": [
-                    item["manifest"]["artifact_id"]
-                    for item in material["artifacts"]
-                    if item["manifest"]["digest"] == receipt["content_digest"]
-                ],
-            }
-            if len(canonical(material)) + len(canonical(record)) + 2 <= MAX_BYTES:
-                material["workspace_readbacks"].append(record)
-            else:
-                material["truncated"] = True
     rows = c.store.db.execute(
         "SELECT a.*,a.rowid AS sequence,l.details FROM actions a JOIN allocations l "
         "ON a.task_id=l.task_id AND a.operation_id=l.operation_id "

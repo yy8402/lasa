@@ -12,6 +12,7 @@ from .conftest import (
     configuration,
     deterministic_verifier,
     documents,
+    operator_get,
     settled,
     submit,
     task_request,
@@ -141,9 +142,12 @@ async def test_real_codex_can_write_and_read_back_without_tool_discovery(tmp_pat
             response = await submit(client, app, await task_request(client, app))
             result = await settled(client, response)
             assert result["status"] == "completed", result
-            assert len(calls) == 3 and result["result"]["usage"]["model_calls"] == 3
+            assert (
+                len(calls) == 3
+                and app.state.coordinator.store.usage(result["task_id"])["model_calls"] == 3
+            )
             assert result["result"]["effect_disposition"] == "known"
-            assert result["result"]["usage"]["tool_calls"] == 2
+            assert app.state.coordinator.store.usage(result["task_id"])["tool_calls"] == 2
             workspace = app.state.coordinator.workspace(result["session_id"])
             assert workspace.read(path) == text
             assert not app.state.coordinator.runtime.handles
@@ -153,6 +157,8 @@ async def test_real_codex_can_write_and_read_back_without_tool_discovery(tmp_pat
                 ]
                 == 0
             )
-            events = (await client.get(response.headers["Location"] + "/events")).json()["events"]
+            events = (
+                await operator_get(client, app, response.headers["Location"], "/events")
+            ).json()["events"]
             assert any(x["kind"] == "call" and x["payload"]["call_type"] == "model" for x in events)
             assert "test-model-key" not in json.dumps(events)

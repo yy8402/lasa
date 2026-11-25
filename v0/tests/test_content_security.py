@@ -9,8 +9,16 @@ import pytest
 from lasa_service.contracts import digest
 from lasa_service.inspection import InspectionBindings
 
-from .conftest import FakeRuntime, documents, new_session, settled, submit, task_request
-from .protocol_helpers import sse_final
+from .conftest import (
+    FakeRuntime,
+    documents,
+    new_session,
+    operator_get,
+    settled,
+    submit,
+    task_request,
+)
+from .protocol_helpers import sse_final, verification_report
 
 
 def configure_inspection(raw, group, direction, *, mode="enforce"):
@@ -304,10 +312,11 @@ async def test_exact_release_and_replay_visibility(services, tmp_path, blocked):
         assert (await client.get(artifact_url)).status_code == 404
         assert "result" not in (await submit(client, app, request, session)).json()
         assert not c.store.db.execute("SELECT * FROM content_releases").fetchall()
-        assert not c.store.db.execute("SELECT * FROM content_release_scopes").fetchall()
 
 
-@pytest.mark.parametrize("change", ["connector", "artifact", "observe_profile", "revoked_legacy"])
+@pytest.mark.parametrize(
+    "change", ["connector", "artifact", "observe_profile", "missing_release", "artifact_metadata"]
+)
 async def test_release_scope_preserves_current_grants_across_unrelated_changes(
     services, tmp_path, change
 ):
@@ -353,12 +362,12 @@ async def test_release_scope_preserves_current_grants_across_unrelated_changes(
     assert task["status"] == "completed" and len(inspected) == 2
     location = response.headers["Location"]
     artifact_url = location + "/artifacts/" + task["result"]["artifacts"][0]["artifact_id"]
-    # Simulate starting with a legacy store under its unchanged inspection config.
-    c.store.db.execute("DELETE FROM content_release_scopes")
-    if change == "revoked_legacy":
-        c.store.db.execute("UPDATE content_releases SET policy_revision='revoked'")
-    c.content.adopt_release_scopes()
-    c.content.adopt_release_scopes()
+    if change == "missing_release":
+        c.store.db.execute("DELETE FROM content_releases")
+    elif change == "artifact_metadata":
+        c.store.db.execute(
+            "UPDATE artifacts SET manifest=json_set(manifest, '$.media_type', 'text/markdown')"
+        )
     if change == "connector":
         security["bindings"]["connectors"]["overrides"] = [
             {
@@ -372,15 +381,14 @@ async def test_release_scope_preserves_current_grants_across_unrelated_changes(
     elif change == "observe_profile":
         profiles[0]["policy_revision"] = "new-observed-revision"
     c.content.bindings = InspectionBindings.from_manifest(raw)
-    c.content.inspection_revision = digest(security)
     result = await client.get(location)
     artifact = await client.get(artifact_url)
     replay = await submit(client, app, request, session)
-    if change == "revoked_legacy":
+    if change == "missing_release":
         assert result.status_code == artifact.status_code == replay.status_code == 403
     else:
         assert result.json()["result"] == replay.json()["result"] == task["result"]
-        if change == "artifact":
+        if change in {"artifact", "artifact_metadata"}:
             assert artifact.status_code == 403
         else:
             assert artifact.status_code == 200 and artifact.text == "approved text"
@@ -467,9 +475,12 @@ async def test_clarification_and_diagnostics_are_policy_gated(services, tmp_path
     rules["principals"][0]["rules"][0]["content_diagnostics"] = True
     path.write_text(json.dumps(rules))
     answers = []
+    diagnostic_checks = []
 
     async def gateway(request):
         body = json.loads(request.content)
+        if body["purpose"] == "diagnostics":
+            diagnostic_checks.append(body["content"])
         deny = body["purpose"] == purpose and (
             mode != "answer" or body["content"]["answer"] == "blocked"
         )
@@ -478,6 +489,13 @@ async def test_clarification_and_diagnostics_are_policy_gated(services, tmp_path
     async def execute(context):
         c = context.coordinator
         if mode == "diagnostics":
+            c.planner.record_verdict(
+                context.task_id,
+                context.definition,
+                verification_report(
+                    context.definition["postconditions"], reason="private diagnostic verdict"
+                ),
+            )
             c.diagnostics.call(
                 context.task_id,
                 "fixture-trace",
@@ -494,7 +512,6 @@ async def test_clarification_and_diagnostics_are_policy_gated(services, tmp_path
         raw=raw, runtime=FakeRuntime(execute), inspection_transport=httpx.MockTransport(gateway)
     )
     body = await task_request(client, app)
-    body["diagnostics"] = "content"
     response = await submit(client, app, body)
     location = response.headers["Location"]
     if mode == "answer":
@@ -525,37 +542,62 @@ async def test_clarification_and_diagnostics_are_policy_gated(services, tmp_path
         assert terminal["status"] == "completed" and answers == [{"answer": "permitted"}]
     else:
         events = (await client.get(location + "/events")).json()["events"]
-        assert any(event["payload"].get("operation_id") == "fixture-trace" for event in events)
-        assert not any("content" in event for event in events)
+        assert all(set(event) == {"sequence", "status"} for event in events)
+        assert "private diagnostic verdict" not in json.dumps(events)
+        detail = (await operator_get(client, app, location, "/events")).json()["events"]
+        assert any(event["payload"].get("operation_id") == "fixture-trace" for event in detail)
+        assert "private diagnostic verdict" in json.dumps(detail)
+        assert not diagnostic_checks
 
 
-@pytest.mark.parametrize("blocked", ["dispatch", "result", "artifact", "revoked"])
+@pytest.mark.parametrize(
+    "blocked",
+    ["dispatch", "result", "artifact", "revoked", "evidence", "artifact_metadata", "child_release"],
+)
 async def test_child_bodies_and_disposition_have_independent_policy(services, tmp_path, blocked):
     child_posts = []
     control_reads = []
 
     async def execute(context):
         c = context.coordinator
-        await c.broker.call(
-            context.task_id,
-            "known-child-write",
-            "workspace.write",
-            {"relative_path": "child.txt", "text": "fixture child effect"},
-        )
         result = await FakeRuntime().run(context)
         result["output"]["summary"] = "fixture child output"
-        if blocked == "artifact":
+        result["evidence"][0]["summary"] = "private child evidence"
+        if blocked in {"artifact", "artifact_metadata"}:
             result["artifact_ids"] = [
                 c.snapshot_artifact(
                     context.task_id,
-                    "text/plain",
+                    "text/markdown" if blocked == "artifact_metadata" else "text/plain",
                     "fixture child attachment",
                 )["artifact_id"]
             ]
         return result
 
+    async def gateway(request):
+        body = json.loads(request.content)
+        content = body["content"]
+        if blocked == "evidence":
+            evidence = json.dumps(content.get("output", {}).get("evidence", []))
+            assert "private child evidence" not in evidence
+            deny = "Criterion verification recorded." in evidence
+        elif blocked == "child_release":
+            deny = (
+                content.get("output", {}).get("output", {}).get("summary") == "fixture child output"
+            )
+        elif blocked == "artifact_metadata":
+            deny = content.get("output", {}).get("media_type") == "text/markdown"
+        else:
+            deny = body["purpose"] == ("task" if blocked == "dispatch" else blocked)
+        return verdict(body, verdict="hard_deny" if deny else "permit")
+
     child_raw = documents(tmp_path / "child", "layer2")
-    _, child_app = await services(raw=child_raw, runtime=FakeRuntime(execute))
+    if blocked == "child_release":
+        configure_inspection(child_raw, "caller", "response")
+    _, child_app = await services(
+        raw=child_raw,
+        runtime=FakeRuntime(execute),
+        inspection_transport=httpx.MockTransport(gateway),
+    )
     if blocked == "revoked":
 
         def revoke(point, _task_id):
@@ -577,13 +619,8 @@ async def test_child_bodies_and_disposition_have_independent_policy(services, tm
 
     raw = documents(tmp_path / "parent", peer=True)
     raw["routing"]["preferred_executor"] = "peer"
-    if blocked != "revoked":
+    if blocked not in {"revoked", "child_release"}:
         configure_inspection(raw, "delegates", "request" if blocked == "dispatch" else "response")
-
-    async def gateway(request):
-        body = json.loads(request.content)
-        deny = body["purpose"] == ("task" if blocked == "dispatch" else blocked)
-        return verdict(body, verdict="hard_deny" if deny else "permit")
 
     client, app = await services(
         raw=raw,
@@ -600,10 +637,10 @@ async def test_child_bodies_and_disposition_have_independent_policy(services, tm
         assert not child_posts and not child["dispatched"] and "request" not in child
         assert terminal["problem"]["effect_disposition"] == "none"
     else:
-        assert len(child_posts) == 1 and terminal["problem"]["effect_disposition"] == "known"
-        assert child["effect_disposition"] == "known" and child["state"] == "completed"
-        assert parent.store.usage(terminal["task_id"])["tool_calls"] == 1
-        assert bool(control_reads) == (blocked == "revoked")
+        assert len(child_posts) == 1 and terminal["problem"]["effect_disposition"] == "none"
+        assert child["effect_disposition"] == "none"
+        assert child["state"] == ("failed" if blocked == "child_release" else "completed")
+        assert control_reads
 
 
 @pytest.mark.parametrize("mode", ["allowed", "argument", "result", "credential"])
@@ -631,7 +668,8 @@ async def test_connector_content_policy_preserves_source_receipts(services, tmp_
     c = app.state.coordinator
     connector, _ = c.broker.operations["documents.read"]
 
-    async def source(name, arguments, _seconds):
+    async def source(name, arguments, _seconds, *, before_use):
+        before_use()
         connector_calls.append((name, arguments))
         return {"text": "test-model-key" if mode == "credential" else "controlled source text"}
 
@@ -648,7 +686,11 @@ async def test_connector_content_policy_preserves_source_receipts(services, tmp_
         result = task["result"]
         assert result["output"]["content"] == "controlled source text"
         (manifest,) = result["artifacts"]
-        assert manifest["provenance"]["operation_id"] == "source-read"
+        assert "provenance" not in manifest
+        stored = c.store.db.execute(
+            "SELECT manifest FROM artifacts WHERE id=?", (manifest["artifact_id"],)
+        ).fetchone()
+        assert json.loads(stored["manifest"])["provenance"]["operation_id"] == "source-read"
         assert manifest["digest"] == digest({"text": "controlled source text"})
         assert c.store.usage(task["task_id"])["tool_calls"] == 1
     else:
@@ -657,78 +699,6 @@ async def test_connector_content_policy_preserves_source_receipts(services, tmp_
         assert c.store.usage(task["task_id"])["tool_calls"] == int(mode != "argument")
     assert len(connector_calls) == int(mode != "argument")
     assert len(gateway_calls) == int(mode != "credential")
-
-
-@pytest.mark.parametrize("permitted_intake", [False, True])
-async def test_delegated_trace_inherits_peer_class_before_result_intake(
-    services, tmp_path, permitted_intake
-):
-    from lasa_service.capabilities import instant
-
-    peer_service = "https://identity.example.net/services/source-peer"
-    source = "peer:" + peer_service
-    raw = documents(tmp_path)
-    path = policy_for(raw)
-    policy = json.loads(path.read_text())
-    policy["content_disclosure"] = {
-        "source_classes": {source: ["restricted"]},
-        "destinations": {source: ["unknown", "restricted"]} if permitted_intake else {},
-    }
-    policy["principals"][0]["rules"][0]["content_diagnostics"] = True
-    path.write_text(json.dumps(policy))
-    client, app = await services(raw=raw)
-    body = await task_request(client, app)
-    body["diagnostics"] = "content"
-    request = await submit(client, app, body)
-    task = await settled(client, request)
-    c = app.state.coordinator
-    child = {
-        "delegation_id": "delegation-fixture",
-        "state": "executing",
-        "service_id": peer_service,
-        "parent_task_id": task["task_id"],
-        "task_id": "task-child",
-    }
-    c.store.save_child(child)
-    events = [
-        {
-            "event_id": "event-fixture",
-            "task_id": child["task_id"],
-            "service_id": peer_service,
-            "sequence": 1,
-            "timestamp": instant(),
-            "causal_parent_event_id": None,
-            "kind": "call",
-            "redacted": True,
-            "payload": {
-                "operation_id": "operation-fixture",
-                "call_type": "model",
-                "phase": "finished",
-                "input_digest": digest({}),
-                "input_bytes": 2,
-                "output_digest": None,
-                "output_bytes": 0,
-                "reserved": c.store.usage(child["task_id"]),
-                "usage": c.store.usage(child["task_id"]),
-                "payload_truncated": False,
-            },
-            "content": {"media_type": "application/json", "text": "restricted trace payload"},
-        }
-    ]
-
-    async def trace(_child, _after):
-        return {"task_id": "task-child", "next_sequence": 2, "events": events}, 200, {}
-
-    c.delegation.child_trace = trace
-    result = await client.get(request.headers["Location"] + "/delegations")
-    reply = result.json()["children"][0]
-    assert reply["state"] == "executing" and reply["service_id"] == peer_service
-    assert reply["trace"]["events"][0]["payload"]["operation_id"] == "operation-fixture"
-    assert "restricted trace payload" not in result.text
-    denied = [event for event in audit_events(c) if event["reason_code"] == "content_class_denied"]
-    assert [event["channel"] for event in denied] == [
-        "caller.response" if permitted_intake else "delegation.response"
-    ]
 
 
 async def test_compaction_keeps_opaque_state_on_the_issuing_model_route(services, tmp_path):

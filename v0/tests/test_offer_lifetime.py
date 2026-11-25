@@ -8,6 +8,7 @@ import httpx
 import pytest
 
 from lasa_service.capabilities import instant
+from lasa_service.contracts import digest
 
 from .conftest import deterministic_planner, documents, settled, submit, task_request
 
@@ -55,6 +56,7 @@ async def test_peer_freshness_after_planning_and_before_dispatch_is_bounded(
     _, child_app = await services(raw=child_raw)
     child = child_app.state.coordinator
     proposals = []
+    admitted_revisions = []
 
     async def planning(c, task_id, request, catalog, requirements):
         proposals.append(catalog)
@@ -68,7 +70,9 @@ async def test_peer_freshness_after_planning_and_before_dispatch_is_bounded(
         raw=raw, planner=planning, peer_transport=httpx.ASGITransport(app=child_app)
     )
 
-    async def plan_check(*args):
+    async def plan_check(task_id, request, private_plan):
+        (routes,) = private_plan["offers"].values()
+        admitted_revisions.append(routes[0]["offer"]["revision"])
         expire(child.publication)
         if changed_terms:
             path = Path(child_raw["authorization"]["policy_file"])
@@ -82,13 +86,11 @@ async def test_peer_freshness_after_planning_and_before_dispatch_is_bounded(
     app.state.coordinator.planner.verify_plan = plan_check
     result = await settled(client, await submit(client, app, await task_request(client, app)))
     assert len(proposals) == 1
+    assert all(key == digest(definition) for key, definition in proposals[0].items())
     children = app.state.coordinator.store.children(result["task_id"])
     if changed_terms:
         assert result["status"] == "failed" and result["problem"]["code"] == "offer_changed"
         assert not children
     else:
         assert result["status"] == "completed" and len(children) == 1, result
-        assert (
-            children[0]["request"]["selection"]["offer_revision"]
-            != proposals[0]["offers"][0]["revision"]
-        )
+        assert children[0]["request"]["selection"]["offer_revision"] != admitted_revisions[0]

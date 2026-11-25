@@ -1,9 +1,9 @@
 {
   "decision_id": "authz-child-001",
   "authorization_ref": "receiver-policy:trusted-layer1-review",
-  "principal_id": "https://identity.example.net/services/layer1",
+  "principal_id": "principal-receiver-local-001",
   "receiver_service_id": "https://identity.example.net/services/layer2",
-  "request_digest": "sha256:e0a7e56cae1514be6edf41be9424cd172f5745e04059c7d38367410d6c5f0047",
+  "request_digest": "sha256:4d9aca9f68ffed2bd902482b83aebbf0255b195c4b6c7f15900cf5338de1e856",
   "contract": {
     "id": "https://contracts.example.net/capabilities/design.review",
     "version": "1.0.0",
@@ -32,8 +32,7 @@
       "output_bytes": 12000,
       "artifact_bytes": 0
     },
-    "deadline": "2026-11-18T08:01:00Z",
-    "max_hops": 0
+    "deadline": "2026-11-18T08:01:00Z"
   },
   "content_diagnostics_allowed": false,
   "delegation_grants": []

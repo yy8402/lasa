@@ -16,13 +16,11 @@
         ],
         "local_assessment": "sufficient",
         "peer_assessment": "matched",
-        "assessment_summary": "Both services offer an authorized review of supplied text with the required coverage.",
         "catalog_revision": "catalog-r9",
         "offer_revision": "offer-review-r1",
         "authorization_decision_id": "authz-parent-001",
         "policy": {
-          "preferred_executor": "peer",
-          "unclaimed_peer_fallback": "reject"
+          "preferred_executor": "peer"
         },
         "selected_executor": "peer",
         "contract": {
@@ -46,7 +44,7 @@
         "operation_id": "op-child-review-001",
         "call_type": "child",
         "phase": "finished",
-        "input_digest": "sha256:e0a7e56cae1514be6edf41be9424cd172f5745e04059c7d38367410d6c5f0047",
+        "input_digest": "sha256:a4679826e50e61b6d1a1937f68cf2aa403d0131b67c35e4722486cd5b2bc8844",
         "input_bytes": 252,
         "output_digest": "sha256:80095459264e4943a0cbe844372473625716b97a22451cd2374bc528760b3cc4",
         "output_bytes": 848,

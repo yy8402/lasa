@@ -1,7 +1,7 @@
 {
   "openapi": "3.2.1",
   "info": {
-    "title": "LASA task and delegation API",
+    "title": "LASA consumer API",
     "version": "1.0.0",
     "description": "LASA 1.0.0 transport. Normative behavioral requirements are in the LASA design package."
   },
@@ -669,7 +669,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "contracts.schema.json#/$defs/Task"
+                  "$ref": "contracts.schema.json#/$defs/ConsumerTask"
                 }
               }
             },
@@ -753,10 +753,10 @@
                 "schema": {
                   "oneOf": [
                     {
-                      "$ref": "contracts.schema.json#/$defs/Task"
+                      "$ref": "contracts.schema.json#/$defs/ConsumerTask"
                     },
                     {
-                      "$ref": "#/components/schemas/TaskDisposition"
+                      "$ref": "#/components/schemas/ConsumerTaskDisposition"
                     }
                   ]
                 }
@@ -834,7 +834,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "contracts.schema.json#/$defs/Task"
+                  "$ref": "contracts.schema.json#/$defs/ConsumerTask"
                 }
               }
             },
@@ -920,7 +920,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "contracts.schema.json#/$defs/Task"
+                  "$ref": "contracts.schema.json#/$defs/ConsumerTask"
                 }
               }
             },
@@ -965,7 +965,7 @@
     "/tasks/{task_id}/events": {
       "get": {
         "operationId": "getEvents",
-        "summary": "Read authorized redacted task events",
+        "summary": "Read consumer-visible task progress",
         "parameters": [
           {
             "name": "task_id",
@@ -1003,11 +1003,11 @@
         ],
         "responses": {
           "200": {
-            "description": "Read authorized redacted task events",
+            "description": "Consumer-visible task progress",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "contracts.schema.json#/$defs/EventPage"
+                  "$ref": "contracts.schema.json#/$defs/ConsumerEventPage"
                 }
               }
             },
@@ -1251,57 +1251,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "contracts.schema.json#/$defs/Task"
-                }
-              }
-            }
-          },
-          "default": {
-            "description": "Typed failure. Retry advice cannot authorize replay of uncertain effects.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "contracts.schema.json#/$defs/Problem"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/tasks/{task_id}/delegations": {
-      "get": {
-        "operationId": "getDelegationDiagnostics",
-        "summary": "Read owner-authorized child metadata and redacted events through the parent",
-        "parameters": [
-          {
-            "name": "task_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
-            },
-            "description": ""
-          },
-          {
-            "name": "after_sequence",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "minimum": 0,
-              "maximum": 9007199254740990
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Immediate child reports; no peer credentials are exposed",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "contracts.schema.json#/$defs/DelegationReport"
+                  "$ref": "contracts.schema.json#/$defs/ConsumerTask"
                 }
               }
             }
@@ -1331,12 +1281,6 @@
     "schemas": {
       "CapabilityRef": {
         "$ref": "contracts.schema.json#/$defs/CapabilityRef"
-      },
-      "Budget": {
-        "$ref": "contracts.schema.json#/$defs/Budget"
-      },
-      "ExecutionLimits": {
-        "$ref": "contracts.schema.json#/$defs/ExecutionLimits"
       },
       "ResourceRule": {
         "$ref": "contracts.schema.json#/$defs/ResourceRule"
@@ -1374,12 +1318,6 @@
       "OfferSelection": {
         "$ref": "contracts.schema.json#/$defs/OfferSelection"
       },
-      "ArtifactManifest": {
-        "$ref": "contracts.schema.json#/$defs/ArtifactManifest"
-      },
-      "DelegationEnvelope": {
-        "$ref": "contracts.schema.json#/$defs/DelegationEnvelope"
-      },
       "TaskRequest": {
         "$ref": "contracts.schema.json#/$defs/TaskRequest"
       },
@@ -1398,41 +1336,11 @@
       "CancelTask": {
         "$ref": "contracts.schema.json#/$defs/CancelTask"
       },
-      "Admission": {
-        "$ref": "contracts.schema.json#/$defs/Admission"
-      },
       "Evidence": {
         "$ref": "contracts.schema.json#/$defs/Evidence"
       },
-      "TaskResult": {
-        "$ref": "contracts.schema.json#/$defs/TaskResult"
-      },
       "Problem": {
         "$ref": "contracts.schema.json#/$defs/Problem"
-      },
-      "Task": {
-        "$ref": "contracts.schema.json#/$defs/Task"
-      },
-      "RoutingPolicy": {
-        "$ref": "contracts.schema.json#/$defs/RoutingPolicy"
-      },
-      "RoutingEvidence": {
-        "$ref": "contracts.schema.json#/$defs/RoutingEvidence"
-      },
-      "CallEvidence": {
-        "$ref": "contracts.schema.json#/$defs/CallEvidence"
-      },
-      "VerificationEvidence": {
-        "$ref": "contracts.schema.json#/$defs/VerificationEvidence"
-      },
-      "ResolutionEvidence": {
-        "$ref": "contracts.schema.json#/$defs/ResolutionEvidence"
-      },
-      "DiagnosticEvent": {
-        "$ref": "contracts.schema.json#/$defs/DiagnosticEvent"
-      },
-      "EventPage": {
-        "$ref": "contracts.schema.json#/$defs/EventPage"
       },
       "ReconcileTask": {
         "$ref": "contracts.schema.json#/$defs/ReconcileTask"
@@ -1440,14 +1348,32 @@
       "OperationReceipt": {
         "$ref": "contracts.schema.json#/$defs/OperationReceipt"
       },
-      "DelegationReport": {
-        "$ref": "contracts.schema.json#/$defs/DelegationReport"
+      "ConsumerTask": {
+        "$ref": "contracts.schema.json#/$defs/ConsumerTask"
       },
-      "AuthorityCeiling": {
-        "$ref": "contracts.schema.json#/$defs/AuthorityCeiling"
+      "ConsumerResult": {
+        "$ref": "contracts.schema.json#/$defs/ConsumerResult"
       },
-      "TaskDisposition": {
-        "$ref": "contracts.schema.json#/$defs/TaskDisposition"
+      "ConsumerTaskDisposition": {
+        "$ref": "contracts.schema.json#/$defs/ConsumerTaskDisposition"
+      },
+      "ConsumerEventPage": {
+        "$ref": "contracts.schema.json#/$defs/ConsumerEventPage"
+      },
+      "ConsumerLimits": {
+        "$ref": "contracts.schema.json#/$defs/ConsumerLimits"
+      },
+      "ConsumerReceipt": {
+        "$ref": "contracts.schema.json#/$defs/ConsumerReceipt"
+      },
+      "ConsumerBudget": {
+        "$ref": "contracts.schema.json#/$defs/ConsumerBudget"
+      },
+      "ConsumerArtifact": {
+        "$ref": "contracts.schema.json#/$defs/ConsumerArtifact"
+      },
+      "EvidenceImport": {
+        "$ref": "contracts.schema.json#/$defs/EvidenceImport"
       }
     }
   }

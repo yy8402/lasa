@@ -30,7 +30,7 @@ lasa config init --output /etc/lasa/review --state-root /var/lib/lasa/review \
   --credential-ref file:/run/secrets/lasa/review/model-key
 ```
 
-The initial policy denies access until the administrator adds issuer subjects and grants. Pass `--operator-subject SUBJECT` to generate a read-only `design.review` grant for one subject. `--jwt-algorithm` can be repeated for an issuer with multiple allowed algorithms. Keep signing keys at the issuer. Mount the model key at the referenced path or inject it via an `env:NAME` reference. The scaffold creates the two JSON files exclusively with owner-only permissions.
+The initial policy denies access until the administrator adds issuer subjects and grants. Pass `--consumer-subject SUBJECT` to grant read-only `design.review`. Use `--operator-subject SUBJECT` with a distinct subject to grant access to operator traces. `--jwt-algorithm` can be repeated for an issuer with multiple allowed algorithms. Keep signing keys at the issuer. Mount the model key at the referenced path or inject it via an `env:NAME` reference. The scaffold creates the two JSON files exclusively with owner-only permissions.
 
 Before startup, run the check as the service user with the same mounts and credentials. It validates the manifest, bindings, policy, secrets, TLS, authentication, and connectivity to the matching launcher and Docker daemon. The launcher verifies its pinned worker image and Codex version before opening the socket. It leaves the service store untouched and sends no model or peer requests. `--offline` skips the launcher and remote JWKS access and still checks local artifacts.
 
@@ -70,7 +70,7 @@ Initialize a static-token manifest with `--auth-mode static_token` and omit the 
 
 ```sh
 lasa config init --output /etc/lasa/review --state-root /var/lib/lasa/review \
-  --auth-mode static_token --operator-subject operator \
+  --auth-mode static_token --consumer-subject consumer \
   --service-id https://identity.example.net/services/review \
   --base-url https://review.example.net/lasa/v1 \
   --launcher-socket /run/lasa/review/launcher.sock \
@@ -78,7 +78,7 @@ lasa config init --output /etc/lasa/review --state-root /var/lib/lasa/review \
   --credential-ref file:/run/secrets/lasa/review/model-key
 
 lasa config issue-token --config /etc/lasa/review/config.json \
-  --subject operator --output /absolute/private/client/lasa-token.txt
+  --subject consumer --output /absolute/private/client/lasa-token.txt
 lasa config check --config /etc/lasa/review/config.json
 ```
 
@@ -88,9 +88,9 @@ The default lifetime is 720 hours. Set `--ttl-hours` when issuing a shorter-live
 
 ### Mixed authentication for delegation
 
-On the sender, a peer entry defaults to JWT. To call a static-token receiver, set that entry's `authentication` to `{"mode": "static_token", "subject": "peer-parent"}` and point `credential_ref` to the caller's opaque token. Keep the receiver service ID, allowed HTTPS base URL, and authorization reference in the same peer entry.
+On the sender, a peer entry defaults to JWT. To call a static-token receiver, set that entry's `authentication` to `{"mode": "static_token", "subject": "peer-parent"}` and point `credential_ref` to the caller's opaque token. Pin the receiver service ID and allowed HTTPS base URL in that entry.
 
-On the receiver, set up a `kind: peer` principal whose subject matches the sender's configured subject and whose `service_id` identifies the sender. List the sender in `trusted_delegator_service_ids` and grant the allowed workload through receiver policy. Use `lasa config issue-token --subject peer-parent` with the receiver manifest and deliver the generated token file to the sender. The sender also needs its own delegation grant for that link.
+On the receiver, set up a `kind: peer` principal whose subject matches the sender's configured subject and whose `service_id` identifies the sender. Grant the allowed workload through receiver policy. Use `lasa config issue-token --subject peer-parent` with the receiver manifest and deliver the generated token file to the sender. The sender also needs its own delegation grant for that link.
 
 LASA attaches a workload identity fingerprint to static peer requests. The receiver checks it against the authenticated token subject, the subject's configured service identity, and the receiver's own service ID. Keep those identities stable when rotating a token so child receipts and retries stay bound to the same workload. `lasa config check` validates the local credential against each peer's configured mode. Peer discovery checks the receiver's advertised mode and the exact wire-schema digest when the sender connects.
 
@@ -163,7 +163,7 @@ To run local content inspection with DLPLite, connect the supervisor to a user-d
 
 In `config.json`, set `executors[].model` to the model ID, `provider_base_url` to the provider's HTTPS API base URL, and `credential_ref` to `env:NAME` or `file:/absolute/private/key.txt`. LASA appends `/responses`, so use a provider that supports the OpenAI Responses API, including structured outputs and streamed tool calls for Codex execution. Local task steps use the executor selected by their binding. Set `default_executor` explicitly when configuring multiple executors. Planning, verification, and unbound integration use that executor. Each LASA peer has its own configuration.
 
-The bundled [prompts.json](lasa_service/prompts.json) contains all eight LASA-authored instruction templates used for planning, verification, execution, source retrieval, result integration, and fallback conversion. To customize them, copy that file to a private location and set the top-level `"prompts_file": "/absolute/path/to/prompts.json"` in `config.json`. LASA validates and loads the entire file when it starts. Keep all eight keys and the `{purpose}` placeholder in `assessment_developer`, then restart the service to apply edits. LASA supplies task inputs, contracts, and evidence at runtime. Codex App Server supplies its own built-in instructions.
+The bundled [prompts.json](lasa_service/prompts.json) contains the seven LASA instruction templates for proposal, plan review, outcome verification, execution, source retrieval, and integration. To customize them, copy that file to a private location and set the top-level `"prompts_file": "/absolute/path/to/prompts.json"` in `config.json`. LASA validates the complete file at startup. Keep the template keys and the `{purpose}` placeholder in `assessment_developer`. Restart the service after edits. LASA supplies typed inputs, assigned criteria, and evidence at runtime. Codex App Server supplies its built-in instructions.
 
 LASA registers the approved tools for each step as immediately callable Codex App Server functions. Workspace writes and readback use `workspace_write` and `workspace_read`. The broker checks current permission and remaining allocation when a function is called. Private MCP connectors remain upstream of the broker.
 
@@ -182,7 +182,7 @@ The script discovers caller-visible offers, creates a session, submits typed inp
 
 `--diagnostics content` additionally requires receiver policy permission. Metadata is always recorded. Content traces exclude service keys, private developer/system prompts, and hidden reasoning; truncation retains operation headers and digests. Child traces are retrieved by the parent using its own credentials, which are never returned to the caller.
 
-To delegate, add `peers` entries in preference order. Each entry names the downstream descriptor URL, expected service ID, allowed base URL, receiver-scoped credential reference and authorization reference. Use its `ca_file` for private TLS. The sender’s receiver policy grants the exact sender, receiver and contract in `delegation_grants`. The downstream policy names the sender in `trusted_delegator_service_ids` and maps the workload subject to that service ID with its own grants. [Multi-peer delegation](design/multi-peer-delegation.md)
+To delegate, add `peers` entries in preference order. Each entry names the downstream descriptor URL, expected service ID, allowed base URL, and receiver-scoped credential reference. Use its `ca_file` for private TLS. The sender’s receiver policy grants the exact sender, receiver and contract in `delegation_grants`. The downstream policy maps the workload subject to that service ID and separately defines its locally fulfillable read-only offers. [Multi-peer delegation](design/multi-peer-delegation.md)
 
 List additional built-in capabilities by name in `published_contracts`. LASA accepts exact contract references for custom registry entries and validates those against the configured publisher and verifier. Define connector operations in `executors[].connectors`, and use explicit `bindings` with `required_operations` for source-backed capabilities. An explicit bindings list selects all local bindings for that service. See the [connector design](design/connectors.md) and the [advanced manifest example](design/examples/config.json) for the policy and binding structure.
 

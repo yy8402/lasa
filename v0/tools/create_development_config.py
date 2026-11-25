@@ -35,6 +35,7 @@ def main():
     parser.add_argument("--peer-ca-file")
     parser.add_argument("--trusted-parent-id")
     parser.add_argument("--trusted-parent-subject", default="peer-parent")
+    parser.add_argument("--execution-key-ref", default="env:LASA_EXECUTION_KEY")
     args = parser.parse_args()
     os.umask(0o077)
     root = args.output.resolve()
@@ -67,7 +68,7 @@ def main():
         state_root=root / "state",
     )
     config["storage"]["listen_port"] = args.listen_port
-    config["routing"] = {"preferred_executor": "peer", "unclaimed_peer_fallback": "attempt"}
+    config["routing"] = {"preferred_executor": "peer"}
     config["peers"] = []
     defaults = packaged_defaults()
     config["limits"] = {
@@ -105,6 +106,7 @@ def main():
         destination.write_text(value + "\n")
         destination.chmod(0o600)
 
+    issue("consumer", "consumer-token.txt")
     issue("operator", "operator-token.txt")
     budget = config["limits"]["max_task_budget"]
     budget.update(model_tokens=500000, model_calls=16, wall_time_ms=300000, input_bytes=128000)
@@ -123,7 +125,6 @@ def main():
         "effects": ["workspace.read", "workspace.write"],
         "delegation_grants": [],
         "budget": budget,
-        "max_hops": defaults["limits"]["max_hops"],
         "content_diagnostics": False,
     }
     if peer:
@@ -138,13 +139,17 @@ def main():
             }
             for contract in contracts
         ]
-    principals = [{"subject": "operator", "kind": "user", "rules": [rule]}]
+    principals = [
+        {"subject": "consumer", "kind": "user", "rules": [rule]},
+        {"subject": "operator", "kind": "operator", "rules": []},
+    ]
     if args.trusted_parent_id:
         principals.append(
             {
                 "subject": args.trusted_parent_subject,
                 "kind": "peer",
                 "service_id": args.trusted_parent_id,
+                "execution_key_ref": args.execution_key_ref,
                 "rules": [rule],
             }
         )
@@ -152,7 +157,6 @@ def main():
     authorization = {
         "revision": "policy-1",
         "principals": principals,
-        "trusted_delegator_service_ids": [args.trusted_parent_id] if args.trusted_parent_id else [],
     }
     if peer:
         settings = {
@@ -160,7 +164,7 @@ def main():
             "expected_service_id": args.peer_service_id,
             "allowed_base_url": args.peer_descriptor.rsplit("/", 1)[0],
             "credential_ref": args.peer_credential_ref,
-            "authorization_ref": "default",
+            "execution_key_ref": args.execution_key_ref,
             "request_timeout_seconds": 15,
         }
         if args.peer_ca_file:

@@ -15,7 +15,15 @@ from lasa_service.errors import LasaError
 from lasa_service.gateway import TaskGateway
 from lasa_service.store import Store
 
-from .conftest import FakeRuntime, documents, example, settled, submit, task_request
+from .conftest import (
+    FakeRuntime,
+    documents,
+    example,
+    settled,
+    submit,
+    task_request,
+)
+from .protocol_helpers import verification_report
 from .test_content_security import configure_inspection, policy_for, verdict
 from .test_source_outcomes import read_workflow, register_read
 
@@ -88,7 +96,11 @@ async def test_model_recovery_dispatches_only_the_permitted_candidate(
                                 {
                                     "type": "output_text",
                                     "text": json.dumps(
-                                        {"passed": True, "reason": "Required output was verified."}
+                                        verification_report(
+                                            json.loads(body["input"][-2]["content"][0]["text"])[
+                                                "criteria"
+                                            ]
+                                        )
                                     ),
                                 }
                             ],
@@ -232,7 +244,7 @@ async def test_delegate_recovery_keeps_receiver_and_required_input(services, tmp
     assert task["status"] == "completed", task
     (sent,) = posts
     assert sent["input"] == {key: value for key, value in ATTEMPT_INPUT.items() if key != "context"}
-    assert sent["delegation"]["recipient_service_id"] == child_raw["service"]["id"]
+    assert "delegation" not in sent and "authorization_ref" not in sent
     assert [value["action"] for value in records(app, "content_recovery")] == ["candidate_revision"]
 
 
@@ -272,7 +284,8 @@ async def test_connector_recovery_preserves_schema_and_replay_identity(
     )
     connector, _ = app.state.coordinator.broker.operations["documents.read"]
 
-    async def call(_, arguments, _remaining):
+    async def call(_, arguments, _remaining, *, before_use):
+        before_use()
         calls.append(arguments)
         return {"text": "Verified source text."}
 
@@ -313,7 +326,7 @@ async def test_intake_recovery_counts_against_the_admitted_task(services, tmp_pa
     client, app = await services(raw=raw, inspection_transport=httpx.MockTransport(scanner))
     task = await settled(client, await submit(client, app, await task_request(client, app)))
     assert task["problem"]["code"] == "content_gateway_unavailable"
-    assert task["problem"]["instance"].startswith("urn:lasa:transfer-")
+    assert task["problem"]["instance"] == "urn:lasa:request"
     assert calls == ["caller.request", "caller.request", "candidate.release"]
     (reservation,) = records(app, "content_recovery")
     assert reservation["task_id"] == task["task_id"] and reservation["channel"] == "caller.request"

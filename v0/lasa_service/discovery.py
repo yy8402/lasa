@@ -8,7 +8,7 @@ from fastapi import Request
 from fastapi.responses import JSONResponse, Response
 
 from . import PROTOCOL_VERSION, __version__
-from .capabilities import epoch, instant, require
+from .capabilities import epoch, instant, public_offer, require
 from .contracts import digest
 
 
@@ -49,13 +49,11 @@ class Discovery:
                     "openapi_url": base + "/openapi.json",
                     "wire_schema_digest": digest(self.publication.config.contracts.bundle),
                     "features": [
-                        "metadata-diagnostics",
-                        "content-diagnostics",
+                        "consumer-events",
                         "clarification",
                         "artifacts",
-                        "bounded-delegation",
                     ],
-                    "required_features": ["metadata-diagnostics", "bounded-delegation"],
+                    "required_features": ["consumer-events"],
                 }
             ],
             "authentication": authentication,
@@ -126,7 +124,7 @@ class Discovery:
             return self.response(
                 request,
                 p,
-                value,
+                self.config.contracts.validate("OfferCatalog", value),
                 self.config.document["discovery_cache"]["catalog_max_age_seconds"],
             )
 
@@ -136,7 +134,9 @@ class Discovery:
             return self.response(
                 request,
                 p,
-                self.publication.offer(p, offer_id),
+                self.config.contracts.validate(
+                    "CapabilityOffer", public_offer(self.publication.offer(p, offer_id))
+                ),
                 self.config.document["discovery_cache"]["catalog_max_age_seconds"],
             )
 

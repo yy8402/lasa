@@ -6,17 +6,16 @@ import hashlib
 import time
 
 from . import PROTOCOL_VERSION
+from .auth import permits_peer_effects
 from .capabilities import epoch, require
-from .content_security import Transfer
+from .consumer import artifact_release, artifact_view, require_public_data
+from .content_security import Transfer, task_inspection
 from .contracts import canonical, digest, parse_json, request_digest
 from .errors import LasaError
-from .evidence import validate_child_readbacks
-from .grants import find_grant, intersect_grants
+from .grants import execution_terms, find_grant, intersect_grants, subtree_charge
 from .preconditions import check_inputs, request_input_size, restrict
 from .recovery import omit_fields, optional_context
-from .routing import fallback_input
 from .store import TERMINAL, encode, identity, zero
-from .verification import receipt_for
 
 CONTENT_FAILURES = {"disclosure_denied", "content_gateway_unavailable"}
 
@@ -28,47 +27,8 @@ class DelegationController:
     def save(self, child):
         self.coordinator.store.save_child(child)
 
-    def trust_receipt(self, task_id, child, result):
-        c = self.coordinator
-        request = c.request(task_id)
-        if not c.registry.is_workflow(request["selection"]["contract"]):
-            return False
-        receipt = result.get("verification_receipt")
-        require(
-            result["effect_disposition"] == "none"
-            and not result["artifacts"]
-            and not result.get("workspace_readbacks"),
-            "verification_failed",
-            502,
-        )
-        if not receipt:
-            return False
-        pin = {
-            "service_id": child["service_id"],
-            "contract": result["contract"],
-            "verifier_revision": receipt["verifier_revision"],
-        }
-        rule = c.authorization.rule(c.principal(task_id), request["authorization_ref"])
-        if pin not in c.authority(task_id).get("verifier_trust", []) or pin not in rule.get(
-            "verifier_trust", []
-        ):
-            return False
-        require(
-            receipt
-            == receipt_for(
-                child["service_id"],
-                child["task_id"],
-                child["request"],
-                result,
-                pin["verifier_revision"],
-            ),
-            "verification_failed",
-            502,
-        )
-        c.store.event(task_id, "trusted_verification_receipt", receipt)
-        return True
-
     async def peer_for(self, child):
+        self.coordinator.check_processing(child["parent_task_id"], "peer:" + child["service_id"])
         peer = self.coordinator.peers.get(child["service_id"])
         binding = child["peer_binding"]
         require(
@@ -79,14 +39,7 @@ class DelegationController:
         require(peer.base == binding["base_url"], "peer_unavailable", 503)
         return peer
 
-    async def child_trace(self, child, after):
-        require("task_id" in child, "peer_unavailable", 503)
-        peer = await self.peer_for(child)
-        binding = child["peer_binding"]
-        url = binding["base_url"] + "/tasks/" + child["task_id"] + "/events"
-        return await peer.request("GET", f"{url}?after_sequence={after}&limit=100", binding=binding)
-
-    async def receipt(self, peer, binding, body, kind):
+    async def receipt(self, peer, binding, body, kind, processing=None):
         receipt, status, _ = await peer.request(
             "GET", binding["base_url"] + "/operations/" + body["operation_id"], binding=binding
         )
@@ -103,9 +56,15 @@ class DelegationController:
             "verification_failed",
             502,
         )
+        if kind == "task":
+            require(
+                receipt["selection"] == body["selection"] and receipt["processing"] == processing,
+                "verification_failed",
+                502,
+            )
         return receipt["resource_id"]
 
-    async def create(self, peer, binding, url, body, kind, check):
+    async def create(self, peer, binding, url, body, kind, check, processing=None):
         expected = 202 if kind == "task" else 201
         uncertain = False
         for _ in range(2):
@@ -127,10 +86,13 @@ class DelegationController:
                 pass
             uncertain = True
             try:
-                resource_id = await self.receipt(peer, binding, body, kind)
+                resource_id = await self.receipt(peer, binding, body, kind, processing)
                 if resource_id:
+                    control = "?view=control" if kind == "task" else ""
                     value, status, _ = await peer.request(
-                        "GET", binding["base_url"] + f"/{kind}s/" + resource_id, binding=binding
+                        "GET",
+                        binding["base_url"] + f"/{kind}s/" + resource_id + control,
+                        binding=binding,
                     )
                     if status == 200:
                         require(value.get(kind + "_id") == resource_id, "verification_failed", 502)
@@ -140,23 +102,31 @@ class DelegationController:
                     raise
         raise LasaError("peer_unavailable", 503)
 
-    def scope(self, task_id, step, contract, peer):
+    def scope(self, task_id, step, contract, peer, execution):
         c = self.coordinator
         c.check_active(task_id)
+        c.check_processing(task_id, "peer:" + peer.service_id)
         authority = c.authority(task_id)
-        request = c.request(task_id)
-        rule = c.authorization.rule(c.principal(task_id), request["authorization_ref"])
+        rule = c.current_rule(task_id)
         require(
-            authority["limits"]["max_hops"] > 0
-            and peer.service_id not in c.routing.ancestry(request),
+            authority["limits"]["budget"]["delegations"] > 0
+            and peer.service_id != c.config.service_id,
             "precondition_failed",
             422,
         )
         grants = intersect_grants(authority["delegation_grants"], rule["delegation_grants"])
         grant = find_grant(grants, c.config.service_id, peer.service_id, contract)
-        origin = find_grant(grants, c.config.service_id, peer.service_id, step["contract"])
-        require(grant is not None and origin is not None, "disclosure_denied", 403)
+        require(grant is not None, "disclosure_denied", 403)
+        require(
+            execution_terms(grant) == execution,
+            "offer_changed",
+            409,
+        )
         ceiling = c.current_ceiling(task_id)
+        cap = authority.get("subtree_cap")
+        if cap is not None:
+            require(rule.get("subtree_cap") == cap, "offer_changed", 409)
+            require(c.store.subtree_usage(task_id) <= cap, "capacity_exhausted", 429)
         require(
             all(
                 used <= ceiling[key] for key, used in c.store.usage(task_id, reserved=True).items()
@@ -166,35 +136,21 @@ class DelegationController:
         )
         scoped = restrict(authority, rule["effects"], rule["resources"])
         scoped = restrict(scoped, grant["effects"], grant["resources"])
-        scoped["resources"] = [resource for resource in scoped["resources"] if resource["actions"]]
         scoped["limits"] = step["allocation"]
-        reachable = {peer.service_id}
-        onward = []
-        for _ in range(step["allocation"]["max_hops"]):
-            edges = [
-                edge
-                for edge in grants
-                if edge["sender_service_id"] in reachable
-                and edge["receiver_service_id"]
-                not in [*c.routing.ancestry(request), peer.service_id]
-                and edge not in onward
-            ]
-            onward.extend(edges)
-            reachable = {edge["receiver_service_id"] for edge in edges}
-            if not reachable:
-                break
-        scoped["delegation_grants"] = onward
-        scoped["content_diagnostics_allowed"] &= rule["content_diagnostics"]
-        disclosures = set(grant["disclosure_resources"]) & set(origin["disclosure_resources"])
-        return scoped, disclosures
+        return scoped, grant
 
     def prepare_inputs(
-        self, task_id, step, peer, offer, inputs, prior_artifacts, dependency_resources
+        self, task_id, step, peer, offer, inputs, prior_artifacts, dependency_resources, execution
     ):
         c = self.coordinator
-        scoped, disclosures = self.scope(task_id, step, offer["contract"], peer)
+        scoped, grant = self.scope(task_id, step, offer["contract"], peer, execution)
         terms = offer["restrictions"]
-        scoped = restrict(scoped, terms["allowed_effects"], terms["resources"])
+        require(
+            permits_peer_effects(grant, offer),
+            "authority_denied",
+            403,
+        )
+        scoped = restrict(scoped, terms["allowed_effects"], scoped["resources"])
         scoped["resources"] = [resource for resource in scoped["resources"] if resource["actions"]]
         artifacts = check_inputs(
             c,
@@ -209,70 +165,39 @@ class DelegationController:
             item["manifest"].get("provenance", {}).get("resource", "workspace:self")
             for item in artifacts
         }
-        require(sources <= disclosures, "disclosure_denied", 403)
-        ceiling = {
-            key: scoped[key]
-            for key in (
-                "resources",
-                "allowed_effects",
-                "delegation_grants",
-                "content_diagnostics_allowed",
-            )
-        }
-        return ceiling, artifacts
+        require(sources <= set(grant["disclosure_resources"]), "disclosure_denied", 403)
+        return [
+            {"manifest": artifact_view(item["manifest"]), "text": item["text"]}
+            for item in artifacts
+        ]
 
-    async def execute(
-        self, task_id, step, inputs, predecessors, prior_artifacts, dependency_resources
-    ):
+    async def execute(self, task_id, step, inputs, predecessors, prior_artifacts, imports):
         c = self.coordinator
         request = c.request(task_id)
         row, _ = c.store.task(task_id)
         private_plan = parse_json(row["plan"])
-        selected = private_plan["offers"][step["step_id"]]
+        routes = private_plan["offers"][step["step_id"]]
         authority = c.authority(task_id)
         allocation = step["allocation"]
         require(
-            len(c.store.children(task_id)) < c.config.document["limits"]["max_children"],
-            "capacity_exhausted",
-            429,
-        )
-        require(
-            time.time() < epoch(allocation["deadline"]) < epoch(authority["limits"]["deadline"]),
+            time.time() < epoch(allocation["deadline"]) <= c.routing.child_deadline(authority),
             "deadline_exceeded",
             422,
         )
         delegated_input = inputs
-        if selected["fallback"]:
-            delegated_input = fallback_input(
-                c.registry.get(step["contract"]),
-                inputs,
-                private_plan["document"]["requirements"],
-                step["requirement_ids"],
-            )
-            rule = c.authorization.rule(c.principal(task_id), request["authorization_ref"])
-            grants = intersect_grants(authority["delegation_grants"], rule["delegation_grants"])
-            eligible = [
-                peer
-                for peer in c.peers.values()
-                if peer.service_id not in c.routing.ancestry(request)
-                and find_grant(grants, c.config.service_id, peer.service_id, step["contract"])
-            ]
-            require(
-                [peer.service_id for peer in eligible] == selected["absence_peers"],
-                "authority_denied",
-                403,
-            )
-            for peer in eligible:
-                snapshot = await c.routing.catalog(peer, step["contract"])
-                require(snapshot is not None and not snapshot["offers"], "offer_changed", 409)
+        dependency_resources = {
+            resource for item in imports for resource in item.get("resources", ())
+        }
 
         failure = LasaError("peer_unavailable", 503)
-        for route in selected["routes"]:
+        for route in routes:
             peer = c.peers[route["service_id"]]
+            execution = route["execution"]
             try:
-                self.scope(task_id, step, route["offer"]["contract"], peer)
+                self.scope(task_id, step, route["offer"]["contract"], peer, execution)
                 async with asyncio.timeout(peer.settings["request_timeout_seconds"]):
                     offer = await peer.refresh_offer(route["offer"])
+                require(peer.matches_execution(offer, execution), "offer_changed", 409)
                 self.prepare_inputs(
                     task_id,
                     step,
@@ -281,6 +206,7 @@ class DelegationController:
                     delegated_input,
                     prior_artifacts,
                     dependency_resources,
+                    execution,
                 )
                 binding = peer.binding()
                 break
@@ -312,30 +238,38 @@ class DelegationController:
                 "catalog_view": offer["catalog_view"],
             },
             "input": delegated_input,
-            "requested_limits": allocation,
-            "authorization_ref": offer["authorization_ref"],
+            "requested_limits": {
+                "deadline": allocation["deadline"],
+                "budget": {
+                    key: value
+                    for key, value in allocation["budget"].items()
+                    if key != "delegations"
+                },
+            },
         }
-        if predecessors:
-            body["dependency_results"] = {
-                key: result["output"] for key, result in predecessors.items()
-            }
-        body["delegation"] = {
-            "delegation_id": delegation_id,
-            "root_task_id": request.get("delegation", {}).get("root_task_id", task_id),
-            "parent_service_id": c.config.service_id,
-            "recipient_service_id": peer.service_id,
-            "parent_task_id": task_id,
-            "step_id": step["step_id"],
-            "requirement_ids": step["requirement_ids"],
-            "ancestry": c.routing.ancestry(request),
-            "remaining_hops": allocation["max_hops"],
-            "allocation": allocation,
-            "dependency_resources": sorted(dependency_resources),
-        }
+        if imports:
+            body["imports"] = [
+                {
+                    "label": item["step_id"] if "step_id" in item else item["label"],
+                    **{key: item[key] for key in ("contract", "output", "output_digest")},
+                }
+                for item in imports
+            ]
+            require_public_data(c, task_id, body["imports"])
+        assigned = set(step["requirement_ids"])
+        requirements = [
+            item
+            for item in private_plan["document"]["requirements"]
+            if item["requirement_id"] in assigned
+        ]
+        cap = authority.get("subtree_cap")
+        charge = subtree_charge(execution, cap)
         child = {
             "delegation_id": delegation_id,
             "parent_task_id": task_id,
             "service_id": peer.service_id,
+            "processing": offer["processing"],
+            **({"subtree_charge": charge} if charge is not None else {}),
             "peer_binding": binding,
             "state": "reserved",
             "dispatched": False,
@@ -344,21 +278,28 @@ class DelegationController:
             "step_id": step["step_id"],
         }
         amount = copy.deepcopy(allocation["budget"])
-        amount["delegations"] += 1
+        amount["delegations"] = 1
         with c.store.transaction():
             c.store.settle(task_id, "step-reservation-" + step["step_id"], zero())
-            c.reserve(task_id, delegation_id, "child", amount, {"step_id": step["step_id"]})
+            details = {"step_id": step["step_id"]}
+            if charge is not None:
+                details["subtree_charge"] = charge
+            c.reserve(task_id, delegation_id, "child", amount, details, subtree_cap=cap)
             self.save(child)
         try:
             c.hit("before_child_dispatch", task_id)
-            ceiling, artifacts = self.prepare_inputs(
-                task_id, step, peer, offer, delegated_input, prior_artifacts, dependency_resources
+            artifacts = self.prepare_inputs(
+                task_id,
+                step,
+                peer,
+                offer,
+                delegated_input,
+                prior_artifacts,
+                dependency_resources,
+                execution,
             )
-            body["delegation"].update(authority_ceiling=ceiling, disclosed_artifacts=artifacts)
-            body["diagnostics"] = (
-                request["diagnostics"] if ceiling["content_diagnostics_allowed"] else "metadata"
-            )
-            body["delegation"]["request_digest"] = request_digest(body)
+            if artifacts:
+                body["attachments"] = artifacts
             require(
                 request_input_size(body) <= allocation["budget"]["input_bytes"],
                 "capacity_exhausted",
@@ -368,19 +309,20 @@ class DelegationController:
 
             def revise(candidate):
                 revised_input = omit_fields(candidate["input"], optional)
-                current, visible = self.prepare_inputs(
-                    task_id, step, peer, offer, revised_input, prior_artifacts, dependency_resources
+                visible = self.prepare_inputs(
+                    task_id,
+                    step,
+                    peer,
+                    offer,
+                    revised_input,
+                    prior_artifacts,
+                    dependency_resources,
+                    execution,
                 )
-                require(current == ceiling, "authority_denied", 403)
-                revised = {
-                    **candidate,
-                    "input": revised_input,
-                    "delegation": {
-                        **candidate["delegation"],
-                        "disclosed_artifacts": visible,
-                    },
-                }
-                revised["delegation"]["request_digest"] = request_digest(revised)
+                revised = {**candidate, "input": revised_input}
+                revised.pop("attachments", None)
+                if visible:
+                    revised["attachments"] = visible
                 return revised
 
             body, dispatch = await c.content.check_request(
@@ -393,11 +335,7 @@ class DelegationController:
                     request["selection"]["contract"]["id"],
                 ),
                 body,
-                project=lambda candidate: {
-                    "input": candidate["input"],
-                    "dependencies": candidate.get("dependency_results", {}),
-                    "attachments": candidate["delegation"]["disclosed_artifacts"],
-                },
+                project=task_inspection,
                 revise=revise
                 if isinstance(delegated_input, dict) and optional & delegated_input.keys()
                 else None,
@@ -406,15 +344,16 @@ class DelegationController:
                 ),
             )
             delegated_input = body["input"]
-            artifacts = body["delegation"]["disclosed_artifacts"]
+            artifacts = body.get("attachments", [])
             input_bytes = request_input_size(body)
             require(input_bytes <= allocation["budget"]["input_bytes"], "capacity_exhausted", 429)
 
             def check_submission():
                 c.check_active(task_id)
+                c.check_processing(task_id, "peer:" + peer.service_id)
                 require(time.time() < epoch(allocation["deadline"]), "deadline_exceeded", 422)
                 c.content.ensure_current(dispatch)
-                current, visible = self.prepare_inputs(
+                visible = self.prepare_inputs(
                     task_id,
                     step,
                     peer,
@@ -422,8 +361,9 @@ class DelegationController:
                     delegated_input,
                     prior_artifacts,
                     dependency_resources,
+                    execution,
                 )
-                require(current == ceiling and visible == artifacts, "authority_denied", 403)
+                require(visible == artifacts, "authority_denied", 403)
 
             check_submission()
             session_body = {
@@ -432,14 +372,15 @@ class DelegationController:
             }
             child["session_operation_id"] = session_body["operation_id"]
             self.save(child)
-            value, status = await self.create(
-                peer,
-                binding,
-                base + "/sessions",
-                session_body,
-                "session",
-                lambda: c.check_active(task_id),
-            )
+            async with asyncio.timeout(epoch(allocation["deadline"]) - time.time()):
+                value, status = await self.create(
+                    peer,
+                    binding,
+                    base + "/sessions",
+                    session_body,
+                    "session",
+                    check_submission,
+                )
             require(status == 201, "peer_unavailable", 503)
             c.contracts.validate("Session", value, "incompatible_protocol", 502)
             require(value["service_id"] == child["service_id"], "incompatible_protocol", 502)
@@ -461,54 +402,57 @@ class DelegationController:
                 content={"service_id": child["service_id"], "request": body},
             )
             try:
-                value, status = await self.create(
-                    peer,
-                    binding,
-                    base + "/sessions/" + child["session_id"] + "/tasks",
-                    body,
-                    "task",
-                    check_submission,
-                )
-            except (LasaError, asyncio.CancelledError):
+                async with asyncio.timeout(epoch(allocation["deadline"]) - time.time()):
+                    value, status = await self.create(
+                        peer,
+                        binding,
+                        base + "/sessions/" + child["session_id"] + "/tasks",
+                        body,
+                        "task",
+                        check_submission,
+                        child["processing"],
+                    )
+            except (LasaError, asyncio.CancelledError, TimeoutError):
                 c.content.outcome(dispatch, "delivery_unknown")
                 raise
             c.content.outcome(dispatch, "delivered")
             if status != 202:
                 self.settle_child(child, state="rejected", effect="none", usage=zero())
                 code = value.get("code") if isinstance(value, dict) else None
-                if code in CONTENT_FAILURES:
+                if code in c.contracts.schemas["Problem"]["properties"]["code"]["enum"]:
                     raise LasaError(code, status)
-                raise LasaError("offer_changed" if status == 409 else "peer_unavailable", status)
-            await self.record_observation(child, peer, value)
+                raise LasaError("peer_unavailable", status)
+            c.contracts.validate(
+                "ConsumerTaskDisposition" if "effect_disposition" in value else "ConsumerTask",
+                value,
+                "incompatible_protocol",
+                502,
+            )
+            self.check_linkage(child, value)
+            child["task_id"] = value["task_id"]
+            self.save(child)
             c.hit("after_child_dispatch", task_id)
             _, parent = c.check_active(task_id)
             parent["status"] = "waiting_child"
             c.store.save_task(parent)
-            async with asyncio.timeout(max(0.001, epoch(allocation["deadline"]) - time.time())):
-                while value["status"] not in TERMINAL:
-                    c.check_active(task_id)
-                    await asyncio.sleep(0.05)
-                    value, status, _ = await self.poll(child, peer)
-                    require(status == 200, "child_outcome_unknown", 503)
-                    await self.record_observation(child, peer, value)
+            async with asyncio.timeout(epoch(allocation["deadline"]) - time.time()):
+                control = await self.wait_for_child(child, peer, lambda: c.check_active(task_id))
             if child["effect_disposition"] == "unknown":
                 raise LasaError("child_outcome_unknown", 503, effect="unknown")
-            problem = value.get("problem", {})
-            if problem.get("code") in CONTENT_FAILURES:
-                raise LasaError(problem["code"], problem["status"])
-            require(value["status"] == "completed", "verification_failed", 422)
+            if child["state"] != "completed":
+                raise LasaError(
+                    control.get("problem", {}).get("code", "verification_failed"),
+                    control.get("problem", {}).get("status", 422),
+                )
+            child["result_state"] = "pending"
+            self.save(child)
+            value = await self.fetch_result(child, peer, control)
             result = value["result"]
-            require(
-                all(result["usage"][key] <= allocation["budget"][key] for key in result["usage"]),
-                "verification_failed",
-                502,
-            )
             c.registry.check_output(
                 offer["contract"], delegated_input, result["output"], result["evidence"]
             )
             require(
-                result["usage"]["input_bytes"] >= input_bytes
-                and result["usage"]["output_bytes"] >= len(canonical(result["output"])),
+                len(canonical(result["output"])) <= allocation["budget"]["output_bytes"],
                 "verification_failed",
                 502,
             )
@@ -516,11 +460,15 @@ class DelegationController:
             receive = await c.content.check(
                 Transfer("delegation.response", source, "result", delegation_id, task_id, source),
                 result,
-                projection={"output": result["output"]},
+                projection={"output": result},
                 remaining=lambda: c.remaining_seconds(task_id),
             )
             c.content.remember_source(task_id, receive)
             c.content.outcome(receive, "accepted")
+            child["upstream_artifact_ids"] = [
+                artifact["artifact_id"] for artifact in result["artifacts"]
+            ]
+            self.save(child)
             artifact_ids = []
             artifact_map = {}
             downloaded = 0
@@ -550,7 +498,7 @@ class DelegationController:
                     502,
                 )
                 downloaded += len(data)
-                require(downloaded <= result["usage"]["artifact_bytes"], "verification_failed", 502)
+                public_artifact = artifact_release(manifest, data)
                 received = await c.content.check(
                     Transfer(
                         "delegation.response",
@@ -560,8 +508,8 @@ class DelegationController:
                         task_id,
                         source,
                     ),
-                    data,
-                    projection={"text": data.decode()},
+                    public_artifact,
+                    projection=public_artifact,
                     media_type=manifest["media_type"],
                     remaining=lambda: c.remaining_seconds(task_id),
                 )
@@ -569,6 +517,21 @@ class DelegationController:
                 artifact_id = identity("artifact")
                 artifact_map[manifest["artifact_id"]] = artifact_id
                 local_manifest = {**manifest, "artifact_id": artifact_id, "source_task_id": task_id}
+                if c.registry.source_profile(offer["contract"]):
+                    from .outcomes import source_resource
+
+                    local_manifest["provenance"] = {
+                        "kind": "operation-result",
+                        "service_id": child["service_id"],
+                        "operation_id": body["operation_id"],
+                        "resource": source_resource(
+                            c.registry.source_profile(offer["contract"]), parse_json(data)
+                        ),
+                        "contract": offer["contract"],
+                        "input_digest": digest(delegated_input),
+                        "result_digest": manifest["digest"],
+                        "sequence": len(artifact_ids) + 1,
+                    }
                 c.store.db.execute(
                     "INSERT INTO artifacts VALUES(?,?,?,?,-1)",
                     (artifact_id, task_id, encode(local_manifest), data),
@@ -576,12 +539,7 @@ class DelegationController:
                 artifact_ids.append(artifact_id)
                 child["imported_artifacts"] = artifact_ids
                 self.save(child)
-            usage = copy.deepcopy(result["usage"])
-            usage["delegations"] += 1
-            with c.store.transaction():
-                if readbacks := validate_child_readbacks(result):
-                    child["workspace_readbacks"] = readbacks
-                    self.save(child)
+            usage = child["charged_budget"]
             c.diagnostics.call(
                 task_id,
                 delegation_id,
@@ -594,76 +552,33 @@ class DelegationController:
             )
             c.finish_delegated_execution(task_id)
             c.check_active(task_id)
-            trusted = not selected["fallback"] and self.trust_receipt(task_id, child, result)
             result = copy.deepcopy(result)
             for evidence in result["evidence"]:
                 require(
                     set(evidence["artifact_ids"]) <= set(artifact_map), "verification_failed", 502
                 )
                 evidence["artifact_ids"] = [artifact_map[x] for x in evidence["artifact_ids"]]
-            if selected["fallback"]:
-                require(result["output"]["disposition"] == "fulfilled", "verification_failed", 422)
-                from .coordinator import ExecutionContext
-
-                definition = c.registry.get(step["contract"])
-                _, parent = c.store.task(task_id)
-                baseline = c.store.usage(task_id, reserved=True)
-                current_budget = c.current_ceiling(task_id)
-                left = {key: max(0, current_budget[key] - spent) for key, spent in baseline.items()}
-                pool = c.store.db.execute(
-                    "SELECT reserved FROM allocations WHERE task_id=? AND operation_id='integration-reserve' AND state='reserved'",
-                    (task_id,),
-                ).fetchone()
-                if pool:
-                    for key, value in parse_json(pool["reserved"]).items():
-                        left[key] += value
-                context = ExecutionContext(
-                    c,
-                    task_id,
-                    parent,
-                    definition,
-                    {
-                        "contract": step["contract"],
-                        "input": inputs,
-                        "attempt_evidence": result["output"],
-                        "instruction": c.config.prompts["fallback_conversion"],
-                    },
-                    {
-                        "budget": left,
-                        "deadline": request["requested_limits"]["deadline"],
-                        "max_hops": 0,
-                    },
-                    None,
-                    [],
-                    baseline,
+            result = {
+                "output": result["output"],
+                "evidence": result["evidence"],
+                "artifact_ids": artifact_ids,
+            }
+            async with c.peer_verification_locks.setdefault(task_id, asyncio.Lock()):
+                require(
+                    await c.planner.verify(
+                        task_id,
+                        c.registry.get(step["contract"]),
+                        delegated_input,
+                        result["output"],
+                        result["evidence"],
+                        requirements=requirements,
+                        artifact_ids=result["artifact_ids"],
+                        step_id=step["step_id"],
+                        verified_steps=predecessors,
+                    ),
+                    "verification_failed",
+                    422,
                 )
-                converted = await c.run_runtime(context)
-                c.registry.check_output(
-                    step["contract"], inputs, converted["output"], converted["evidence"]
-                )
-                converted["artifact_ids"] += artifact_ids
-                result = converted
-            else:
-                result = {
-                    "output": result["output"],
-                    "evidence": result["evidence"],
-                    "artifact_ids": artifact_ids,
-                }
-            require(
-                trusted
-                or await c.planner.verify(
-                    task_id,
-                    c.registry.get(step["contract"]),
-                    inputs,
-                    result["output"],
-                    result["evidence"],
-                    artifact_ids=result["artifact_ids"],
-                    step_id=step["step_id"],
-                    verified_steps=predecessors,
-                ),
-                "verification_failed",
-                422,
-            )
             c.diagnostics.emit(
                 task_id,
                 "verification",
@@ -680,8 +595,13 @@ class DelegationController:
                     "UPDATE artifacts SET released=0 WHERE id=? AND task_id=?",
                     (artifact_id, task_id),
                 )
+            child["result_state"] = "verified"
+            self.save(child)
+            result["verified_input_digest"] = digest(delegated_input)
+            scoped, _ = self.scope(task_id, step, offer["contract"], peer, execution)
             result["disclosure_resources"] = sorted(
-                dependency_resources | {resource["resource"] for resource in ceiling["resources"]}
+                dependency_resources
+                | {item["resource"] for item in scoped["resources"] if item["actions"]}
             )
             return result
         except (TimeoutError, asyncio.CancelledError):
@@ -690,7 +610,17 @@ class DelegationController:
             elif not child["dispatched"]:
                 self.settle_child(child, state="failed", effect="none", usage=zero())
             raise
-        except Exception:
+        except Exception as exc:
+            if child.get("result_state") == "pending":
+                code = exc.code if isinstance(exc, LasaError) else None
+                child["result_state"] = (
+                    "withheld"
+                    if code in CONTENT_FAILURES | {"authority_denied"}
+                    else "unavailable"
+                    if code == "peer_unavailable"
+                    else "invalid"
+                )
+                self.save(child)
             if child["dispatched"] and child["state"] not in TERMINAL:
                 child["state"] = "unknown"
                 self.save(child)
@@ -698,39 +628,94 @@ class DelegationController:
                 self.settle_child(child, state="failed", effect="none", usage=zero())
             raise
 
+    @staticmethod
+    def task_url(child):
+        return child["peer_binding"]["base_url"] + "/tasks/" + child["task_id"]
+
     async def control(self, child, peer):
-        binding = child["peer_binding"]
-        url = binding["base_url"] + "/tasks/" + child["task_id"] + "?view=control"
-        value, status, headers = await peer.request("GET", url, binding=binding)
+        c = self.coordinator
+        c.check_processing(child["parent_task_id"], "peer:" + child["service_id"])
+        value, status, headers = await peer.request(
+            "GET", self.task_url(child) + "?view=control", binding=child["peer_binding"]
+        )
         if status == 200:
-            self.receive_task(child, value, control=True)
-        return value, status, headers
-
-    async def poll(self, child, peer, *, observing=False):
-        binding = child["peer_binding"]
-        url = binding["base_url"] + "/tasks/" + child["task_id"]
-        value, status, headers = await peer.request("GET", url, binding=binding)
-        if (
-            status in {403, 503}
-            and isinstance(value, dict)
-            and value.get("code") in CONTENT_FAILURES | {"authority_denied"}
-        ):
-            result = await self.control(child, peer)
-            if observing:
-                return result
-            raise LasaError(value["code"], status)
-        return value, status, headers
-
-    async def record_observation(self, child, peer, value):
-        problem = value.get("problem", {}) if isinstance(value, dict) else {}
-        if problem.get("code") in CONTENT_FAILURES:
-            self.coordinator.contracts.validate("Task", value, "incompatible_protocol", 502)
+            c.contracts.validate("ConsumerTaskDisposition", value, "incompatible_protocol", 502)
             self.check_linkage(child, value)
-            child["task_id"] = value["task_id"]
-            _, status, _ = await self.control(child, peer)
-            if status == 200:
-                return
-        self.receive_task(child, value)
+            require(
+                value["revision"] >= child.get("control_revision", 0),
+                "verification_failed",
+                502,
+            )
+            child["control_revision"] = value["revision"]
+            if value["status"] in TERMINAL:
+                control_digest = digest(value)
+                if child.get("terminal_digest") and child["effect_disposition"] != "unknown":
+                    require(control_digest == child["terminal_digest"], "verification_failed", 502)
+                child["terminal_digest"] = control_digest
+                reservation = c.store.db.execute(
+                    "SELECT reserved FROM allocations WHERE task_id=? AND operation_id=?",
+                    (child["parent_task_id"], child["delegation_id"]),
+                ).fetchone()
+                usage = parse_json(reservation["reserved"])
+                child["charged_budget"] = usage
+                self.settle_child(
+                    child, state=value["status"], effect=value["effect_disposition"], usage=usage
+                )
+            else:
+                child["state"] = value["status"]
+                self.save(child)
+        return value, status, headers
+
+    async def wait_for_child(self, child, peer, check):
+        delay = 0.05
+        while True:
+            check()
+            try:
+                value, status, _ = await self.control(child, peer)
+            except LasaError as exc:
+                if exc.code != "peer_unavailable":
+                    raise
+                status = 503
+            if status == 200 and child["state"] in TERMINAL:
+                return value
+            require(status in {200, 408, 429} or 500 <= status < 600, "child_outcome_unknown", 503)
+            await asyncio.sleep(delay)
+            delay = min(1, delay * 2)
+
+    async def fetch_result(self, child, peer, control):
+        c = self.coordinator
+        value, status, _ = await peer.request(
+            "GET", self.task_url(child), binding=child["peer_binding"]
+        )
+        if status != 200:
+            code = value.get("code") if isinstance(value, dict) else None
+            raise LasaError(
+                code if code in CONTENT_FAILURES | {"authority_denied"} else "peer_unavailable",
+                status,
+            )
+        c.contracts.validate("ConsumerTask", value, "incompatible_protocol", 502)
+        expected = self.check_linkage(child, value)
+        result = value.get("result", {})
+        receipt = result.get("receipt", {})
+        require(
+            value["status"] == "completed"
+            and value["revision"] == control["revision"]
+            and result["request_digest"] == expected
+            and result["contract"] == child["request"]["selection"]["contract"]
+            and result["effect_disposition"] == control["effect_disposition"] == "none"
+            and receipt
+            == {
+                "service_id": child["service_id"],
+                "task_id": child["task_id"],
+                "operation_id": child["request"]["operation_id"],
+                "selection": child["request"]["selection"],
+                "processing": child["processing"],
+                "result_digest": digest({k: v for k, v in result.items() if k != "receipt"}),
+            },
+            "verification_failed",
+            502,
+        )
+        return value
 
     @staticmethod
     def check_linkage(child, value):
@@ -748,59 +733,14 @@ class DelegationController:
         )
         return expected_digest
 
-    def receive_task(self, child, value, *, control=False):
-        schema = "TaskDisposition" if control else "Task"
-        self.coordinator.contracts.validate(schema, value, "incompatible_protocol", 502)
-        expected_digest = self.check_linkage(child, value)
-        request = child["request"]
-        state = value["status"]
-        child["task_id"] = value["task_id"]
-        if state not in TERMINAL:
-            child["state"] = state
-            self.save(child)
-            return
-        usage = None
-        if control:
-            effect = value["effect_disposition"]
-            usage = copy.deepcopy(value["usage"])
-            usage["delegations"] += 1
-        elif state == "completed":
-            require(
-                all(
-                    value[key]["request_digest"] == expected_digest
-                    and value[key]["contract"] == request["selection"]["contract"]
-                    for key in ("admission", "result")
-                ),
-                "verification_failed",
-                502,
-            )
-            effect = value["result"]["effect_disposition"]
-            usage = copy.deepcopy(value["result"]["usage"])
-            usage["delegations"] += 1
-        else:
-            effect = (
-                "unknown"
-                if state == "indeterminate"
-                else value.get("problem", {}).get("effect_disposition", "unknown")
-            )
-        child["terminal_digest"] = digest(value)
-        self.settle_child(child, state=state, effect=effect, usage=usage)
-
     def settle_child(self, child, *, state, effect, usage):
         store = self.coordinator.store
         child.update(state=state, effect_disposition=effect)
         with store.transaction():
             if effect != "unknown":
-                row = store.db.execute(
-                    "SELECT reserved FROM allocations WHERE task_id=? AND operation_id=?",
-                    (child["parent_task_id"], child["delegation_id"]),
-                ).fetchone()
-                reserved = parse_json(row["reserved"])
-                store.settle(
-                    child["parent_task_id"],
-                    child["delegation_id"],
-                    usage if usage is not None else reserved,
-                )
+                if child["dispatched"]:
+                    usage = {**usage, "delegations": 1}
+                store.settle(child["parent_task_id"], child["delegation_id"], usage)
             self.save(child)
 
     async def observe(self, child, *, cancel=False):
@@ -812,35 +752,36 @@ class DelegationController:
                 peer = await self.peer_for(child)
                 binding = child["peer_binding"]
                 if "task_id" not in child:
-                    resource_id = await self.receipt(peer, binding, child["request"], "task")
+                    resource_id = await self.receipt(
+                        peer, binding, child["request"], "task", child["processing"]
+                    )
                     if resource_id is None:
                         return
                     child["task_id"] = resource_id
                     self.save(child)
-                url = binding["base_url"] + "/tasks/" + child["task_id"]
-                value, status, headers = await self.poll(child, peer, observing=True)
-                if status != 200:
-                    return
-                if "effect_disposition" not in value:
-                    await self.record_observation(child, peer, value)
-                if not cancel or child["state"] in TERMINAL:
-                    return
                 body = {"operation_id": child["delegation_id"] + "-cancel"}
-                value, status, _ = await peer.request(
-                    "POST",
-                    url + "/cancel",
-                    body,
-                    body["operation_id"],
-                    headers.get("etag"),
-                    binding=binding,
-                )
-                while status in (200, 202):
-                    if "effect_disposition" not in value:
-                        await self.record_observation(child, peer, value)
-                    if child["state"] in TERMINAL:
+                for _ in range(2):
+                    _, status, headers = await self.control(child, peer)
+                    if status != 200 or not cancel or child["state"] in TERMINAL:
                         return
-                    await asyncio.sleep(0.05)
-                    value, status, _ = await self.poll(child, peer, observing=True)
+                    try:
+                        _, status, _ = await peer.request(
+                            "POST",
+                            self.task_url(child) + "/cancel",
+                            body,
+                            body["operation_id"],
+                            headers.get("etag"),
+                            binding=binding,
+                        )
+                    except LasaError as exc:
+                        if exc.code != "peer_unavailable":
+                            raise
+                        continue
+                    if status == 412:
+                        continue
+                    if status in {200, 202}:
+                        await self.wait_for_child(child, peer, lambda: None)
+                    return
         except (LasaError, TimeoutError):
             return
 

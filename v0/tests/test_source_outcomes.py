@@ -22,6 +22,7 @@ from .conftest import (
     submit,
     task_request,
 )
+from .protocol_helpers import verification_report
 from .test_connector_transports import LIMITS, operation
 
 
@@ -129,7 +130,10 @@ def verified_document_receipt(payload, output, instruction):
     )
     assert json.loads(artifact_text)["text"] == output["content"]
     assert artifact["canonical_json_sha256"] != read["document_content_utf8_sha256"]
-    assert artifact["operation_id"] == manifest["provenance"]["operation_id"] == "source-read"
+    assert artifact["operation_id"] == manifest["provenance"]["operation_id"]
+    assert artifact["operation_id"] == "source-read" or artifact["operation_id"].startswith(
+        "delegation-"
+    )
     assert artifact["service_id"] == manifest["provenance"]["service_id"]
     assert (
         "Compare candidate_output.content_digest with document_content_utf8_sha256" in instruction
@@ -157,7 +161,7 @@ async def test_source_receipts_exact_assembly_scope_and_independent_rejection(
     async def assess(task_id, purpose, payload, schema, *, candidate_output, instruction, **_):
         if purpose == "verification":
             verified_document_receipt(payload, candidate_output, instruction)
-        return {"passed": mode != "semantic-rejection", "reason": "Controlled independent verdict."}
+        return verification_report(payload["criteria"], mode != "semantic-rejection")
 
     c.planner.verifier = None
     c.models.ask = assess
@@ -177,9 +181,14 @@ async def test_source_receipts_exact_assembly_scope_and_independent_rejection(
             == "sha256:" + hashlib.sha256(output["content"].encode()).hexdigest()
         )
         manifest = result["result"]["artifacts"][0]
-        assert manifest["provenance"]["input_digest"] == digest(request["input"])
-        assert manifest["provenance"]["contract"] == request["selection"]["contract"]
-        assert manifest["digest"] == manifest["provenance"]["result_digest"]
+        assert "provenance" not in manifest
+        stored = c.store.db.execute(
+            "SELECT manifest FROM artifacts WHERE id=?", (manifest["artifact_id"],)
+        ).fetchone()
+        provenance = json.loads(stored["manifest"])["provenance"]
+        assert provenance["input_digest"] == digest(request["input"])
+        assert provenance["contract"] == request["selection"]["contract"]
+        assert manifest["digest"] == provenance["result_digest"]
     else:
         assert result["status"] == "failed" and "result" not in result
         assert result["problem"]["code"] == (
@@ -224,7 +233,7 @@ async def test_parent_verifies_actual_child_source_artifact_bytes(services, tmp_
             verified[coordinator.config.service_id] = verified_document_receipt(
                 payload, candidate_output, instruction
             )
-            return {"passed": True, "reason": "Verified exact source fields."}
+            return verification_report(payload["criteria"])
 
         coordinator.planner.verifier = None
         coordinator.models.ask = assess
@@ -248,7 +257,12 @@ async def test_parent_verifies_actual_child_source_artifact_bytes(services, tmp_
     if tamper == "none":
         assert result["result"]["output"]["content"] == "Report guide.md"
         assert (
-            result["result"]["artifacts"][0]["provenance"]["service_id"]
+            json.loads(
+                app.state.coordinator.store.db.execute(
+                    "SELECT manifest FROM artifacts WHERE id=?",
+                    (result["result"]["artifacts"][0]["artifact_id"],),
+                ).fetchone()["manifest"]
+            )["provenance"]["service_id"]
             == child_raw["service"]["id"]
         )
         assert app.state.coordinator.store.children(result["task_id"])

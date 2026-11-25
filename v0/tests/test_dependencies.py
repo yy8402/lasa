@@ -77,7 +77,9 @@ async def test_current_policy_denies_dependency_without_disabling_service(servic
     client, app = await services(raw=raw)
     c = app.state.coordinator
     assert (
-        c.broker.binding_state(binding, c.authorization.rules({"subject": "alice"})[0])
+        c.broker.binding_state(
+            binding, c.authorization.rules({"subject": "alice", "kind": "user"})[0]
+        )
         == "available"
     )
     path = Path(raw["authorization"]["policy_file"])

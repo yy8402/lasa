@@ -11,7 +11,6 @@ import jwt
 
 from .contracts import digest, parse_json, protocol_contracts
 from .errors import LasaError
-from .grants import grant_key, intersect_grants
 
 
 def jwt_workload_identity(token, expected_service_id):
@@ -144,6 +143,15 @@ class Authentication:
                 raise ValueError("Unexpected static peer workload pin")
             return {
                 "subject": principal["subject"],
+                "id": "principal-"
+                + digest(
+                    [
+                        self.config.document["authentication"].get("issuer"),
+                        subject,
+                        principal["kind"],
+                        principal.get("service_id"),
+                    ]
+                )[7:],
                 "kind": principal["kind"],
                 **({"service_id": principal["service_id"]} if "service_id" in principal else {}),
                 "token_expiry": expiry,
@@ -181,6 +189,11 @@ class Authentication:
         return entry["subject"], entry["expires_at"]
 
 
+def permits_peer_effects(grant, offer):
+    advertised = set(offer["restrictions"]["allowed_effects"])
+    return advertised <= (set(grant["effects"]) & {"workspace.read", "external.read"})
+
+
 class Authorization:
     def __init__(self, config):
         self.config = config
@@ -188,8 +201,25 @@ class Authorization:
     def rules(self, principal):
         policy = self.config.policy()
         for record in policy["principals"]:
-            if record["subject"] == principal["subject"]:
-                return record["rules"]
+            if (
+                record["subject"] == principal["subject"]
+                and record["kind"] == principal["kind"]
+                and record.get("service_id") == principal.get("service_id")
+            ):
+                rules = record["rules"]
+                if record["kind"] == "peer":
+                    rules = [
+                        {**rule, "execution_key_ref": record["execution_key_ref"]} for rule in rules
+                    ]
+                if record.get("domain_only"):
+                    from .processing import DOMAIN_ONLY, modes
+
+                    return [
+                        {**rule, "processing_modes": [DOMAIN_ONLY]}
+                        for rule in rules
+                        if DOMAIN_ONLY in modes(rule)
+                    ]
+                return rules
         raise LasaError("authority_denied", 403)
 
     def rule(self, principal, reference):
@@ -201,156 +231,116 @@ class Authorization:
     def context_revision(self, principal):
         return digest({"policy": self.config.policy()["revision"], "rules": self.rules(principal)})
 
-    def resolve(self, principal, request, offer, registry, *, deadline_ceiling=None):
+    def resolve(self, principal, request, offer, registry, *, received_at):
         from .capabilities import epoch, instant, require
-        from .contracts import request_digest
+        from .grants import (
+            configured_grants,
+            execution_commitment,
+            peer_execution,
+            select_recursion,
+            task_fanout,
+        )
+        from .processing import DOMAIN_ONLY, check, qualified_domain
 
-        rule = self.rule(principal, request["authorization_ref"])
+        reference = offer["authorization_ref"]
+        rule = self.rule(principal, reference)
         ref = request["selection"]["contract"]
         require(ref in rule["contracts"], "authority_denied", 403)
-        definition = registry.input(ref, request["input"])
-        limits = request["requested_limits"]
+        registry.input(ref, request["input"])
         service = self.config.document["limits"]
-        maximum = {
-            key: min(rule["budget"][key], offer["max_budget"][key], service["max_task_budget"][key])
-            for key in rule["budget"]
-        }
-        require(
-            all(limits["budget"][key] <= maximum[key] for key in maximum), "capacity_exhausted", 429
-        )
-        require(
-            limits["max_hops"] <= min(rule["max_hops"], offer["max_hops"], service["max_hops"]),
-            "authority_denied",
-            403,
-        )
-        require(
-            time.time()
-            < epoch(limits["deadline"])
-            <= time.time()
-            + maximum["wall_time_ms"] / 1000
-            + self.config.document["limits"]["max_clock_skew_seconds"],
-            "deadline_exceeded",
-            422,
-        )
-        allowed_effects = sorted(
-            set(rule["effects"])
-            & set(offer["restrictions"]["allowed_effects"])
-            & set(definition["max_effects"])
-        )
-        require("external.write" not in allowed_effects, "authority_denied", 403)
-        envelope = request.get("delegation")
-        require("dependency_results" not in request or envelope, "authority_denied", 403)
-        require(not envelope or not registry.is_workflow(ref), "authority_denied", 403)
-        if envelope:
+        maximum = offer["max_budget"]
+        requested = request.get("requested_limits", {})
+        requested_budget = requested.get("budget", maximum)
+        peer = principal["kind"] == "peer"
+        fanout = task_fanout(self.config, rule, peer=peer)
+        grants = configured_grants(self.config, rule)
+        if peer:
             require(
-                principal["kind"] == "peer"
-                and principal.get("service_id") == envelope["parent_service_id"]
-                and envelope["recipient_service_id"] == self.config.service_id
-                and principal["service_id"]
-                in self.config.policy()["trusted_delegator_service_ids"],
-                "authority_denied",
-                403,
+                offer["execution_commitment"]
+                == execution_commitment(
+                    self.config.execution_key(rule["execution_key_ref"]),
+                    principal["service_id"],
+                    self.config.service_id,
+                    offer,
+                    peer_execution(self.config, rule, fanout, grants),
+                ),
+                "offer_changed",
+                409,
             )
+            require("deadline" in requested, "deadline_exceeded", 422)
+        budget = {
+            **requested_budget,
+            "delegations": fanout,
+        }
+        require(all(budget[key] <= maximum[key] for key in maximum), "capacity_exhausted", 429)
+        receipt_time = epoch(received_at)
+        deadline = receipt_time + budget["wall_time_ms"] / 1000
+        if requested.get("deadline"):
+            absolute = epoch(requested["deadline"])
             require(
-                self.config.service_id not in envelope["ancestry"]
-                and envelope["ancestry"][-1] == envelope["parent_service_id"]
-                and len(envelope["ancestry"]) + envelope["remaining_hops"] <= 32,
-                "precondition_failed",
+                absolute
+                <= receipt_time
+                + maximum["wall_time_ms"] / 1000
+                + service["max_clock_skew_seconds"],
+                "deadline_exceeded",
                 422,
             )
-            require(
-                envelope["request_digest"] == request_digest(request)
-                and envelope["allocation"] == limits
-                and envelope["remaining_hops"] == limits["max_hops"],
-                "authority_denied",
-                403,
-            )
-        import copy
-
-        effective_limits = copy.deepcopy(limits)
-        effective_deadline = min(
-            epoch(limits["deadline"]), time.time() + limits["budget"]["wall_time_ms"] / 1000
+            deadline = min(deadline, absolute)
+        require(deadline > time.time(), "deadline_exceeded", 422)
+        policy = self.config.policy()
+        domain_only = offer["processing"]["mode"] == DOMAIN_ONLY
+        domain = qualified_domain(self.config, policy) if domain_only else None
+        if domain_only:
+            members = set(domain["members"]) if domain else set()
+            grants = [
+                grant for grant in grants if "peer:" + grant["receiver_service_id"] in members
+            ]
+        grants, subtree_cap = select_recursion(
+            self.config,
+            rule,
+            fanout,
+            grants,
+            min(budget["wall_time_ms"], round((epoch(instant(deadline)) - receipt_time) * 1000)),
+            peer=peer,
         )
-        if deadline_ceiling is not None:
-            effective_deadline = min(effective_deadline, epoch(deadline_ceiling))
-        require(effective_deadline > time.time(), "deadline_exceeded", 422)
-        effective_limits["deadline"] = instant(effective_deadline)
-        result = {
-            "selected_offer": copy.deepcopy(offer),
+        if peer and registry.is_workflow(ref):
+            require(bool(grants), "authority_denied", 403)
+        imports = request.get("imports", [])
+        require(
+            len({item["label"] for item in imports}) == len(imports)
+            and all(item["output_digest"] == digest(item["output"]) for item in imports),
+            "precondition_failed",
+            422,
+        )
+        allowed_effects = offer["restrictions"]["allowed_effects"]
+        require("external.write" not in allowed_effects, "authority_denied", 403)
+        authority = {
+            "selected_offer": offer,
             "decision_id": "authority-"
             + digest(
                 {
-                    "principal": principal["subject"],
+                    "principal": principal["id"],
                     "policy": self.context_revision(principal),
-                    "request": request_digest(request),
+                    "request": digest(request),
                 }
             )[7:39],
-            "authorization_ref": request["authorization_ref"],
-            "principal_id": principal["subject"],
+            "authorization_ref": reference,
+            "principal_id": principal["id"],
             "receiver_service_id": self.config.service_id,
-            "request_digest": request_digest(request),
+            "request_digest": digest(request),
             "contract": ref,
-            "valid_until": instant(min(effective_deadline, principal["token_expiry"])),
-            "resources": [
-                {
-                    "resource": r["resource"],
-                    "actions": sorted(
-                        set(r["actions"])
-                        & set(
-                            next(
-                                (
-                                    x["actions"]
-                                    for x in offer["restrictions"]["resources"]
-                                    if x["resource"] == r["resource"]
-                                ),
-                                [],
-                            )
-                        )
-                    ),
-                }
-                for r in rule["resources"]
-            ],
+            "valid_until": instant(min(deadline, principal["token_expiry"])),
+            "resources": offer["resources"],
             "allowed_effects": allowed_effects,
-            "delegation_grants": rule["delegation_grants"],
-            "limits": effective_limits,
+            "delegation_grants": grants,
+            **({"subtree_cap": subtree_cap} if subtree_cap is not None else {}),
+            "limits": {
+                "budget": dict(budget),
+                "deadline": instant(deadline),
+            },
             "content_diagnostics_allowed": rule["content_diagnostics"],
         }
-        if rule.get("verifier_trust") and not envelope:
-            result["verifier_trust"] = rule["verifier_trust"]
-        if envelope:
-            ceiling = envelope["authority_ceiling"]
-            result["allowed_effects"] = sorted(
-                set(result["allowed_effects"]) & set(ceiling["allowed_effects"])
-            )
-            result["resources"] = [
-                {
-                    "resource": r["resource"],
-                    "actions": sorted(
-                        set(r["actions"])
-                        & set(
-                            next(
-                                (
-                                    x["actions"]
-                                    for x in ceiling["resources"]
-                                    if x["resource"] == r["resource"]
-                                ),
-                                [],
-                            )
-                        )
-                    ),
-                }
-                for r in result["resources"]
-            ]
-            result["resources"] = [r for r in result["resources"] if r["actions"]]
-            grants = ceiling["delegation_grants"]
-            require(
-                len(grants) == len({grant_key(grant) for grant in grants}), "authority_denied", 403
-            )
-            result["delegation_grants"] = intersect_grants(result["delegation_grants"], grants)
-            result["content_diagnostics_allowed"] &= ceiling["content_diagnostics_allowed"]
-        require(
-            request["diagnostics"] != "content" or result["content_diagnostics_allowed"],
-            "disclosure_denied",
-            403,
-        )
-        return result
+        if domain_only:
+            authority["processing_members"] = list(domain["members"]) if domain else []
+        check(self.config, policy, rule, authority)
+        return authority

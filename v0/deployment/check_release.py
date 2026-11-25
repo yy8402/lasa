@@ -248,7 +248,7 @@ def check_provisioning():
             "https://model.example.net/v1",
             "--state-root",
             str(folder / "state"),
-            "--operator-subject",
+            "--consumer-subject",
             "operator",
         ]
 

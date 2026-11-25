@@ -10,17 +10,14 @@
       "base_url": "https://layer2.example.net/lasa/v1",
       "openapi_url": "https://layer2.example.net/lasa/v1/openapi.json",
       "features": [
-        "metadata-diagnostics",
-        "content-diagnostics",
+        "consumer-events",
         "clarification",
-        "artifacts",
-        "bounded-delegation"
+        "artifacts"
       ],
       "required_features": [
-        "metadata-diagnostics",
-        "bounded-delegation"
+        "consumer-events"
       ],
-      "wire_schema_digest": "sha256:f657a761385ea34d46d7ab2c70f4502d79a287361ef68041175c9601b5328647"
+      "wire_schema_digest": "sha256:c58016888226947052ab923a57d6ce6afb511b6be3dd1851a5033aacf8332786"
     }
   ],
   "authentication": {

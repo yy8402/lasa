@@ -18,11 +18,13 @@ The Mac's `com.lasa.layer1-https` user agent runs Caddy using `~/.config/lasa/pr
 
 Build and check the wheel and source distribution, then build the `linux/amd64` supervisor, launcher, and worker images. Give each launcher the immutable worker image ID and configure its supervisor's `runtime.launcher_socket`. The launcher owns Docker access. Run `lasa config check` with each supervisor's production identity and mounts. [Package verification](../VERIFICATION.md)
 
-The split launcher runtime uses store schema revision 2. Provision fresh state roots for this candidate and retain the revision 1 stores with the previous release. Wait for all task stores to be idle. Stop the parent, then the two receivers. Start the matching launchers before starting their supervisors. Start and verify primary and review over authenticated HTTPS before starting the parent. Each state root belongs to a single running supervisor. Verify the advertised service IDs, authentication modes, catalogs, and live dependent workflow before retiring any stopped candidate or predecessor. [Provisioning guide](../RUNNING.md)
+The current checkout uses store schema revision 4 for the direct-child ledger and optional subtree charges. Provision fresh candidate roots and verify the exact wire schema digest. Put each candidate supervisor behind authenticated HTTPS with a separate launcher socket and immutable worker image pin. Provision a separate execution binding key for each outgoing relationship and its matching receiver principal. Keep existing container specs, config and policy copies, state roots, proxy configuration, and image IDs available for rollback. Record the active deployment, authentication modes, inspection bindings, and snapshot checks before any cutover. Preserve credentials and raw evidence in owner-only state. [Peer configuration](../CONFIGURATION.md#peer-execution-terms)
+
+Prove the candidate canary with both downstream credential modes and with consumer and operator transcripts captured separately. Confirm the three stores are idle immediately before stopping the Mac parent and then the two receivers. Start and verify the matching receiver launchers and supervisors over HTTPS before starting the parent. Verify the live dependent workflow and any approved source read. If a gate fails after a documented cutover starts, restore the matching predecessor group and verify HTTPS readiness. Each state root belongs to one supervisor. [Provisioning guide](../RUNNING.md)
 
 For deployments that use a managed DLPLite gateway, list the supervisor manifests in `deployment.json` and enable `local_dlp`. Run `lasa deploy apply` and require authenticated HTTPS readiness and matching profile pins before rolling out the affected supervisors. External scanners remain available with the managed stack disabled. [DLPLite deployment workflow](LOCAL_DLP.md)
 
-## 1.0.0 deployment verification
+## Historical 1.0.0 deployment verification
 
 On November 23, 2026, the Mac parent and both air188 backends passed `lasa config check` at deployment revision `docker-1.0.0-unified-43e45cad4420`. All three authenticated HTTPS endpoints advertised wire protocol `lasa/1.0.0`, descriptor format `1.0.0`, and OpenAPI `info.version` `1.0.0`. The Mac JWT renewal job also passed with the updated package.
 
@@ -32,9 +34,9 @@ Live task `task-b37a936281b54a498dd5aaf6a510305e` finished with disposition `ful
 
 Air188 primary also completed `documents.read` in task `task-204474f7c39243e1a51b587f02053170`. The returned `README.md` digest matched the approved file. Run receipts and diagnostics are in the Mac's private `~/.local/state/lasa/releases/1.0.0/unified-formats/` directory.
 
-## Typed workflow rollout and live benchmark
+## Historical typed workflow rollout and live benchmark
 
-All three supervisors run revision `docker-1.0.0-typed-982347ae1b54` with their existing service identities, task stores, and workspaces. The Mac publishes `design.review-checklist` to the operator under `review-checklist`. The authorization rule pins the static-token review peer for `design.review` and the JWT primary peer for `task.attempt`, with a separate verifier revision pin for each grant. Both receivers use `gpt-6-luna` with low reasoning effort for outcome verification and `gpt-5.5` for execution. The Mac keeps its own verifier for independent checks when policy calls for them.
+The benchmark used revision `docker-1.0.0-typed-982347ae1b54` across all three supervisors with their existing service identities, task stores, and workspaces. The Mac publishes `design.review-checklist` to the operator under `review-checklist`. The authorization rule pins the static-token review peer for `design.review` and the JWT primary peer for `task.attempt`, with a separate verifier revision pin for each grant. Both receivers use `gpt-6-luna` with low reasoning effort for outcome verification and `gpt-5.5` for execution. The Mac keeps its own verifier for independent checks when policy calls for them.
 
 The typed benchmark used the cutover and rollback design from the earlier open-ended task. Elapsed time is measured from receipt to completion on the Mac. The first attempt reached both peers and failed verification because the checklist added conditions beyond the review evidence. The three timed runs specified readiness, rollback, and retirement as explicit review criteria and asked the checklist to preserve exactly those gates.
 
@@ -45,3 +47,25 @@ The typed benchmark used the cutover and rollback design from the earlier open-e
 | `task-c20b697350694366a5a1ec080d36c253` | 43.9 s | 4 |
 
 Each air188 backend made one execution call and one verification call. The Mac accepted both exact, policy-pinned receipts, confirmed the review output matched primary's dependency, and assembled the result without asking a model. Earlier comparable open-ended tasks took 149–162 seconds and ten model calls. The Mac keeps benchmark inputs, traces, the initial rejection, and rollout evidence under `~/.local/state/lasa/releases/1.0.0/typed-workflows/`.
+
+## Verified consumer API rollout
+
+On November 25, 2026, the Mac parent and both air188 receivers moved to `consumer-api-20261125-6121eeb73c44` using the same immutable supervisor, launcher, and worker image IDs. The three predecessor stores were idle at cutover. The candidate used separate schema-3 stores and retained the verified predecessor images, configuration, stores, and container records for rollback.
+
+The authenticated HTTPS canary and deployed workflow verified review on air188 review using its static-token workload relationship, followed by the dependent checklist on air188 primary using JWT. The Mac independently verified both results. Private records bind the exact review handoff to a fresh disclosure decision for the selected receiver. Air188 primary returned the approved document with a matching source digest. The consumer transcript passed the closed schema and identifier checks, and the consumer credential was denied on the operator endpoints. [Air188 isolation](air188.md)
+
+## Verified processing-boundary and recursive-fulfillment rollout
+
+The qualified November 25, 2026 candidate is `processing-recursive-20261125-37be3fc1cca5`. Mac and air188 reported matching immutable image IDs. The final worker was reused from the earlier test-source snapshot because all its build inputs were identical.
+
+| Image | Immutable ID |
+| --- | --- |
+| Supervisor | `sha256:c5fb362e1e8cc1b99430347c436e762323c45931712bbd3f729c0ffe9bcf2cc9` |
+| Launcher | `sha256:76a89fb758f70c5f34c760b200a6de9a9c84938df45b932c298699a22214cdf1` |
+| Codex worker | `sha256:d1f54d26b7053daa0797e0c100c81bb153870560e5ffa5750a88368bd97f74b3` |
+
+The authenticated canary verified the Mac workflow with the air188 static-token and JWT relationships, exact handoff and release decisions, and the approved document digest. The first production attempt completed the workflow, then the `documents.read` verification encountered an inference transport failure before the connector ran. The rollout restored and reverified all three predecessor HTTPS services. The isolated candidate subsequently completed the same approved read, and fresh retry stores were staged with the same immutable images. The preserved first-attempt log, diagnostic and rollback evidence are `managed-cutover-attempt-1.log`, `primary-production-read-diagnostic.private.json`, and `rollback/` under the Mac release evidence root.
+
+The retry deployed the candidate to the Mac parent and both air188 receivers. All three stores were idle at the cutover gate. The deployed Mac workflow and air188 `documents.read` passed over authenticated HTTPS. Private evidence binds the verified review to a fresh disclosure decision for the exact checklist request and confirms the approved document digest. Consumer discovery, progress, receipts, results, and artifact retrieval preserved the caller boundary. The consumer credential was denied operator traces. `postflight-running.json` confirms the running supervisor and launcher IDs and immutable worker pin on each role. The predecessor containers and state remain available with verified retry snapshots in `rollback-retry/` on the Mac and under `~/.local/state/lasa/releases/1.0.0/processing-recursive-20261125-37be3fc1cca5/evidence/rollback-retry/` on air188.
+
+The production profile publishes `approved_processing` offers and uses the two air188 receivers as leaves. Its model endpoint is outside the service's administrative domain, so `provider_domain_only` offers are unpublished. Independent TLS fixtures qualify domain-only composition and deeper recursion with synthetic data. [Qualification and private evidence locations](../VERIFICATION.md#processing-boundaries-and-recursive-fulfillment-qualification) · [Air188 isolation](air188.md)

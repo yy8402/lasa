@@ -311,6 +311,8 @@ class ModelTransport:
                 transport=transport,
                 trust_env=False,
                 follow_redirects=False,
+                # The operation deadline in exchange bounds response headers and streaming.
+                timeout=httpx.Timeout(None, connect=5.0, pool=5.0),
             )
             for executor in coordinator.config.document["executors"]
         }
@@ -348,6 +350,7 @@ class ModelTransport:
             remaining=lambda: c.remaining_seconds(task_id),
         )
         c.check_active(task_id, evaluating=not worker)
+        c.check_processing(task_id, destination)
         c.begin_model(task_id, operation, body, purpose)
         started = time.monotonic()
         try:

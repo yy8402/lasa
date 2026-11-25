@@ -72,4 +72,7 @@ async def test_registered_mcp_tool_runs_through_actual_stdio_and_authority(servi
 
     client, app = await services(raw=raw, runtime=FakeRuntime(handler))
     result = await settled(client, await submit(client, app, await task_request(client, app)))
-    assert result["status"] == "completed" and result["result"]["usage"]["tool_calls"] == 1
+    assert (
+        result["status"] == "completed"
+        and app.state.coordinator.store.usage(result["task_id"])["tool_calls"] == 1
+    )

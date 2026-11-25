@@ -99,7 +99,6 @@ def publication(registry):
                 "effects": ["workspace.read"],
                 "resources": [{"resource": "workspace:self", "actions": ["read"]}],
                 "budget": budget,
-                "max_hops": 1,
                 "delegation_grants": [
                     {
                         "sender_service_id": config.service_id,
@@ -118,12 +117,12 @@ def publication(registry):
 
 def test_caller_scoped_paging_and_private_separation(registry):
     pub, rules = publication(registry[0])
-    alice = {"subject": "alice"}
+    alice = {"subject": "alice", "kind": "user"}
     first = pub.catalog(alice)
     second = pub.catalog(alice, cursor=first["next_cursor"])
     assert first["revision"] == second["revision"]
     assert len(first["offers"]) == len(second["offers"]) == 1
-    assert pub.catalog({"subject": "bob"})["offers"] == []
+    assert pub.catalog({"subject": "bob", "kind": "user"})["offers"] == []
     encoded = json.dumps(first) + json.dumps(second)
     assert all(x not in encoded for x in ["executor_id", "credential_ref", "gpt-5.5", "state_root"])
     assert pub.availability(alice, first["offers"][0]["offer_id"])["state"] == "available"
@@ -134,7 +133,7 @@ def test_caller_scoped_paging_and_private_separation(registry):
 
 def test_offer_selection_revision_withdrawal_and_retained_definition(registry):
     pub, rules = publication(registry[0])
-    p = {"subject": "alice"}
+    p = {"subject": "alice", "kind": "user"}
     offer = pub.catalog(p)["offers"][0]
     selection = {
         "contract": offer["contract"],
@@ -142,7 +141,10 @@ def test_offer_selection_revision_withdrawal_and_retained_definition(registry):
         "offer_revision": offer["revision"],
         "catalog_view": offer["catalog_view"],
     }
-    assert pub.select(p, selection) == offer
+    selected = pub.select(p, selection)
+    assert selected["offer_id"] == offer["offer_id"]
+    assert selected["authorization_ref"] == "default"
+    assert "resources" in selected and "resources" not in offer["restrictions"]
     selection["offer_revision"] = "stale"
     with pytest.raises(LasaError, match="offer_changed"):
         pub.select(p, selection)

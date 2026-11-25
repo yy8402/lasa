@@ -53,8 +53,6 @@ def review_checklist_steps(inputs):
             "depends_on": dependencies,
             "contract_digest": refs[step]["digest"],
             "input_json": canonical(step_inputs[step]).decode(),
-            "local_assessment": "insufficient",
-            "assessment_summary": "Registered workflow supplies the exact child contract and input.",
         }
         for step, _, criterion, dependencies in STEPS
     ]

@@ -196,68 +196,6 @@
     "expected": "availability_expiry"
   },
   {
-    "id": "delegated-input-tampered",
-    "file": "delegated-task-request.json",
-    "mutations": [
-      {
-        "op": "replace",
-        "path": [
-          "input",
-          "design"
-        ],
-        "value": "Changed after authorization."
-      }
-    ],
-    "expected": "request_digest"
-  },
-  {
-    "id": "delegation-budget-tampered",
-    "file": "delegated-task-request.json",
-    "mutations": [
-      {
-        "op": "replace",
-        "path": [
-          "delegation",
-          "allocation",
-          "budget",
-          "model_calls"
-        ],
-        "value": 3
-      }
-    ],
-    "expected": "allocation"
-  },
-  {
-    "id": "delegation-parent-mismatch",
-    "file": "delegated-task-request.json",
-    "mutations": [
-      {
-        "op": "replace",
-        "path": [
-          "delegation",
-          "parent_service_id"
-        ],
-        "value": "https://identity.example.net/services/other"
-      }
-    ],
-    "expected": "ancestry"
-  },
-  {
-    "id": "delegation-hop-mismatch",
-    "file": "delegated-task-request.json",
-    "mutations": [
-      {
-        "op": "replace",
-        "path": [
-          "delegation",
-          "remaining_hops"
-        ],
-        "value": 1
-      }
-    ],
-    "expected": "hops"
-  },
-  {
     "id": "completed-without-result",
     "file": "task-completed.json",
     "mutations": [
@@ -485,6 +423,48 @@
           "payload",
           "operation_id"
         ]
+      }
+    ],
+    "expected": "schema"
+  },
+  {
+    "id": "consumer-rejects-authorization_ref",
+    "file": "downstream-task-request.json",
+    "mutations": [
+      {
+        "op": "add",
+        "path": [
+          "authorization_ref"
+        ],
+        "value": "operator-rule"
+      }
+    ],
+    "expected": "schema"
+  },
+  {
+    "id": "consumer-rejects-delegation",
+    "file": "downstream-task-request.json",
+    "mutations": [
+      {
+        "op": "add",
+        "path": [
+          "delegation"
+        ],
+        "value": {}
+      }
+    ],
+    "expected": "schema"
+  },
+  {
+    "id": "consumer-rejects-diagnostics",
+    "file": "downstream-task-request.json",
+    "mutations": [
+      {
+        "op": "add",
+        "path": [
+          "diagnostics"
+        ],
+        "value": "content"
       }
     ],
     "expected": "schema"

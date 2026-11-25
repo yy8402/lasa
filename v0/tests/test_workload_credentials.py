@@ -18,7 +18,7 @@ from lasa_service.contracts import digest
 from lasa_service.errors import LasaError
 from lasa_service.peer import PeerClient
 
-from .conftest import configuration, documents, settled, submit, task_request, token
+from .conftest import configuration, documents, operator_get, settled, submit, task_request, token
 
 
 async def test_peer_rereads_rotated_token_for_discovery_and_task_requests(tmp_path):
@@ -137,10 +137,10 @@ async def test_static_workload_rotation_preserves_bound_session_owner(services, 
             )
             assert response.status_code == 401
         store = app.state.coordinator.store
-        assert (
-            store.db.execute("SELECT owner FROM sessions").fetchall()[0]["owner"]
-            == parent["subject"]
-        )
+        owner = app.state.coordinator.authentication.authenticate(
+            "Bearer " + first, workload_pin=digest(pin["workload"])
+        )["id"]
+        assert store.db.execute("SELECT owner FROM sessions").fetchone()["owner"] == owner
         assert store.db.execute("SELECT count(*) FROM sessions").fetchone()[0] == 1
     finally:
         await peer.close()
@@ -182,13 +182,9 @@ async def test_trace_requires_the_original_static_peer_identity(services, tmp_pa
     (child,) = app.state.coordinator.store.children(result["task_id"])
     identity = static_workload_identity(subject, sender_id, receiver_id)
     assert child["peer_binding"]["workload"] == identity
-    endpoint = sender["service"]["base_url"] + "/tasks/" + result["task_id"] + "/delegations"
-    page = (await client.get(endpoint)).raise_for_status().json()["children"][0]["trace"]
-    assert page["task_id"] == child["task_id"] and page["events"]
-    after = page["events"][0]["sequence"]
-    paged = (await client.get(endpoint, params={"after_sequence": after})).json()
-    assert all(event["sequence"] > after for event in paged["children"][0]["trace"]["events"])
-
+    endpoint = sender["service"]["base_url"] + "/tasks/" + result["task_id"]
+    report = (await operator_get(client, app, endpoint, "/delegations")).raise_for_status().json()
+    assert report["children"][0]["task_id"] == child["task_id"]
     policy_path = Path(receiver["authorization"]["policy_file"])
     policy = json.loads(policy_path.read_text())
     principal = next(p for p in policy["principals"] if p["subject"] == subject)
@@ -204,4 +200,4 @@ async def test_trace_requires_the_original_static_peer_identity(services, tmp_pa
     ) as other:
         base = receiver["service"]["base_url"]
         assert (await other.get(base + "/descriptor")).status_code == 200
-        assert (await other.get(base + "/tasks/" + child["task_id"] + "/events")).status_code == 403
+        assert (await other.get(base + "/tasks/" + child["task_id"] + "/events")).status_code == 404

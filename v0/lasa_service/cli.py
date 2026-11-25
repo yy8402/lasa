@@ -49,8 +49,9 @@ def add_init_options(parser):
     parser.add_argument("--provider-url", required=True)
     parser.add_argument("--credential-ref", default="env:LASA_MODEL_API_KEY")
     parser.add_argument(
-        "--operator-subject", help="Grant this user subject read-only design review"
+        "--consumer-subject", help="Grant this user subject read-only design review"
     )
+    parser.add_argument("--operator-subject", help="Grant access to private operator traces")
     parser.add_argument(
         "--state-root", type=Path, help="Parent of private and workspace directories"
     )
@@ -85,7 +86,9 @@ def initialize(args):
         credential_ref=args.credential_ref,
         state_root=args.state_root,
     )
-    write_scaffold(args.output, manifest, initial_policy(args.operator_subject))
+    write_scaffold(
+        args.output, manifest, initial_policy(args.consumer_subject, args.operator_subject)
+    )
     print(f"Created LASA configuration in {args.output}.")
 
 

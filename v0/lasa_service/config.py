@@ -16,7 +16,7 @@ from .auth import peer_workload_identity
 from .capabilities import reference
 from .connector_schema import check_schema, validate
 from .contracts import digest, parse_json, protocol_contracts
-from .grants import find_grant, grant_key
+from .grants import grant_key
 from .inspection import InspectionBindings
 from .workflows import REVIEW_CHECKLIST
 
@@ -344,6 +344,7 @@ class Configuration:
                     "Binding cannot authorize its required operation",
                 )
         for peer in config.peers:
+            config.execution_key(peer["execution_key_ref"])
             token = config.secret(peer["credential_ref"], label="Peer credential")
             try:
                 peer_workload_identity(token, peer, config.service_id)
@@ -352,7 +353,9 @@ class Configuration:
                     "Peer credential does not match its configured authentication mode or service ID"
                 ) from None
         config.configure_inspection()
-        config.policy()
+        for principal in config.policy()["principals"]:
+            if principal["kind"] == "peer" and principal["rules"]:
+                config.execution_key(principal["execution_key_ref"])
         return config
 
     def configure_inspection(self):
@@ -435,6 +438,16 @@ class Configuration:
         require(separator and name and kind in {"env", "file"}, "Unsupported secret reference")
         require(kind != "file" or Path(name).is_absolute(), "Secret file path must be absolute")
 
+    def execution_key(self, reference):
+        try:
+            key = bytes.fromhex(self.secret(reference, label="Execution binding key"))
+        except ValueError:
+            raise ConfigurationError(
+                "Expected a 32-byte hexadecimal execution binding key"
+            ) from None
+        require(len(key) == 32, "Expected a 32-byte hexadecimal execution binding key")
+        return key
+
     def policy(self):
         path = Path(self.document["authorization"]["policy_file"])
         policy = self.contracts.validate("AuthorizationPolicy", parse_json(path.read_bytes()))
@@ -446,21 +459,11 @@ class Configuration:
             for rule in principal["rules"]:
                 keys = [grant_key(grant) for grant in rule["delegation_grants"]]
                 require(len(keys) == len(set(keys)), "Duplicate delegation grant")
-                for trust in rule.get("verifier_trust", []):
-                    require(
-                        any(
-                            peer["expected_service_id"] == trust["service_id"]
-                            for peer in self.peers
-                        )
-                        and find_grant(
-                            rule["delegation_grants"],
-                            self.service_id,
-                            trust["service_id"],
-                            trust["contract"],
-                        )
-                        is not None,
-                        "Verifier trust must match a configured peer and an outbound delegation grant",
-                    )
+                require(
+                    rule.get("subtree_cap", 0)
+                    <= self.document["limits"]["max_derived_descendants"],
+                    "Subtree cap exceeds the accepted descendant maximum",
+                )
         return policy
 
     def verification_settings(self):

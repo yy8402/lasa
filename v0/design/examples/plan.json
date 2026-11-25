@@ -43,13 +43,9 @@
           "output_bytes": 12000,
           "artifact_bytes": 0
         },
-        "deadline": "2026-11-18T08:01:00Z",
-        "max_hops": 0
+        "deadline": "2026-11-18T08:01:00Z"
       }
     }
-  ],
-  "integration_requirement_ids": [
-    "requirement-review"
   ],
   "integration_reserve": {
     "model_tokens": 2000,

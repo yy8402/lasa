@@ -70,13 +70,13 @@ def initial_manifest(
     return protocol_contracts().validate("Config", manifest)
 
 
-def initial_policy(operator_subject):
+def initial_policy(consumer_subject, operator_subject):
     principals = []
-    if operator_subject:
+    if consumer_subject:
         definition, _ = builtin_capabilities()["design.review"]
         principals.append(
             {
-                "subject": operator_subject,
+                "subject": consumer_subject,
                 "kind": "user",
                 "rules": [
                     {
@@ -86,13 +86,16 @@ def initial_policy(operator_subject):
                         "effects": ["workspace.read"],
                         "budget": packaged_defaults()["limits"]["max_task_budget"],
                         "delegation_grants": [],
-                        "max_hops": 0,
                         "content_diagnostics": False,
                     }
                 ],
             }
         )
-    policy = {"revision": "initial", "principals": principals, "trusted_delegator_service_ids": []}
+    if operator_subject:
+        if consumer_subject == operator_subject:
+            raise ValueError("Consumer and operator subjects must be distinct")
+        principals.append({"subject": operator_subject, "kind": "operator", "rules": []})
+    policy = {"revision": "initial", "principals": principals}
     return protocol_contracts().validate("AuthorizationPolicy", policy)
 
 

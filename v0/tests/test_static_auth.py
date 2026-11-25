@@ -55,7 +55,7 @@ async def test_standalone_static_auth_uses_policy_and_reloads_credentials(servic
     descriptor = response.json()
     coordinator.config.contracts.validate("ServiceDescriptor", descriptor)
     assert descriptor["authentication"] == {"mode": "static_token"}
-    assert "bounded-delegation" in descriptor["protocols"][0]["features"]
+    assert "consumer-events" in descriptor["protocols"][0]["features"]
 
     client.headers.update(header(active))
     result = await settled(client, await submit(client, app, await task_request(client, app)))

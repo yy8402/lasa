@@ -13,13 +13,11 @@
     ],
     "local_assessment": "sufficient",
     "peer_assessment": "matched",
-    "assessment_summary": "Both services offer an authorized review of supplied text with the required coverage.",
     "catalog_revision": "catalog-r9",
     "offer_revision": "offer-review-r1",
     "authorization_decision_id": "authz-parent-001",
     "policy": {
-      "preferred_executor": "peer",
-      "unclaimed_peer_fallback": "reject"
+      "preferred_executor": "peer"
     },
     "selected_executor": "peer",
     "contract": {

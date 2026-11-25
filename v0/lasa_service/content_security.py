@@ -39,17 +39,12 @@ def has_credential_fields(value):
     return isinstance(value, list) and any(has_credential_fields(item) for item in value)
 
 
-PROJECTION_FIELDS = {
-    "reasoning.request": {"input"},
-    "reasoning.response": {"output", "deltas"},
-    "candidate.release": {"output", "text"},
-    "caller.request": {"input", "attachments", "answer", "dependencies"},
-    "caller.response": {"question", "content"},
-    "delegation.request": {"input", "dependencies", "attachments"},
-    "delegation.response": {"output", "text", "content"},
-    "tool.invoke": {"arguments"},
-    "tool.result": {"output"},
-}
+def task_inspection(request):
+    return {
+        "input": request["input"],
+        "attachments": request.get("attachments", []),
+        "dependencies": request.get("imports", []),
+    }
 
 
 def payload_digest(value):
@@ -75,12 +70,12 @@ class Transfer:
     source: str | tuple[str, ...] | None = None
     connector: str | None = None
     operation: str | None = None
+    intake: tuple[dict, dict] | None = None
 
 
 class ContentSecurity:
     def __init__(self, coordinator, transport):
         self.c = coordinator
-        self.inspection_revision = digest(coordinator.config.document.get("content_security", {}))
         self.bindings = coordinator.config.inspection
         self.recovery = coordinator.config.document["limits"]["content_recovery"]
         self.clients = {
@@ -96,30 +91,15 @@ class ContentSecurity:
         except (OSError, ValueError, LasaError):
             raise LasaError("content_gateway_unavailable", 503) from None
 
-    def legacy_release_revision(self, disclosure_revision):
-        return digest({"inspection": self.inspection_revision, "disclosure": disclosure_revision})
-
     def release_scope(self, *, artifact, disclosure_revision):
         binding = self.bindings.defaults["caller"]["response"]
         enforced = None
         if binding.fields["mode"] == "enforce":
             enforced = self.bindings.profiles[binding.profile_for(artifact=artifact)]
-        return digest({"enforced_inspection": enforced, "disclosure": disclosure_revision})
-
-    def adopt_release_scopes(self):
-        # Only a legacy grant valid under this exact configuration can acquire a scope.
-        policy = digest(self.disclosure())
-        self.c.store.db.execute(
-            "INSERT INTO content_release_scopes SELECT task_id,component, "
-            "CASE WHEN component='result' THEN ? ELSE ? END "
-            "FROM content_releases WHERE policy_revision=? "
-            "ON CONFLICT(task_id,component) DO NOTHING",
-            (
-                self.release_scope(artifact=False, disclosure_revision=policy),
-                self.release_scope(artifact=True, disclosure_revision=policy),
-                self.legacy_release_revision(policy),
-            ),
-        )
+        scope = {"enforced_inspection": enforced, "disclosure": disclosure_revision}
+        if enforced is not None:
+            scope["projection"] = "consumer-artifact" if artifact else "consumer-result"
+        return digest(scope)
 
     @staticmethod
     def source_classes(source, disclosure):
@@ -295,6 +275,15 @@ class ContentSecurity:
         *,
         candidate_revision=0,
     ):
+        def check_processing(destination):
+            if transfer.task_id is not None or transfer.intake is not None:
+                self.c.check_processing(transfer.task_id, destination, intake=transfer.intake)
+
+        check_processing(
+            None
+            if transfer.channel.startswith("caller.") or transfer.channel == "candidate.release"
+            else transfer.destination
+        )
         disclosure = self.disclosure()
         policy_revision = digest(disclosure)
         source_classes = self.source_classes(transfer.source, disclosure)
@@ -358,8 +347,18 @@ class ContentSecurity:
         verdict = "hard_deny" if reason else "permit"
         if verdict == "permit" and profile is not None:
             disclosed = classes <= set(destinations.get("inspection:" + profile_id, UNKNOWN))
+
+            def scanner_allowed():
+                check_processing("inspection:" + profile_id)
+
             scanned, retryable = await self.inspect(
-                decision, profile, projection, media_type, remaining, disclosed=disclosed
+                decision,
+                profile,
+                projection,
+                media_type,
+                remaining,
+                disclosed=disclosed,
+                check_processing=scanner_allowed,
             )
             if (
                 mode == "enforce"
@@ -369,8 +368,15 @@ class ContentSecurity:
                 and self.reserve_recovery(scanned, "inspection_retry")
             ):
                 scanned, _ = await self.inspect(
-                    decision, profile, projection, media_type, remaining, disclosed=disclosed
+                    decision,
+                    profile,
+                    projection,
+                    media_type,
+                    remaining,
+                    disclosed=disclosed,
+                    check_processing=scanner_allowed,
                 )
+            scanner_allowed()
             gateway_verdict, gateway_reason = scanned["verdict"], scanned["reason_code"]
             if mode == "enforce" and gateway_verdict != "permit":
                 verdict, reason = gateway_verdict, gateway_reason
@@ -404,14 +410,15 @@ class ContentSecurity:
         remaining,
         *,
         disclosed,
+        check_processing,
     ):
-        selected = self.sanitize_projection(
-            {
-                key: projection[key]
-                for key in PROJECTION_FIELDS[decision["channel"]]
-                if key in projection
-            }
-        )
+        selected = projection
+        release_payload = decision["purpose"] in {"result", "artifact"} and decision["channel"] in {
+            "candidate.release",
+            "delegation.response",
+        }
+        if not release_payload:
+            selected = self.sanitize_projection(selected)
         metadata = {
             **decision,
             "inspection_id": identity("inspection"),
@@ -451,6 +458,7 @@ class ContentSecurity:
         if len(raw) > MAX_INSPECTION_REQUEST_BYTES or limit <= 0:
             return outcome("indeterminate", "inspection_limit")
         self.c.contracts.validate("ContentInspectionRequest", request)
+        check_processing()
         self.record({**metadata, "verdict": "permit", "reason_code": "scanner_disclosure"})
         try:
             async with asyncio.timeout(limit):

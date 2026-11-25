@@ -29,12 +29,13 @@ from lasa_service.deployment import POLICY_REVISION as DLP_REVISION
 from lasa_service.deployment import PRESIDIO_IMAGE, DockerDeployment
 
 from .http_helpers import certificate
-from .protocol_helpers import sse_final, sse_tool
+from .protocol_helpers import sse_final, sse_tool, verification_report
 
 ROOT = Path(__file__).resolve().parents[1]
 PEERS = {"review": "design.review", "attempt": "task.attempt"}
 MODEL_KEY = "local-responses-fixture"
 GATEWAY_KEY = "local-inspection-fixture"
+EXECUTION_KEY = secrets.token_hex(32)
 SOURCE_KEY = "local-connector-fixture"
 GATEWAY_ID = "smoke-local-inspection"
 DLP_PROFILE = "local-text-dlp"
@@ -91,13 +92,13 @@ CHANNEL_DENIALS = {
     "tool.result": ("connector_result", "connector_off"),
 }
 GATEWAY_FIELDS = {
-    "caller.request": {"input", "attachments", "dependencies", "answer"},
+    "caller.request": {"answer", "attachments", "dependencies", "input"},
     "caller.response": {"question", "content"},
     "reasoning.request": {"input"},
     "reasoning.response": {"output", "deltas"},
     "candidate.release": {"output", "text"},
-    "delegation.request": {"input", "dependencies", "attachments"},
-    "delegation.response": {"output", "text", "content"},
+    "delegation.request": {"attachments", "dependencies", "input"},
+    "delegation.response": {"content", "output", "text"},
     "tool.invoke": {"arguments"},
     "tool.result": {"output"},
 }
@@ -164,6 +165,7 @@ def configure(root, name, namespace, *, trusted_parent=None):
         registry = {"tokens": []}
         for subject, filename in (
             ("operator", "operator-token.txt"),
+            ("consumer", "consumer-token.txt"),
             ("peer-parent", "peer-token.txt"),
         ):
             token = secrets.token_urlsafe(32)
@@ -426,7 +428,6 @@ def authorize(root, configs, parent_name="parent", peers=PEERS):
     policy_path = root / parent_name / "authorization.json"
     policy = read(policy_path)
     rule = policy["principals"][0]["rules"][0]
-    parent["routing"]["unclaimed_peer_fallback"] = "reject"
     for name, contract_name in peers.items():
         receiver = configs[name]["service"]["id"]
         token_path = root / parent_name / f"{name}-token.txt"
@@ -438,7 +439,7 @@ def authorize(root, configs, parent_name="parent", peers=PEERS):
                 "expected_service_id": receiver,
                 "allowed_base_url": base(name),
                 "credential_ref": "file:" + str(token_path),
-                "authorization_ref": "default",
+                "execution_key_ref": "env:LASA_EXECUTION_KEY",
                 "request_timeout_seconds": 5,
                 "ca_file": str(root / "ca.pem"),
             }
@@ -497,8 +498,6 @@ def propose_plan(context):
                     "depends_on": [],
                     "contract_digest": request["contract"]["digest"],
                     "input_json": json.dumps(request["input"]),
-                    "local_assessment": "sufficient",
-                    "assessment_summary": "Exercise one authenticated delegate.",
                 }
             ]
         }
@@ -521,12 +520,10 @@ def propose_plan(context):
         "steps": [
             {
                 "step_id": step,
-                "requirement_ids": requirements,
+                "requirement_ids": requirements if dependencies else [],
                 "depends_on": dependencies,
                 "contract_digest": contract,
                 "input_json": json.dumps(inputs),
-                "local_assessment": "sufficient",
-                "assessment_summary": "Deterministic container fixture.",
             }
             for step, contract, inputs, dependencies in steps
         ]
@@ -583,10 +580,7 @@ def execute_fixture(context):
             )
             summary = "The parent integrated both verified peer results."
         else:
-            assert (
-                context["delegated_dependencies"]["step-review"]["coverage"][0]["criterion_id"]
-                == "selection"
-            )
+            assert context["imports"][0]["output"]["coverage"][0]["criterion_id"] == "selection"
             summary = "The worker consumed the verified review."
         output = {
             "disposition": "fulfilled",
@@ -747,14 +741,7 @@ def serve_fixture(directory):
                 text := dlp_fixture_text(inputs.get("objective", ""), "model-response")
             ):
                 data = sse_tool("workspace_write", {"relative_path": "effect.txt", "text": text}, 1)
-            elif (
-                first_turn
-                and any(
-                    MARKERS[key] in inputs.get("objective", "")
-                    for key in ("release", "delegation_response")
-                )
-                or (first_turn and dlp_fixture_text(inputs.get("objective", ""), "delegate-result"))
-            ):
+            elif first_turn and MARKERS["release"] in inputs.get("objective", ""):
                 data = sse_tool(
                     "workspace_write", {"relative_path": "effect.txt", "text": "confirmed"}, 1
                 )
@@ -792,11 +779,20 @@ def serve_fixture(directory):
                     assert attempt_input["step_id"] == "step-attempt"
                     assert attempt_input["content"] == context["input"]
         schema = message_format["schema"]
-        answer = (
-            propose_plan(payload(body))
-            if "steps" in schema["properties"]
-            else {"passed": True, "reason": "Deterministic verification fixture."}
-        )
+        if "steps" in schema["properties"]:
+            answer = propose_plan(payload(body))
+        elif message_format["name"] == "lasa_verification":
+            answer = verification_report(context["criteria"])
+        else:
+            context = json.loads(body["input"][-1]["content"][0]["text"])
+            answer = {
+                "criteria": [
+                    verification_report([item], evidence=f"step:{item['owner_step_id']}")[
+                        "criteria"
+                    ][0]
+                    for item in context["criteria"]
+                ]
+            }
         return {
             "output": [
                 {
@@ -828,10 +824,15 @@ def state_rows(root, name, statement, arguments=()):
         return db.execute(statement, arguments).fetchall()
 
 
+def task_usage(root, name, task_id):
+    rows = state_rows(root, name, "SELECT spent FROM ledger_totals WHERE task_id=?", (task_id,))
+    return json.loads(rows[0][0]) if rows else {}
+
+
 def checked_task(
     client, root, name, profile, inputs, scenario, *, intake_denied=False, answer_question=None
 ):
-    token = (root / name / "operator-token.txt").read_text().strip()
+    token = (root / name / "consumer-token.txt").read_text().strip()
     headers = {"Authorization": "Bearer " + token}
     catalog = client.get(base(name) + "/capabilities", headers=headers).raise_for_status().json()
     offer = next(x for x in catalog["offers"] if x["contract"]["id"].endswith("/" + profile))
@@ -853,11 +854,8 @@ def checked_task(
         "input": inputs,
         "requested_limits": {
             "budget": offer["max_budget"],
-            "max_hops": min(1, offer["max_hops"]),
             "deadline": (datetime.now(UTC) + timedelta(seconds=160)).isoformat(),
         },
-        "authorization_ref": offer["authorization_ref"],
-        "diagnostics": "metadata",
     }
     response = client.post(
         base(name) + f"/sessions/{session['session_id']}/tasks",
@@ -991,7 +989,10 @@ def verify_content(client, root):
             control = (
                 client.get(location + "?view=control", headers=headers).raise_for_status().json()
             )
-            assert control["effect_disposition"] == "known" and control["usage"]["tool_calls"] == 1
+            assert (
+                control["effect_disposition"] == "known"
+                and task_usage(root, name, task["task_id"])["tool_calls"] == 1
+            )
 
     for scenario in ("delegation_request", "delegation_response"):
         receiver = "review" if scenario == "delegation_request" else "attempt"
@@ -1005,11 +1006,7 @@ def verify_content(client, root):
         if scenario == "delegation_request":
             assert admitted == 0 and task["problem"]["effect_disposition"] == "none"
         else:
-            assert admitted == 1 and task["problem"]["effect_disposition"] == "known", task
-            control = (
-                client.get(location + "?view=control", headers=headers).raise_for_status().json()
-            )
-            assert control["usage"]["tool_calls"] == 1
+            assert admitted == 1 and task["problem"]["effect_disposition"] == "none", task
         outcomes[scenario] = {"blocked": True, "child_tasks_admitted": admitted}
 
     _, observed_task, _ = checked_task(
@@ -1086,7 +1083,14 @@ def verify_content(client, root):
         if scenario == "connector_allowed":
             assert task["status"] == "completed", task
             (manifest,) = task["result"]["artifacts"]
-            assert manifest["provenance"]["operation_id"].startswith("tool-")
+            ((stored,),) = state_rows(
+                root,
+                "review",
+                "SELECT manifest FROM artifacts WHERE id=?",
+                (manifest["artifact_id"],),
+            )
+            assert json.loads(stored)["provenance"]["operation_id"].startswith("tool-")
+            assert "provenance" not in manifest
             artifact = client.get(
                 location + "/artifacts/" + manifest["artifact_id"], headers=headers
             )
@@ -1294,9 +1298,9 @@ def verify_dlp_case(client, root, mode, scenario, reason, marker):
                 and json.loads(writes[0][1])["arguments"]["text"] == marker
             )
         ), (operation, writes)
-        control = client.get(location + "?view=control", headers=headers).raise_for_status().json()
-        assert control["usage"]["model_calls"] >= 1
-        assert control["usage"]["tool_calls"] == int(not blocked)
+        usage = task_usage(root, receiver, task_id)
+        assert usage["model_calls"] >= 1
+        assert usage["tool_calls"] == int(not blocked)
         deliveries = len(writes)
     elif scenario.startswith("delegate-"):
         ((record,),) = state_rows(
@@ -1323,7 +1327,7 @@ def verify_dlp_case(client, root, mode, scenario, reason, marker):
             control = (
                 client.get(location + "?view=control", headers=headers).raise_for_status().json()
             )
-            assert control["effect_disposition"] == "known" and control["usage"]["tool_calls"] == 1
+            assert control["effect_disposition"] == "none"
             deliveries = int(task.get("result", {}).get("output", {}).get("summary") == marker)
             assert any(marker in json.dumps(request) for request in model) == (not blocked), (
                 operation
@@ -1405,7 +1409,7 @@ def verify_dlp(root):
     names = (*DLP_TARGETS, *(f"delegates-{mode}-child" for mode in DLP_MODES))
     with httpx.Client(verify=ca, trust_env=False, timeout=6) as client:
         for name in names:
-            token = (root / name / "operator-token.txt").read_text().strip()
+            token = (root / name / "consumer-token.txt").read_text().strip()
             wait_ready(client, origin(name), {"Authorization": "Bearer " + token})
         gateway = origin("inspection")
         token = (root / "inspection/token.txt").read_text().strip()
@@ -1646,18 +1650,34 @@ def verify_required_document_read(client, root):
     document_id = DLP_CASES[reason] + ".md"
     before = len(read_traffic(root, "source"))
     location, task, headers = checked_task(
-        client, root, name, "documents.read",
-        {"collection": "lasa-docs", "document_id": document_id}, "required-document-denied",
+        client,
+        root,
+        name,
+        "documents.read",
+        {"collection": "lasa-docs", "document_id": document_id},
+        "required-document-denied",
     )
-    assert task["status"] == "failed" and task["problem"]["code"] in {"disclosure_denied", "verification_failed"}
-    control = client.get(location + "?view=control", headers=headers).raise_for_status().json()
-    assert control["usage"]["tool_calls"] == 0
-    assert all(item.get("report_id") != document_id for item in read_traffic(root, "source")[before:])
-    (denial,) = [row for row in inspection_decisions(root, name, task["task_id"], "tool.invoke")
-                 if "inspection_id" in row and row["reason_code"] == "gateway_hard_deny"]
+    assert task["status"] == "failed" and task["problem"]["code"] in {
+        "disclosure_denied",
+        "verification_failed",
+    }
+    assert task_usage(root, name, task["task_id"])["tool_calls"] == 0
+    assert all(
+        item.get("report_id") != document_id for item in read_traffic(root, "source")[before:]
+    )
+    (denial,) = [
+        row
+        for row in inspection_decisions(root, name, task["task_id"], "tool.invoke")
+        if "inspection_id" in row and row["reason_code"] == "gateway_hard_deny"
+    ]
     assert denial["destination"] == "connector:documents.read" and denial["mode"] == "enforce"
-    return {"scenario": "required-documents.read", "case": reason, "verdict": "hard_deny",
-            "destination_calls": 0, "inspection_ids": [denial["inspection_id"]]}
+    return {
+        "scenario": "required-documents.read",
+        "case": reason,
+        "verdict": "hard_deny",
+        "destination_calls": 0,
+        "inspection_ids": [denial["inspection_id"]],
+    }
 
 
 def verify_recovery_canary(root):
@@ -1666,7 +1686,7 @@ def verify_recovery_canary(root):
     tls = ssl.create_default_context(cafile=root / "ca.pem")
     with httpx.Client(verify=tls, trust_env=False, timeout=6) as client:
         for name in names:
-            token = (root / name / "operator-token.txt").read_text().strip()
+            token = (root / name / "consumer-token.txt").read_text().strip()
             wait_ready(client, origin(name), {"Authorization": "Bearer " + token})
         for group in ("model", "delegates", "connectors"):
             for reason in ("pii_detected", "credential_detected"):
@@ -1741,24 +1761,24 @@ def verify_dlp_logs(output, logs, token):
 
 def verify(root):
     verify_tls = ssl.create_default_context(cafile=root / "ca.pem")
-    token = (root / "parent/operator-token.txt").read_text().strip()
+    token = (root / "parent/consumer-token.txt").read_text().strip()
     with httpx.Client(
         verify=verify_tls, trust_env=False, timeout=6, headers={"Authorization": "Bearer " + token}
     ) as client:
         for name in (*PEERS, "parent"):
-            receiver_token = (root / name / "operator-token.txt").read_text().strip()
+            receiver_token = (root / name / "consumer-token.txt").read_text().strip()
             wait_ready(client, origin(name), {"Authorization": "Bearer " + receiver_token})
-        review_operator = (root / "review/operator-token.txt").read_text().strip()
+        review_consumer = (root / "review/consumer-token.txt").read_text().strip()
         review = (
             client.get(
                 base("review") + "/descriptor",
-                headers={"Authorization": "Bearer " + review_operator},
+                headers={"Authorization": "Bearer " + review_consumer},
             )
             .raise_for_status()
             .json()
         )
         assert review["authentication"]["mode"] == "static_token"
-        assert "bounded-delegation" in review["protocols"][0]["features"]
+        assert "consumer-events" in review["protocols"][0]["features"]
         descriptor = client.get(base("parent") + "/descriptor").raise_for_status().json()
         protocol = descriptor["protocols"][0]["version"]
         assert protocol == review["protocols"][0]["version"] == "lasa/1.0.0", descriptor
@@ -1805,11 +1825,8 @@ def verify(root):
                 },
                 "requested_limits": {
                     "budget": offer["max_budget"],
-                    "max_hops": 1,
                     "deadline": (datetime.now(UTC) + timedelta(seconds=240)).isoformat(),
                 },
-                "authorization_ref": offer["authorization_ref"],
-                "diagnostics": "metadata",
             },
         ).raise_for_status()
         location = task.headers["Location"]
@@ -1827,14 +1844,29 @@ def verify(root):
             time.sleep(0.25)
         assert outcome["status"] == "completed", outcome
         result = outcome["result"]
-        assert result["usage"]["delegations"] == 2
+        usage = task_usage(root, "parent", outcome["task_id"])
+        assert usage["delegations"] == 2
         assert result["output"]["summary"] == "The parent integrated both verified peer results."
-        report = client.get(location + "/delegations").raise_for_status().json()
+        assert client.get(location + "/delegations").status_code == 404
+        operator_path = location.replace("/tasks/", "/operator/tasks/") + "/delegations"
+        assert client.get(operator_path).status_code == 403
+        operator_token = (root / "parent/operator-token.txt").read_text().strip()
+        report = (
+            client.get(operator_path, headers={"Authorization": "Bearer " + operator_token})
+            .raise_for_status()
+            .json()
+        )
         children = report["children"]
         for child, name in zip(children, PEERS, strict=True):
             receiver = read(root / name / "config.json")["service"]["id"]
             assert child["service_id"] == receiver and child["state"] == "completed", child
-            events = child["trace"]["events"]
+            operator_token = (root / name / "operator-token.txt").read_text().strip()
+            operator_events = base(name) + "/operator/tasks/" + child["task_id"] + "/events"
+            events = (
+                client.get(operator_events, headers={"Authorization": "Bearer " + operator_token})
+                .raise_for_status()
+                .json()["events"]
+            )
             routing = next(event["payload"] for event in events if event["kind"] == "routing")
             assert routing["contract"]["id"].endswith("/" + PEERS[name]), routing
             calls = [
@@ -1879,7 +1911,7 @@ def verify(root):
                         for child in children
                     ],
                     "wrong_audience_status": 401,
-                    "model_calls": result["usage"]["model_calls"],
+                    "reserved_and_local_model_calls": usage["model_calls"],
                     "delegate_response_modes": {"review": "off", "attempt": "enforce"},
                 },
                 indent=2,
@@ -2161,6 +2193,8 @@ def run(args, root):
                 "LASA_MODEL_API_KEY=" + MODEL_KEY,
                 "--env",
                 "LASA_GATEWAY_KEY=" + GATEWAY_KEY,
+                "-e",
+                "LASA_EXECUTION_KEY=" + EXECUTION_KEY,
                 "--env",
                 "LASA_SOURCE_KEY=" + SOURCE_KEY,
                 image,

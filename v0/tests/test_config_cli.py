@@ -60,7 +60,7 @@ def deployment(tmp_path):
 def test_scaffold_defaults_and_secrets_are_checked_without_startup(tmp_path, deployment):
     manifest_dir, key_file, args = deployment
     path = manifest_dir / "config.json"
-    result = cli(tmp_path, *args, "--operator-subject", "alice")
+    result = cli(tmp_path, *args, "--consumer-subject", "alice")
     assert result.returncode == 0, result.stderr
     policy = manifest_dir / "authorization.json"
     assert policy.stat().st_mode & 0o777 == 0o600
@@ -105,9 +105,7 @@ def test_scaffold_defaults_and_secrets_are_checked_without_startup(tmp_path, dep
     revision = cfg.document["service"]["deployment_revision"]
     key_file.write_text("rotated")
     assert cfg.secret(f"file:{key_file}") == "rotated"
-    policy.write_text(
-        json.dumps({"revision": "revoked", "principals": [], "trusted_delegator_service_ids": []})
-    )
+    policy.write_text(json.dumps({"revision": "revoked", "principals": []}))
     assert cfg.policy()["principals"] == []
     assert Configuration.load(path).document["service"]["deployment_revision"] == revision
 
@@ -159,7 +157,7 @@ def static_deployment(tmp_path, deployment):
     for flag in ("--issuer", "--jwks-file"):
         index = args.index(flag)
         del args[index : index + 2]
-    result = cli(tmp_path, *args, "--auth-mode", "static_token", "--operator-subject", "alice")
+    result = cli(tmp_path, *args, "--auth-mode", "static_token", "--consumer-subject", "alice")
     assert result.returncode == 0, result.stderr
     key.write_text("fixture-key")
     return folder / "config.json", folder / "authorization.json", folder / "static-tokens.json"
@@ -198,6 +196,8 @@ def test_config_check_validates_each_outbound_credential(tmp_path, static_deploy
     authority = json.loads(policy.read_text())
     receiver = "https://peer.example.net/lasa"
     credential = tmp_path / "peer-token.txt"
+    execution_key = tmp_path / "execution-key.txt"
+    execution_key.write_text(secrets.token_hex(32))
     opaque = secrets.token_urlsafe(32)
     signed = token("workload", receiver)
     peer = {
@@ -205,15 +205,20 @@ def test_config_check_validates_each_outbound_credential(tmp_path, static_deploy
         "allowed_base_url": receiver + "/v1",
         "expected_service_id": receiver,
         "credential_ref": f"file:{credential}",
-        "authorization_ref": "default",
+        "execution_key_ref": f"file:{execution_key}",
         "authentication": {"mode": mode},
     }
     if mode == "static_token":
         peer["authentication"]["subject"] = "workload"
     manifest["peers"] = [peer]
-    authority["trusted_delegator_service_ids"] = [receiver]
     authority["principals"].append(
-        {"subject": "workload", "kind": "peer", "service_id": receiver, "rules": []}
+        {
+            "subject": "workload",
+            "kind": "peer",
+            "service_id": receiver,
+            "execution_key_ref": f"file:{execution_key}",
+            "rules": [],
+        }
     )
     (rule,) = authority["principals"][0]["rules"]
     rule["delegation_grants"] = [

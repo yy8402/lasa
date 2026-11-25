@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse, Response
 from starlette.exceptions import HTTPException
 
 from .capabilities import require
+from .consumer import artifact_release, require_public_data, task_view
 from .contracts import parse_json
 from .coordinator import Coordinator
 from .errors import LasaError
@@ -89,8 +90,10 @@ def create_app(
     c.discovery.mount(app)
     prefix = urlsplit(config.document["service"]["base_url"]).path.rstrip("/")
 
-    def principal(request):
-        return c.authentication.authenticate_headers(request.headers)
+    def principal(request, *, operator=False):
+        identity = c.authentication.authenticate_headers(request.headers)
+        require((identity["kind"] == "operator") == operator, "authority_denied", 403)
+        return identity
 
     def query_integer(request, name, default, minimum, maximum):
         try:
@@ -125,10 +128,12 @@ def create_app(
 
     def response(document, status=200, *, audience=None):
         if "question" in document:
-            row, _ = c.store.task(document["task_id"], audience["subject"])
+            row, _ = c.store.task(document["task_id"], audience["id"])
             c.check_read_authority(row, audience)
         if "result" in document:
             c.check_release_read(document["task_id"], "result", document["result"], audience)
+        if audience:
+            document = c.contracts.validate("ConsumerTask", task_view(c.store, document))
         headers = {"Cache-Control": "no-store"}
         if "task_id" in document:
             headers.update(
@@ -162,7 +167,7 @@ def create_app(
 
     @app.get(prefix + "/sessions/{session_id}")
     async def session(session_id: str, request: Request):
-        return response(c.store.session(session_id, principal(request)["subject"])[1])
+        return response(c.store.session(session_id, principal(request)["id"])[1])
 
     @app.post(prefix + "/sessions/{session_id}/tasks")
     async def submit(session_id: str, request: Request):
@@ -174,9 +179,14 @@ def create_app(
     @app.get(prefix + "/tasks/{task_id}")
     async def task(task_id: str, request: Request):
         p = principal(request)
-        row, document = c.store.task(task_id, p["subject"])
+        row, document = c.store.task(task_id, p["id"])
         if request.query_params.get("view") == "control":
-            return response(c.task_disposition(row, document, p))
+            c.check_task_identity(row, p)
+            return response(
+                c.contracts.validate(
+                    "ConsumerTaskDisposition", task_view(c.store, document, control=True)
+                )
+            )
         return response(document, audience=p)
 
     @app.post(prefix + "/tasks/{task_id}/inputs")
@@ -223,7 +233,7 @@ def create_app(
         p = principal(request)
         row = c.store.db.execute(
             "SELECT * FROM operations WHERE owner=? AND operation_id=?",
-            (p["subject"], operation_id),
+            (p["id"], operation_id),
         ).fetchone()
         require(row is not None, "not_found", 404)
         value = {
@@ -233,30 +243,56 @@ def create_app(
             "resource_id": row["resource_id"],
             "http_status": row["status"],
         }
+        if row["kind"] == "task":
+            _, task = c.store.task(row["resource_id"], p["id"])
+            value.update(selection=task["selection"], processing=task["processing"])
         c.contracts.validate("OperationReceipt", value)
         return JSONResponse(value, headers={"Cache-Control": "no-store"})
 
-    @app.get(prefix + "/tasks/{task_id}/delegations")
+    @app.get(prefix + "/operator/tasks/{task_id}/delegations")
     async def delegations(task_id: str, request: Request):
-        after = query_integer(request, "after_sequence", "0", 0, MAX_AFTER_SEQUENCE)
         return JSONResponse(
-            await c.diagnostics.children_report(task_id, principal(request), after),
+            c.diagnostics.children_report(task_id, principal(request, operator=True)),
+            headers={"Cache-Control": "no-store"},
+        )
+
+    @app.get(prefix + "/operator/tasks/{task_id}/events")
+    async def operator_events(task_id: str, request: Request):
+        after = query_integer(request, "after_sequence", "0", 0, MAX_AFTER_SEQUENCE)
+        limit = query_integer(request, "limit", "50", 1, 100)
+        return JSONResponse(
+            c.diagnostics.page(task_id, principal(request, operator=True), after, limit),
             headers={"Cache-Control": "no-store"},
         )
 
     @app.get(prefix + "/tasks/{task_id}/events")
     async def events(task_id: str, request: Request):
+        p = principal(request)
+        row, _ = c.store.task(task_id, p["id"])
+        c.check_task_identity(row, p)
         after = query_integer(request, "after_sequence", "0", 0, MAX_AFTER_SEQUENCE)
         limit = query_integer(request, "limit", "50", 1, 100)
+        entries = [
+            dict(item)
+            for item in c.store.db.execute(
+                "SELECT sequence,status FROM consumer_events WHERE task_id=? AND sequence>? "
+                "ORDER BY sequence LIMIT ?",
+                (task_id, after, limit),
+            )
+        ]
+        page = {
+            "task_id": task_id,
+            "events": entries,
+            "next_sequence": (entries[-1]["sequence"] if entries else after) + 1,
+        }
         return JSONResponse(
-            await c.diagnostics.release_page(task_id, principal(request), after, limit),
-            headers={"Cache-Control": "no-store"},
+            c.contracts.validate("ConsumerEventPage", page), headers={"Cache-Control": "no-store"}
         )
 
     @app.get(prefix + "/tasks/{task_id}/artifacts/{artifact_id}")
     async def artifact(task_id: str, artifact_id: str, request: Request):
         p = principal(request)
-        c.store.task(task_id, p["subject"])
+        c.store.task(task_id, p["id"])
         row = c.store.db.execute(
             "SELECT * FROM artifacts WHERE id=? AND task_id=? AND released=1",
             (artifact_id, task_id),
@@ -270,7 +306,9 @@ def create_app(
             "verification_failed",
             500,
         )
-        c.check_release_read(task_id, artifact_id, data, p)
+        public_artifact = artifact_release(manifest, data)
+        c.check_release_read(task_id, artifact_id, public_artifact, p)
+        require_public_data(c, task_id, public_artifact)
         return Response(
             data,
             media_type=manifest["media_type"],

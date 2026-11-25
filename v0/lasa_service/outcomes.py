@@ -21,6 +21,14 @@ def supported(condition):
         raise LasaError("verification_failed", 422)
 
 
+def source_resource(profile, value):
+    if profile == "documents-read-v1":
+        return "documents:lasa"
+    if profile == "repository-inspect-v1" and isinstance(value, dict) and "result" in value:
+        return "documentation:python-sdk"
+    return "repository:python-sdk"
+
+
 def assemble_source_outcome(profile, contract, inputs, material):
     input_digest = digest(inputs)
     facts = []

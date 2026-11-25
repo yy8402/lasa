@@ -28,6 +28,7 @@ JWK = json.loads(jwt.algorithms.ECAlgorithm.to_jwk(KEY.public_key())) | {
     "use": "sig",
 }
 ISSUER = "https://identity.example.net"
+EXECUTION_KEY = "a7f56edd7e80acdb9aa778feec3db68754dbd6afe90010b86a95530c90571d31"
 
 
 def example(name):
@@ -100,16 +101,12 @@ def documents(tmp_path, layer="layer1", *, peer=False):
         "effects": ["workspace.read", "workspace.write"],
         "delegation_grants": [],
         "budget": raw["limits"]["max_task_budget"],
-        "max_hops": 2,
         "content_diagnostics": False,
     }
     for contract in raw["published_contracts"]:
         add_delegation_grant(raw, rule, contract)
     policy = {
         "revision": "policy-1",
-        "trusted_delegator_service_ids": (
-            ["https://identity.example.net/services/layer1"] if layer != "layer1" else []
-        ),
         "principals": [
             {"subject": "alice", "kind": "user", "rules": [copy.deepcopy(rule)]},
             {"subject": "bob", "kind": "user", "rules": []},
@@ -117,8 +114,10 @@ def documents(tmp_path, layer="layer1", *, peer=False):
                 "subject": "peer-layer1",
                 "kind": "peer",
                 "service_id": "https://identity.example.net/services/layer1",
+                "execution_key_ref": "env:LASA_EXECUTION_KEY",
                 "rules": [copy.deepcopy(rule)],
             },
+            {"subject": "operator", "kind": "operator", "rules": []},
         ],
     }
     (tmp_path / "authorization.json").write_text(json.dumps(policy))
@@ -130,7 +129,6 @@ def documents(tmp_path, layer="layer1", *, peer=False):
         raw["peers"][0].update(
             descriptor_url="https://layer2.example.net/prefix/lasa/v1/descriptor",
             allowed_base_url="https://layer2.example.net/prefix/lasa/v1",
-            authorization_ref="default",
             credential_ref="env:PEER_TOKEN",
         )
     return raw
@@ -142,6 +140,7 @@ def configuration(raw):
         environ={
             "MODEL_KEY": "test-model-key",
             "GATEWAY_KEY": "test-gateway-key",
+            "LASA_EXECUTION_KEY": EXECUTION_KEY,
             **{
                 peer["credential_ref"][4:]: token(
                     "peer-" + raw["service"]["id"].rsplit("/", 1)[-1], peer["expected_service_id"]
@@ -282,7 +281,7 @@ async def deterministic_verifier(c, task_id, definition, inputs, output, evidenc
     return True
 
 
-async def deterministic_planner(c, task_id, request, peer_catalog, requirements):
+async def deterministic_planner(c, task_id, request, contracts, requirements):
     from lasa_service.contracts import canonical
 
     return {
@@ -293,8 +292,6 @@ async def deterministic_planner(c, task_id, request, peer_catalog, requirements)
                 "depends_on": [],
                 "contract_digest": request["selection"]["contract"]["digest"],
                 "input_json": canonical(request["input"]).decode(),
-                "local_assessment": "sufficient",
-                "assessment_summary": "Deterministic controller fixture.",
             }
         ]
     }
@@ -355,12 +352,9 @@ async def task_request(client, app, *, profile="task.attempt", inputs=None, oper
         },
         "input": inputs,
         "requested_limits": {
-            "budget": copy.deepcopy(c.config.document["limits"]["max_task_budget"]),
+            "budget": copy.deepcopy(offer["max_budget"]),
             "deadline": (datetime.now(UTC) + timedelta(seconds=120)).isoformat(),
-            "max_hops": offer["max_hops"],
         },
-        "authorization_ref": "default",
-        "diagnostics": "metadata",
     }
 
 
@@ -391,3 +385,13 @@ async def settled(client, response):
             return result.json()
         await asyncio.sleep(0.005)
     raise AssertionError("Task did not settle")
+
+
+async def operator_get(client, app, url, suffix, **kwargs):
+    c = app.state.coordinator
+    prefix, task = url.rsplit("/tasks/", 1)
+    return await client.get(
+        prefix + "/operator/tasks/" + task + suffix,
+        headers={"Authorization": "Bearer " + token("operator", c.config.service_id)},
+        **kwargs,
+    )

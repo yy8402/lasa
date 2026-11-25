@@ -335,11 +335,11 @@ class Connector:
 
     def _drain(self):
         while not self.queue.empty():
-            _, _, _, future = self.queue.get_nowait()
+            _, _, _, before_use, future = self.queue.get_nowait()
             if not future.done():
                 future.set_exception(ConnectorFailure())
 
-    async def call(self, operation_id, arguments, seconds):
+    async def call(self, operation_id, arguments, seconds, *, before_use):
         if self.closed or self.state(operation_id) != "available":
             raise ConnectorFailure(self.state(operation_id))
         operation = self.operations[operation_id]
@@ -350,7 +350,7 @@ class Connector:
             seconds, self.limits["request_timeout_seconds"]
         )
         try:
-            self.queue.put_nowait((operation_id, arguments, end, future))
+            self.queue.put_nowait((operation_id, arguments, end, before_use, future))
         except asyncio.QueueFull:
             raise ConnectorFailure("busy", code="capacity_exhausted") from None
         try:
@@ -447,7 +447,13 @@ class Connector:
                                 continue
                             try:
                                 async with asyncio.timeout(until_refresh):
-                                    operation_id, arguments, end, future = await self.queue.get()
+                                    (
+                                        operation_id,
+                                        arguments,
+                                        end,
+                                        before_use,
+                                        future,
+                                    ) = await self.queue.get()
                             except TimeoutError:
                                 continue
                             if future.cancelled():
@@ -459,8 +465,19 @@ class Connector:
                             if seconds <= 0:
                                 future.set_exception(LasaError("deadline_exceeded", 422))
                                 continue
+
+                            async def invoke(before_use, call, operation, arguments, seconds):
+                                before_use()
+                                return await call(operation, arguments, seconds)
+
                             self.active = asyncio.create_task(
-                                backend.call(self.operations[operation_id], arguments, seconds)
+                                invoke(
+                                    before_use,
+                                    backend.call,
+                                    self.operations[operation_id],
+                                    arguments,
+                                    seconds,
+                                )
                             )
                             future.add_done_callback(
                                 lambda f, call=self.active: call.cancel() if f.cancelled() else None

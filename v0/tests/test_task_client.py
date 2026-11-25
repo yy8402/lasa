@@ -34,6 +34,7 @@ async def test_runnable_client_uses_target_api_over_real_https(services, tmp_pat
         async with asyncio.timeout(15):
             stdout, stderr = await process.communicate()
         assert process.returncode == 0, stderr.decode()
-        assert b'"status": "completed"' in stdout and b'"kind": "routing"' in stdout
+        assert b'"status": "completed"' in stdout and b'"sequence":' in stdout
+        assert b'"kind": "routing"' not in stdout
         assert b"Session operation: session-" in stdout and b"Task operation: task-" in stdout
         assert env["LASA_ACCESS_TOKEN"].encode() not in stdout

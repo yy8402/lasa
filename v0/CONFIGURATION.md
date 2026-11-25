@@ -20,7 +20,7 @@ In the tables, **Required** means the field must appear in the supplied object. 
 | `verification` | No | The default executor's model and the provider's reasoning defaults | Object with `model` and optional `reasoning_effort` | Selects the model for outcome verification using the default executor's provider and credentials. Set it after evaluating the model on correct and incorrect outcomes. |
 | `content_security` | No | Built-in safeguards and metadata audit | Object with optional `inspection_profiles` and grouped `bindings` | Selects which content streams use an inspection profile and how its verdict applies. |
 | `peers` | No | `[]` | Ordered list of 0–16 peer objects with distinct, non-self service IDs | Supplies downstream routes. Order breaks ties among suitable peers. Leave it empty for standalone operation. |
-| `routing` | No | Local preference and reject fallback | Object | Changes how eligible local and peer routes are selected. |
+| `routing` | No | Local preference | Object | Changes how eligible local and peer routes are selected. |
 | `storage` | No | See below | Object | Overrides private state paths or listener settings. |
 | `limits` | No | See below | Object | Sets service-wide task and lifecycle ceilings. |
 | `discovery_cache` | No | See below | Object | Controls freshness and pagination for discovery. |
@@ -64,9 +64,23 @@ Use HTTPS service URLs without embedded credentials, a query, or a fragment. LAS
 | `authentication.jwks_file` | One JWKS source for JWT | None | Non-empty path to a public JWKS JSON file | Loads signing keys from disk. Use it for a locally provisioned key set. Relative paths resolve beside `config.json`. |
 | `authentication.allowed_algorithms` | For JWT | None. Init uses `["ES256"]` unless given `--jwt-algorithm`. | Non-empty list of distinct `ES256`, `EdDSA`, or `RS256` values | Restricts signing keys and token algorithms. Set only the algorithms used by your issuer. |
 | `authentication.tokens_file` | No, static mode only | `static-tokens.json` beside the manifest | Path, 1–2,048 characters, to a valid static-token registry | Stores token digests, subjects, and expirations. Relative paths resolve beside `config.json`. Override for a separate registry mount. Use `lasa config issue-token` to create a token for a policy subject. |
-| `authorization.policy_file` | No | `authorization.json` beside the manifest | Path, 1–2,048 characters, to a receiver policy JSON file | Maps subjects to permissions and controls trusted delegators and delegation grants. Relative paths resolve beside `config.json`. Change it when the policy lives in a separate mount. |
+| `authorization.policy_file` | No | `authorization.json` beside the manifest | Path, 1–2,048 characters, to a receiver policy JSON file | Maps subjects to permissions and controls consumer access and outbound grants. Relative paths resolve beside `config.json`. Change it when the policy lives in a separate mount. |
 
 A JWT receiver uses exactly one of `jwks_url` and `jwks_file`. Give each caller a token with `aud` equal to the receiver's `service.id` and a `sub` that exists in the policy. For a static-token receiver, configure the registry and omit the JWT fields. Store the actual token in a private caller file or environment variable. The registry contains only its digest and associated metadata. [Token issuance and rotation](RUNNING.md#static-tokens)
+
+### Published processing guarantees
+
+Rules publish approved processing by default. Set `processing_modes` to the modes the rule may publish. An account with `domain_only: true` can use only a `provider_domain_only` offer. The account setting and rule modes belong to the private authorization policy.
+
+An operator records a qualified boundary in the policy's `processing_domain` object. Its `id` is the public domain URI. Set `qualified_config` to the effective manifest revision, `qualified_deployment` to the deployment revision, and `qualified_contracts` to the exact capability references qualified in that deployment. `members` holds private `model:<executor-id>`, `connector:<operation-id>`, `inspection:<profile-id>`, `peer:<service-id>`, and `operator:<subject>` entries. Grant a member only after verifying its actual administrative and network boundary. For peer membership, verify the exact child offer guarantees the same domain. Store the associated qualification evidence in private operator state. A changed manifest or deployment makes the old qualification ineligible. Removing a member revokes its use by admitted tasks. Ensure that state, backups, ingress, support access, and operating-system egress enforce the same boundary before qualifying any contract.
+
+### Peer execution terms
+
+Provision a fresh random 32-byte execution binding key for each direction of each peer relationship. Store it as hexadecimal in a private credential file or environment variable. The sender's peer manifest and the receiver's authenticated `peer` principal record both use `execution_key_ref`, independently of the HTTPS workload credential. The receiver binds the exact offer and its recursive execution terms. Keep the numeric terms and verification key in private configuration.
+
+Inbound peer work defaults to a leaf. Set `onward_fanout` on the receiver's private rule to enable onward work, subject to its `budget.delegations`, the service ceilings, and explicit outgoing grants. The sender's matching outbound grant omits `execution` for a leaf. For a recursive receiver, provision an `execution` object with the expected transitive `max_fanout` and `min_verification_margin_ms`. The transitive terms cover the receiver and the eligible descendants under its rule. Every child deadline is shortened by the greater of the configured minimum and the integration time reserve, plus allowance for clock uncertainty and timestamp rounding. Mismatched terms block child task submission.
+
+For a caller-facing rule, set a private `subtree_cap` only if the operator wants to permit recursive routes whose derived bound exceeds `limits.max_derived_descendants`. Set a private `subtree_cap` on each recursive peer rule provisioned to accept a capped branch and match it in the sender's `execution` terms. A capped parent reserves one child operation plus the receiver's full agreed allowance, along with the ordinary direct-child charge. Uncapped tasks only reserve direct children. The receiver honors the cap on a capped offer throughout that branch, and leaves have no onward allowance.
 
 ## Executors and private connectors
 
@@ -180,7 +194,7 @@ Use `local_dlp.enabled` in the separate Docker deployment settings to manage a l
 
 ## Outgoing peers and routing
 
-Incoming authentication and outgoing authentication are independent. Put only downstream services in `peers`. The sender grants the exact delegation edge. The receiver owns the `authorization_ref` and authorizes the peer principal for the contract. [Delegation and policy](design/multi-peer-delegation.md)
+Incoming authentication and outgoing authentication are independent. Put only downstream services in `peers`. The sender grants the exact delegation edge. The receiver independently publishes offers for the authenticated service principal. [Delegation and policy](design/multi-peer-delegation.md)
 
 | Setting | Required | Default | Allowed values | What it does and when to set it |
 | --- | --- | --- | --- | --- |
@@ -191,15 +205,14 @@ Incoming authentication and outgoing authentication are independent. Put only do
 | `peers[].authentication` | No | JWT | Object for the selected peer mode | Pins the peer's credential type independently of incoming authentication. Set it explicitly when the peer uses a static token. |
 | `peers[].authentication.mode` | With an explicit peer authentication object | `jwt` when the object is omitted | `jwt` or `static_token` | Selects JWT identity or a static workload pin. Match the receiver's incoming mode. |
 | `peers[].authentication.subject` | For a static peer | None | Non-empty subject string | Pins the static token's policy subject. Match the receiver's `kind: peer` principal for the sender. |
-| `peers[].authorization_ref` | Yes | None | Receiver policy reference, 1–512 characters | Selects the receiver rule for this peer credential. Match the rule configured for the sender's subject on the receiver. |
+| `peers[].private_aliases` | No | Empty | Distinct private identifier strings | Blocks configured aliases when checking consumer releases. Use distinctive identifiers. |
 | `peers[].request_timeout_seconds` | No | `15` | Integer 1–60 | Bounds peer HTTP requests and discovery. Adjust for a known network or discovery latency within the task deadline. |
 | `peers[].ca_file` | No | Normal TLS trust | Non-empty path to a readable CA bundle | Supplies trust for this peer's private CA. Use an absolute mount path for portability. |
 | `routing.preferred_executor` | No | `local` | `local` or `peer` | Breaks a tie between suitable local and peer routes. Set `peer` when you want the parent to prefer authorized delegates. |
-| `routing.unclaimed_peer_fallback` | No | `reject` | `reject` or `attempt` | Controls generic `task.attempt` fallback. Use `attempt` only when the policy permits it and a generic attempt is acceptable after fresh, complete catalogs confirm no eligible peer claims the requested outcome and local fulfillment is insufficient. |
 
 ## Limits and budgets
 
-The service ceiling combines with the caller's requested budget, the receiver policy and offer, and any parent allocation. Raising a service limit does not expand anyone's grants.
+The provider applies its policy and the selected offer to supported request limits. Delegation accounting stays in private provider state. Raising a service limit does not expand anyone's grants.
 
 | Setting | Required | Default | Allowed values | What it does and when to set it |
 | --- | --- | --- | --- | --- |
@@ -207,8 +220,9 @@ The service ceiling combines with the caller's requested budget, the receiver po
 | `limits.assessment_budget` | No | See budget table | Complete budget object | Sets the assessment envelope, including caps on planning calls, model tokens, and assessment time. Increase it for larger planning inputs or more complex decomposition. |
 | `limits.content_recovery` | No | One retry, one revision, four actions per task | Partial recovery limits object. Each integer ranges from zero through its default. | Bounds scanner retries and eligible outbound revisions across bindings. A zero task limit disables automatic recovery. [Fields and example](design/content-security.md#service-limits) |
 | `limits.integration_reserve` | No | See budget table | Complete budget object | Reserves part of the task budget for final integration. Adjust it for multi-step results and leave enough budget for fulfillment. |
-| `limits.max_hops` | No | `2` | Integer 0–32 | Caps delegation depth. Use `0` to forbid onward delegation or raise it for a deeper authorized topology. |
-| `limits.max_children` | No | `2` | Integer 0–64 | Caps immediate delegated children per task. Adjust for the intended fan-out. |
+| `limits.max_children` | No | `2` | Integer 0–64 | Caps distinct direct child operations over the lifetime of each task. |
+| `limits.min_verification_margin_ms` | No | `1000` | Positive integer | Minimum time kept for the parent's verification and release. A larger integration reserve increases this margin. |
+| `limits.max_derived_descendants` | No | `64` | Nonnegative integer | Largest accepted worst-case descendant count. Narrow routes or use an explicitly provisioned cap within this ceiling when the derived count exceeds it. |
 | `limits.max_plan_steps` | No | `16` | Integer 1–64 | Caps steps in a plan. Adjust to bound the complexity of admitted workflows. |
 | `limits.max_active_tasks` | No | `4` | Integer 1–1,024 | Limits concurrent active tasks. Size it for your workers, provider quota, and host capacity. |
 | `limits.max_clock_skew_seconds` | No | `5` | Integer 0–60 | Allows slack when comparing the requested task deadline to the service wall-time ceiling. Adjust for measured host clock differences. JWT expiry validation applies separately. |
@@ -218,11 +232,11 @@ Each supplied budget replaces the corresponding packaged object. Include all eig
 
 | Budget field | Max task | Assessment | Integration reserve | What it measures and when to adjust it |
 | --- | ---: | ---: | ---: | --- |
-| `model_tokens` | 24,000 | 2,000 | 2,000 | Model token allowance. Account for prompts, responses, and delegated usage. |
-| `model_calls` | 6 | 1 | 1 | Number of model requests. Increase for multiple execution or verification calls. |
+| `model_tokens` | 96,000 | 24,000 | 16,000 | Model token allowance. Account for prompts, responses, and delegated usage. |
+| `model_calls` | 12 | 2 | 3 | Number of model requests. Assessment covers proposal and review. Integration also covers parent-side child verification. |
 | `tool_calls` | 12 | 0 | 0 | Number of tool calls. Size it for documented source or workspace operations. |
 | `delegations` | 2 | 0 | 0 | Number of delegated calls charged to the task. Size it for the expected workflow. |
-| `wall_time_ms` | 180,000 | 10,000 | 15,000 | Elapsed time in milliseconds. Budget for provider latency, child execution, and integration. |
+| `wall_time_ms` | 180,000 | 30,000 | 20,000 | Elapsed time in milliseconds. Budget for provider latency, child execution, and integration. |
 | `input_bytes` | 64,000 | 64,000 | 0 | Input data size. Increase for larger request input or disclosed dependency data. |
 | `output_bytes` | 32,000 | 4,000 | 4,000 | Result size allowance. Change it for workflows with larger structured results. |
 | `artifact_bytes` | 128,000 | 0 | 0 | Artifact size allowance. Allocate it only where the task needs artifact data. |
@@ -301,16 +315,14 @@ The parent uses JWT for incoming callers. It prefers two downstream services for
       "allowed_base_url": "https://primary.example.net/lasa/v1",
       "descriptor_url": "https://primary.example.net/lasa/v1/descriptor",
       "credential_ref": "file:/run/secrets/lasa-primary-jwt",
-      "authentication": {"mode": "jwt"},
-      "authorization_ref": "parent-checklist"
+      "authentication": {"mode": "jwt"}
     },
     {
       "expected_service_id": "https://identity.example.net/services/review",
       "allowed_base_url": "https://review.example.net/lasa/v1",
       "descriptor_url": "https://review.example.net/lasa/v1/descriptor",
       "credential_ref": "file:/run/secrets/lasa-review-token",
-      "authentication": {"mode": "static_token", "subject": "peer-parent"},
-      "authorization_ref": "parent-review"
+      "authentication": {"mode": "static_token", "subject": "peer-parent"}
     }
   ]
 }
@@ -318,5 +330,5 @@ The parent uses JWT for incoming callers. It prefers two downstream services for
 
 - **Primary receiver.** Use the standalone JWT manifest on primary and set `published_contracts` to `["task.attempt"]` if this peer should specialize in checklists. Issue a JWT with primary's `service.id` as its audience and `peer-parent` as its subject. Its receiver policy maps that subject to the parent ID and grants `task.attempt` under `parent-checklist`.
 - **Review receiver.** Use the standalone manifest as a base, with the review service ID and base URL from the parent peer entry. Replace the entire `authentication` object with `{"mode": "static_token"}`. Keep the registry at the default `static-tokens.json` path. Set `published_contracts` to `["design.review"]` if this peer should specialize in reviews. Its policy maps `peer-parent` to the parent ID and grants `design.review` under `parent-review`. Issue the token on review with `lasa config issue-token --config /etc/lasa/review/config.json --subject peer-parent --output /absolute/private/client/lasa-review-token` and mount it at the parent's referenced path.
-- **Policies and state.** Each receiver lists the parent in `trusted_delegator_service_ids` and declares its subject as `kind: peer` with the parent's service ID. The parent's policy grants each exact contract and receiver in `delegation_grants`. Grant any predecessor disclosure explicitly for the chosen receiver. Give each service its own policy and state root, such as `/var/lib/lasa/primary` and `/var/lib/lasa/review` for the two receivers. Add user principals if operators also call the delegates directly.
+- **Policies and state.** Each receiver declares the parent as a `kind: peer` subject with the parent's service ID. The parent's policy grants each exact contract and receiver in `delegation_grants`. Grant any predecessor disclosure explicitly for the chosen receiver. Give each service its own policy and state root, such as `/var/lib/lasa/primary` and `/var/lib/lasa/review` for the two receivers. Add user principals if operators also call the delegates directly.
 - **Preflight.** Replace the placeholder deployment values on every service, set task and assessment budgets appropriate for the workflow, and run `lasa config check` for each service. Then test with the real credentials over HTTPS. [Air188 runbook](deployment/air188.md)

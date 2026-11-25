@@ -46,7 +46,7 @@
   },
   {
     "file": "authorization.json",
-    "schema": "contracts.schema.json#/$defs/TaskAuthorization",
+    "schema": "private.schema.json#/$defs/TaskAuthorization",
     "visibility": "private"
   },
   {
@@ -55,12 +55,7 @@
     "visibility": "wire"
   },
   {
-    "file": "delegated-task-request.json",
-    "schema": "contracts.schema.json#/$defs/TaskRequest",
-    "visibility": "wire"
-  },
-  {
-    "file": "fallback-task-request.json",
+    "file": "downstream-task-request.json",
     "schema": "contracts.schema.json#/$defs/TaskRequest",
     "visibility": "wire"
   },
@@ -76,33 +71,33 @@
   },
   {
     "file": "plan.json",
-    "schema": "contracts.schema.json#/$defs/ResponsibilityPlan",
+    "schema": "private.schema.json#/$defs/ResponsibilityPlan",
     "visibility": "private"
   },
   {
     "file": "task-completed.json",
-    "schema": "contracts.schema.json#/$defs/Task",
+    "schema": "contracts.schema.json#/$defs/ConsumerTask",
     "visibility": "wire"
   },
   {
     "file": "task-result.json",
-    "schema": "contracts.schema.json#/$defs/TaskResult",
+    "schema": "contracts.schema.json#/$defs/ConsumerResult",
     "visibility": "wire"
   },
   {
     "file": "routing-event.json",
-    "schema": "contracts.schema.json#/$defs/DiagnosticEvent",
-    "visibility": "wire"
+    "schema": "private.schema.json#/$defs/DiagnosticEvent",
+    "visibility": "private"
   },
   {
     "file": "call-event.json",
-    "schema": "contracts.schema.json#/$defs/DiagnosticEvent",
-    "visibility": "wire"
+    "schema": "private.schema.json#/$defs/DiagnosticEvent",
+    "visibility": "private"
   },
   {
     "file": "events.json",
-    "schema": "contracts.schema.json#/$defs/EventPage",
-    "visibility": "wire"
+    "schema": "private.schema.json#/$defs/EventPage",
+    "visibility": "private"
   },
   {
     "file": "problem.json",
@@ -131,7 +126,7 @@
   },
   {
     "file": "child-plan.json",
-    "schema": "contracts.schema.json#/$defs/ResponsibilityPlan",
+    "schema": "private.schema.json#/$defs/ResponsibilityPlan",
     "visibility": "private"
   },
   {

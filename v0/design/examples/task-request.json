@@ -28,15 +28,11 @@
       "model_tokens": 24000,
       "model_calls": 6,
       "tool_calls": 12,
-      "delegations": 2,
       "wall_time_ms": 180000,
       "input_bytes": 64000,
       "output_bytes": 32000,
       "artifact_bytes": 128000
     },
-    "deadline": "2026-11-18T08:03:00Z",
-    "max_hops": 1
-  },
-  "authorization_ref": "receiver-policy:user-design-work",
-  "diagnostics": "metadata"
+    "deadline": "2026-11-18T08:03:00Z"
+  }
 }

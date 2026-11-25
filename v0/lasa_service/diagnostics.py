@@ -1,10 +1,19 @@
 """Always-on bounded operation evidence; separately authorized content disclosure."""
 
-from .capabilities import instant
-from .content_security import CREDENTIAL_FIELDS, Transfer
+from .capabilities import instant, require
+from .content_security import CREDENTIAL_FIELDS
 from .contracts import canonical, digest, parse_json
-from .errors import LasaError
 from .store import identity, zero
+
+
+def metadata(event):
+    payload = event["payload"]
+    if event["kind"] == "routing":
+        payload.pop("assessment_summary", None)
+    elif event["kind"] == "verification":
+        for check in payload["checks"]:
+            check["summary"] = "Verification disposition recorded."
+    return event
 
 
 class Diagnostics:
@@ -61,13 +70,11 @@ class Diagnostics:
             "payload": self.redact(payload, task_id),
             "redacted": True,
         }
-        request = parse_json(row["request"])
+        if kind == "verification":
+            content = payload
+        metadata(event)
         authority = parse_json(row["authority"])
-        if (
-            content is not None
-            and request["diagnostics"] == "content"
-            and authority["content_diagnostics_allowed"]
-        ):
+        if content is not None and authority["content_diagnostics_allowed"]:
             cleaned = canonical(self.redact(content, task_id))
             available = max(0, 65536 - c.store.diagnostic_bytes(task_id))
             text = cleaned[: min(8192, available)].decode(errors="ignore")
@@ -117,7 +124,6 @@ class Diagnostics:
             payload["purpose"] = inputs["purpose"]
         if call_type == "child":
             payload["contract"] = inputs["selection"]["contract"]
-            payload["peer_service_id"] = inputs["delegation"]["recipient_service_id"]
             child = next(
                 (
                     x
@@ -126,132 +132,52 @@ class Diagnostics:
                 ),
                 None,
             )
-            if child and "task_id" in child:
-                payload["child_task_id"] = child["task_id"]
+            if child:
+                payload["peer_service_id"] = child["service_id"]
+                if "task_id" in child:
+                    payload["child_task_id"] = child["task_id"]
         return self.emit(task_id, "call", payload, content)
 
     def page(self, task_id, principal, after=0, limit=50):
         c = self.coordinator
-        row, _ = c.store.task(task_id, principal["subject"])
-        owner = parse_json(row["principal"])
-        original_identity = (owner.get("kind"), owner.get("service_id"))
-        current_identity = (principal.get("kind"), principal.get("service_id"))
-        if (
-            "peer" in (original_identity[0], current_identity[0])
-            and original_identity != current_identity
-        ):
-            raise LasaError("authority_denied", 403)
-        try:
-            allowed = c.authorization.rule(
-                principal, parse_json(row["request"])["authorization_ref"]
-            )["content_diagnostics"]
-        except (LasaError, OSError, ValueError):
-            allowed = False
+        require(principal.get("kind") == "operator", "authority_denied", 403)
+        c.store.task(task_id)
+        c.check_processing(task_id, "operator:" + principal["subject"])
         events = [
-            parse_json(r[0])
+            metadata(parse_json(r[0]))
             for r in c.store.db.execute(
                 "SELECT document FROM events WHERE task_id=? AND sequence>? ORDER BY sequence LIMIT ?",
                 (task_id, after, limit),
             )
         ]
-        if not allowed:
-            for event in events:
-                event.pop("content", None)
         return {
             "task_id": task_id,
             "events": events,
             "next_sequence": events[-1]["sequence"] + 1 if events else after + 1,
         }
 
-    async def disclose_content(self, task_id, events, destination, channel, *, source=None):
+    def children_report(self, task_id, principal):
+        require(principal.get("kind") == "operator", "authority_denied", 403)
         c = self.coordinator
-        content = [event["content"] for event in events if "content" in event]
-        if not content:
-            return
-        source = source or c.request(task_id)["selection"]["contract"]["id"]
-        try:
-            decision = await c.content.check(
-                Transfer(
-                    channel, destination, "diagnostics", identity("diagnostic"), task_id, source
-                ),
-                content,
-                projection={"content": content},
-            )
-            c.content.outcome(decision, "delivered")
-        except LasaError:
-            for event in events:
-                event.pop("content", None)
-
-    async def release_page(self, task_id, principal, after=0, limit=50):
-        c = self.coordinator
-        page = self.page(task_id, principal, after, limit)
-        row, _ = c.store.task(task_id, principal["subject"])
-        c.check_task_identity(row, principal)
-        await self.disclose_content(
-            task_id,
-            page["events"],
-            c.release_destination(principal),
-            "caller.response",
-        )
-        return page
-
-    async def children_report(self, task_id, principal, after=0):
-        import asyncio
-
-        c = self.coordinator
-        row, _ = c.store.task(task_id, principal["subject"])
-        c.check_task_identity(row, principal)
-        children = c.store.children(task_id)
-        try:
-            content = (
-                c.authorization.rule(principal, parse_json(row["request"])["authorization_ref"])[
-                    "content_diagnostics"
-                ]
-                and parse_json(row["request"])["diagnostics"] == "content"
-            )
-        except (LasaError, OSError, ValueError):
-            content = False
-
-        async def report(child):
-            summary = {key: child[key] for key in ["delegation_id", "service_id", "state"]}
-            if "task_id" in child:
-                summary["task_id"] = child["task_id"]
-            try:
-                async with asyncio.timeout(5):
-                    page, status, _ = await c.delegation.child_trace(child, after)
-                    if status != 200:
-                        raise LasaError("peer_unavailable", 503)
-                    c.contracts.validate("EventPage", page, "incompatible_protocol", 502)
-                    if page["task_id"] != child["task_id"]:
-                        raise LasaError("verification_failed", 502)
-                    for event in page["events"]:
-                        if event["service_id"] != child["service_id"]:
-                            raise LasaError("verification_failed", 502)
-                        if not content:
-                            event.pop("content", None)
-                    source = "peer:" + child["service_id"]
-                    await self.disclose_content(
-                        task_id,
-                        page["events"],
-                        source,
-                        "delegation.response",
-                        source=source,
-                    )
-                    await self.disclose_content(
-                        task_id,
-                        page["events"],
-                        c.release_destination(principal),
-                        "caller.response",
-                        source=source,
-                    )
-                    summary["trace"] = self.redact(page, task_id)
-            except (LasaError, TimeoutError) as exc:
-                summary["problem"] = (
-                    exc if isinstance(exc, LasaError) else LasaError("peer_unavailable", 503)
-                ).public()
-            return summary
-
+        c.store.task(task_id)
+        c.check_processing(task_id, "operator:" + principal["subject"])
         return {
             "task_id": task_id,
-            "children": await asyncio.gather(*(report(child) for child in children)),
+            "children": [
+                {
+                    key: child[key]
+                    for key in (
+                        "delegation_id",
+                        "service_id",
+                        "state",
+                        "task_id",
+                        "effect_disposition",
+                        "result_state",
+                        "terminal_digest",
+                        "step_id",
+                    )
+                    if key in child
+                }
+                for child in c.store.children(task_id)
+            ],
         }

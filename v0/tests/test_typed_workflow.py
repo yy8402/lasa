@@ -1,3 +1,4 @@
+import copy
 import json
 from pathlib import Path
 
@@ -5,10 +6,11 @@ import httpx
 import pytest
 
 from lasa_service.capabilities import reference
-from lasa_service.config import ConfigurationError, builtin_capabilities
-from lasa_service.contracts import digest, parse_json
+from lasa_service.config import builtin_capabilities
+from lasa_service.contracts import parse_json
 
 from .conftest import documents, settled, submit, task_request
+from .protocol_helpers import verification_report
 from .test_multi_peer import setup_peers
 
 INPUT = {
@@ -29,7 +31,7 @@ INPUT = {
 }
 
 
-@pytest.mark.parametrize("mode", ["trusted", "revoked", "forged", "wrong-revision"])
+@pytest.mark.parametrize("mode", ["valid", "forged"])
 async def test_typed_workflow_checks_exact_child_receipts(services, tmp_path, mode):
     async def unexpected_planning(*args):
         pytest.fail("A registered workflow must compile without model planning")
@@ -47,25 +49,18 @@ async def test_typed_workflow_checks_exact_child_receipts(services, tmp_path, mo
     policy = json.loads(path.read_text())
     rule = policy["principals"][0]["rules"][0]
     rule["contracts"].append(workflow)
-    rule["verifier_trust"] = [
-        {
-            "service_id": grant["receiver_service_id"],
-            "contract": grant["contract"],
-            "verifier_revision": workers[
-                grant["receiver_service_id"].rsplit("/", 1)[-1] + ".example.net"
-            ].state.coordinator.config.verifier_revision,
-        }
-        for grant in rule["delegation_grants"]
-    ]
-    if mode == "wrong-revision":
-        rule["verifier_trust"][0]["verifier_revision"] = digest("other verifier")
-    pin = rule["verifier_trust"][0]
+    for grant in rule["delegation_grants"]:
+        grant.update(effects=[], resources=[], disclosure_resources=[])
+        layer = grant["receiver_service_id"].rsplit("/", 1)[1]
+        receiver = workers[layer + ".example.net"].state.coordinator
+        policy_path = Path(receiver.config.document["authorization"]["policy_file"])
+        receiver_policy = json.loads(policy_path.read_text())
+        principal = next(item for item in receiver_policy["principals"] if item["kind"] == "peer")
+        pure = copy.deepcopy(principal["rules"][0])
+        pure.update(authorization_ref="pure-task", effects=[], resources=[])
+        principal["rules"].append(pure)
+        policy_path.write_text(json.dumps(receiver_policy))
     path.write_text(json.dumps(policy))
-
-    def revoke(point, task_id):
-        if point == "after_admission":
-            rule["verifier_trust"].clear()
-            path.write_text(json.dumps(policy))
 
     async def forge(response_request):
         response = await originally(response_request)
@@ -73,17 +68,16 @@ async def test_typed_workflow_checks_exact_child_receipts(services, tmp_path, mo
             response_request.method == "GET"
             and response_request.url.host == "layer2.example.net"
             and "/tasks/" in response_request.url.path
+            and "view" not in response_request.url.params
         ):
             data = parse_json(await response.aread())
             if data["status"] == "completed":
-                data["result"]["verification_receipt"]["delegation_id"] = "another-delegation"
+                data["result"]["receipt"]["operation_id"] = "another-operation"
                 await response.aclose()
                 return httpx.Response(200, json=data)
         return response
 
     originally = transport.handle_async_request
-    if mode == "revoked":
-        parent.fault = revoke
     if mode == "forged":
         transport.handle_async_request = forge
 
@@ -104,30 +98,18 @@ async def test_typed_workflow_checks_exact_child_receipts(services, tmp_path, mo
     assert result["status"] == "completed", result
     assert transport.submissions() == ["layer2.example.net", "layer3.example.net"]
     output = result["result"]["output"]
-    assert runtimes["layer3.example.net"].prompts[0]["delegated_dependencies"] == {
-        "review": output["review"]
-    }
+    (review,) = runtimes["layer3.example.net"].prompts[0]["imports"]
+    assert review["label"] == "review" and review["output"] == output["review"]
     assert output["checklist"]["disposition"] == "fulfilled"
     assert {x["id"] for x in output["checklist"]["requirement_evidence"]} == {
         "confirm-both",
         "verified-review-handoff",
     }
-    adopted = parent.store.db.execute(
-        "SELECT COUNT(*) FROM audit WHERE task_id=? AND kind='trusted_verification_receipt'",
-        (result["task_id"],),
-    ).fetchone()[0]
-    assert (adopted, len(verifies)) == {
-        "trusted": (2, 0),
-        "revoked": (0, 2),
-        "wrong-revision": (1, 1),
-    }[mode]
+    assert [identifier.rsplit("/", 1)[-1] for identifier in verifies] == [
+        "design.review",
+        "task.attempt",
+    ]
     assert not parent.runtime.prompts
-
-    rule["delegation_grants"].clear()
-    rule["verifier_trust"] = [pin]
-    path.write_text(json.dumps(policy))
-    with pytest.raises(ConfigurationError, match="outbound delegation grant"):
-        parent.config.policy()
 
 
 async def test_verifier_model_override_uses_existing_provider(services, tmp_path):
@@ -136,7 +118,9 @@ async def test_verifier_model_override_uses_existing_provider(services, tmp_path
     bodies = []
 
     def model(request):
-        bodies.append(parse_json(request.content))
+        body = parse_json(request.content)
+        bodies.append(body)
+        payload = parse_json(body["input"][-2]["content"][0]["text"])
         return httpx.Response(
             200,
             json={
@@ -144,7 +128,10 @@ async def test_verifier_model_override_uses_existing_provider(services, tmp_path
                     {
                         "type": "message",
                         "content": [
-                            {"type": "output_text", "text": '{"passed":true,"reason":"Verified"}'}
+                            {
+                                "type": "output_text",
+                                "text": json.dumps(verification_report(payload["criteria"])),
+                            }
                         ],
                     }
                 ],

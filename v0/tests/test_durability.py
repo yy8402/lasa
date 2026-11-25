@@ -12,7 +12,15 @@ from lasa_service.contracts import canonical, digest
 from lasa_service.planning import Planner
 from lasa_service.store import STORAGE_SCHEMA_VERSION, Store, encode, zero
 
-from .conftest import FakeRuntime, documents, new_session, settled, submit, task_request
+from .conftest import (
+    FakeRuntime,
+    documents,
+    new_session,
+    operator_get,
+    settled,
+    submit,
+    task_request,
+)
 
 
 def test_accounting_totals_backfill_and_roll_back_with_source_rows(tmp_path):
@@ -148,7 +156,9 @@ async def test_effect_commit_unknown_is_not_replayed_and_resolution_is_append_on
     body = {"operation_id": "reconcile-write"}
     resolved = await client.post(url, json=body, headers={"Idempotency-Key": "reconcile-key"})
     assert resolved.status_code == 202 and canonical(resolved.json()) == before
-    events = (await client.get(response.headers["Location"] + "/events")).json()["events"]
+    events = (await operator_get(client, app, response.headers["Location"], "/events")).json()[
+        "events"
+    ]
     assert any(
         e["kind"] == "resolution" and e["payload"]["resolved_effect_disposition"] == "known"
         for e in events
@@ -158,9 +168,9 @@ async def test_effect_commit_unknown_is_not_replayed_and_resolution_is_append_on
         len(
             [
                 e
-                for e in (await client.get(response.headers["Location"] + "/events")).json()[
-                    "events"
-                ]
+                for e in (
+                    await operator_get(client, app, response.headers["Location"], "/events")
+                ).json()["events"]
                 if e["kind"] == "resolution"
             ]
         )
@@ -369,8 +379,78 @@ async def test_lost_child_response_reconciles_without_reexecuting(services, tmp_
     )
     assert any(
         e["kind"] == "resolution"
-        for e in (await client.get(response.headers["Location"] + "/events")).json()["events"]
+        for e in (await operator_get(client, app, response.headers["Location"], "/events")).json()[
+            "events"
+        ]
     )
+
+
+@pytest.mark.parametrize("failure", ["control_unavailable", "stale_cancel"])
+async def test_child_control_retries_without_resubmission(services, tmp_path, failure):
+    running = asyncio.Event()
+    calls = []
+
+    async def execute(context):
+        running.set()
+        if failure == "stale_cancel":
+            await asyncio.Future()
+        return await FakeRuntime().run(context)
+
+    _, child_app = await services(
+        raw=documents(tmp_path / "child", "layer2"), runtime=FakeRuntime(execute)
+    )
+    transport = httpx.ASGITransport(app=child_app)
+
+    async def exchange(request):
+        path = request.url.path
+        kind = (
+            "control"
+            if request.url.params.get("view") == "control"
+            else "cancel"
+            if path.endswith("/cancel")
+            else "submit"
+            if request.method == "POST" and path.endswith("/tasks")
+            else "result"
+            if request.method == "GET" and "/tasks/" in path
+            else None
+        )
+        if kind:
+            calls.append((kind, request.headers.get("idempotency-key")))
+        if (
+            kind == "control"
+            and failure == "control_unavailable"
+            and calls.count((kind, None)) == 1
+        ):
+            return httpx.Response(503, request=request)
+        if kind == "cancel" and failure == "stale_cancel" and sum(k == kind for k, _ in calls) == 1:
+            return httpx.Response(412, request=request)
+        return await transport.handle_async_request(request)
+
+    raw = documents(tmp_path / "parent", peer=True)
+    raw["routing"]["preferred_executor"] = "peer"
+    client, app = await services(raw=raw, peer_transport=httpx.MockTransport(exchange))
+    response = await submit(client, app, await task_request(client, app))
+    if failure == "stale_cancel":
+        async with asyncio.timeout(5):
+            await running.wait()
+        location = response.headers["Location"]
+        task = await client.get(location)
+        cancelled = await client.post(
+            location + "/cancel",
+            json={"operation_id": "cancel-parent"},
+            headers={"Idempotency-Key": "cancel-parent", "If-Match": task.headers["etag"]},
+        )
+        assert cancelled.status_code == 202
+    result = await settled(client, response)
+    assert sum(k == "submit" for k, _ in calls) == 1
+    if failure == "stale_cancel":
+        assert result["status"] == "cancelled", result
+        first, second = [key for kind, key in calls if kind == "cancel"]
+        assert first == second and first.endswith("-cancel")
+        assert all(kind != "result" for kind, _ in calls)
+    else:
+        assert result["status"] == "completed", result
+        assert [kind for kind, _ in calls] == ["submit", "control", "control", "result"]
 
 
 async def test_changed_requirements_cannot_reuse_semantic_verdict(services):
@@ -395,7 +475,9 @@ async def test_changed_requirements_cannot_reuse_semantic_verdict(services):
         inputs,
         output,
         evidence,
-        requirements=[{"stricter": "actual root obligation"}],
+        requirements=[
+            {"acceptance": [{"id": "stricter", "criterion": "Verify the actual root obligation."}]}
+        ],
     )
     assert len(calls) == 2
 
@@ -446,5 +528,7 @@ async def test_actual_process_death_recovers_without_replay(tmp_path):
         resume.set()
         await finished.wait()
         assert c.store.unresolved("", 4) == []
-        events = c.diagnostics.page(task["task_id"], {"subject": "alice"})["events"]
+        events = c.diagnostics.page(task["task_id"], {"kind": "operator", "subject": "operator"})[
+            "events"
+        ]
         assert any(e["kind"] == "resolution" for e in events)

@@ -5,14 +5,17 @@ from pathlib import Path
 import httpx
 import pytest
 
-from .conftest import FakeRuntime, documents, settled, submit, task_request
+from lasa_service.contracts import digest
+
+from .conftest import FakeRuntime, documents, operator_get, settled, submit, task_request
 
 
 async def test_dispatch_attenuates_newly_narrowed_effects_and_resources(services, tmp_path):
     async def child_handler(context):
         c = context.coordinator
         request = c.request(context.task_id)
-        ceiling = request["delegation"]["authority_ceiling"]
+        assert "delegation" not in request and "authorization_ref" not in request
+        ceiling = c.authority(context.task_id)
         assert ceiling["allowed_effects"] == ["workspace.read"]
         assert ceiling["resources"] == [{"resource": "workspace:self", "actions": ["read"]}]
         assert not c.permits(context.task_id, "workspace.write", "workspace:self", "update")
@@ -40,7 +43,7 @@ async def test_dispatch_attenuates_newly_narrowed_effects_and_resources(services
     assert result["status"] == "completed", result
 
 
-@pytest.mark.parametrize("tamper", ["task_id", "underreported_artifacts", "cumulative_artifacts"])
+@pytest.mark.parametrize("tamper", ["task_id", "forged_artifact_receipt", "cumulative_artifacts"])
 async def test_child_linkage_and_observed_cumulative_artifact_budget(services, tmp_path, tamper):
     async def child_handler(context):
         manifest = context.coordinator.snapshot_artifact(context.task_id, "text/plain", "abc")
@@ -65,16 +68,19 @@ async def test_child_linkage_and_observed_cumulative_artifact_budget(services, t
                 and "/artifacts/" not in request.url.path
             ):
                 value = json.loads(content)
-                if value.get("status") == "completed":
+                if value.get("status") == "completed" and "result" in value:
                     if tamper == "task_id":
                         value["task_id"] = "task-another-operation"
-                    elif tamper == "underreported_artifacts":
-                        value["result"]["usage"]["artifact_bytes"] = 0
+                    elif tamper == "forged_artifact_receipt":
+                        value["result"]["artifacts"][0]["digest"] = digest("other bytes")
                     else:
                         alias = copy.deepcopy(value["result"]["artifacts"][0])
                         alias["artifact_id"] = "artifact-alias"
                         value["result"]["artifacts"].append(alias)
-                        value["result"]["usage"]["artifact_bytes"] = 5
+                        result = value["result"]
+                        result["receipt"]["result_digest"] = digest(
+                            {key: item for key, item in result.items() if key != "receipt"}
+                        )
                 return httpx.Response(response.status_code, json=value, request=request)
             return httpx.Response(
                 response.status_code, content=content, headers=response.headers, request=request
@@ -123,10 +129,11 @@ async def test_content_diagnostics_redact_and_keep_operation_headers_when_trunca
 
     client, app = await services(raw=raw, runtime=FakeRuntime(handler))
     request = await task_request(client, app)
-    request["diagnostics"] = "content"
     response = await submit(client, app, request)
     result = await settled(client, response)
-    events = (await client.get(response.headers["Location"] + "/events")).json()["events"]
+    events = (await operator_get(client, app, response.headers["Location"], "/events")).json()[
+        "events"
+    ]
     calls = [x for x in events if x["kind"] == "call"]
     assert result["status"] == "completed" and len(calls) == 12
     assert all(
@@ -134,7 +141,7 @@ async def test_content_diagnostics_redact_and_keep_operation_headers_when_trunca
         for x in calls
     )
     assert "test-model-key" not in json.dumps(events)
-    sizes = [len(x["content"]["text"].encode()) for x in calls if "content" in x]
+    sizes = [len(x["content"]["text"].encode()) for x in events if "content" in x]
     total = app.state.coordinator.store.diagnostic_bytes(result["task_id"])
     assert all(size <= 8192 for size in sizes)
     assert 65534 <= sum(sizes) == total <= 65536
@@ -150,8 +157,11 @@ async def test_diagnostic_cursor_rejects_values_outside_the_wire_range(services)
     client, app = await services()
     response = await submit(client, app, await task_request(client, app))
     await settled(client, response)
-    for suffix in ("/events", "/delegations"):
-        page = await client.get(
-            response.headers["Location"] + suffix, params={"after_sequence": 2**63}
-        )
-        assert page.status_code == 400 and page.json()["code"] == "invalid_input"
+    page = await client.get(
+        response.headers["Location"] + "/events", params={"after_sequence": 2**63}
+    )
+    assert page.status_code == 400 and page.json()["code"] == "invalid_input"
+    page = await operator_get(
+        client, app, response.headers["Location"], "/events", params={"after_sequence": 2**63}
+    )
+    assert page.status_code == 400

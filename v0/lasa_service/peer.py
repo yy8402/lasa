@@ -3,6 +3,7 @@
 import asyncio
 import copy
 import hashlib
+import hmac
 import re
 import ssl
 import time
@@ -17,6 +18,7 @@ from .capabilities import epoch, offer_terms, require, validate_definition
 from .config import within_url
 from .contracts import canonical, digest, parse_json
 from .errors import LasaError
+from .grants import execution_commitment
 
 
 class PeerClient:
@@ -29,6 +31,16 @@ class PeerClient:
         self.cache = OrderedDict()
         self.descriptor = None
         self.base = None
+
+    def matches_execution(self, offer, terms):
+        expected = execution_commitment(
+            self.config.execution_key(self.settings["execution_key_ref"]),
+            self.config.service_id,
+            self.service_id,
+            offer,
+            terms,
+        )
+        return hmac.compare_digest(offer.get("execution_commitment", ""), expected)
 
     async def start(self):
         verify = (
@@ -183,7 +195,7 @@ class PeerClient:
             (p for p in descriptor["protocols"] if p["version"] == PROTOCOL_VERSION), None
         )
         require(
-            protocol is not None and "bounded-delegation" in protocol["features"],
+            protocol is not None and "consumer-events" in protocol["features"],
             "incompatible_protocol",
             502,
         )

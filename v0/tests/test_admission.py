@@ -7,7 +7,7 @@ import pytest
 
 from lasa_service.contracts import canonical
 from lasa_service.errors import LasaError
-from lasa_service.planning import check_plan
+from lasa_service.planning import check_allocation, check_responsibilities
 from lasa_service.store import zero
 
 from .conftest import (
@@ -40,15 +40,15 @@ async def test_received_evaluating_then_admitted_and_verified(services):
     resume.set()
     result = await settled(client, response)
     assert result["status"] == "completed"
-    app.state.coordinator.contracts.validate("Task", result)
+    app.state.coordinator.contracts.validate("ConsumerTask", result)
 
 
 @pytest.mark.parametrize(
     "change,code",
     [
-        ("authority", "authority_denied"),
+        ("authority", "invalid_input"),
         ("budget", "capacity_exhausted"),
-        ("content", "disclosure_denied"),
+        ("content", "invalid_input"),
         ("offer", "offer_changed"),
     ],
 )
@@ -157,14 +157,14 @@ async def test_independent_verification_can_reject_schema_valid_claim(services):
         and "result" not in result
     )
     c = app.state.coordinator
-    events = c.diagnostics.page(result["task_id"], {"subject": "alice"})["events"]
+    events = c.diagnostics.page(result["task_id"], {"kind": "operator", "subject": "operator"})[
+        "events"
+    ]
     rejection = next(
         e for e in events if e["kind"] == "verification" and e["payload"]["release"] == "rejected"
     )
-    assert (
-        rejection["payload"]["checks"][0]["summary"]
-        == "Independent verifier rejected the candidate."
-    )
+    assert rejection["payload"]["checks"][0]["disposition"] == "failed"
+    assert rejection["payload"]["checks"][0]["summary"] == "Verification disposition recorded."
 
 
 async def test_task_and_events_are_owner_scoped(services):
@@ -212,9 +212,9 @@ async def test_clarification_revision_and_idempotent_answer(services):
     assert concurrent.status_code in {409, 412}
     result = await settled(client, response)
     assert result["status"] == "completed"
-    assert result["result"]["usage"]["input_bytes"] == len(canonical(request["input"])) + len(
-        canonical("Ada")
-    )
+    assert app.state.coordinator.store.usage(result["task_id"])["input_bytes"] == len(
+        canonical(request["input"])
+    ) + len(canonical("Ada"))
     replay = await client.post(url, json=body, headers=headers)
     assert replay.status_code == 202
 
@@ -227,23 +227,29 @@ async def test_plan_dag_coverage_and_aggregate_reservation(services):
     result = await settled(client, response)
     row, _ = c.store.task(result["task_id"])
     plan = json.loads(row["plan"])["document"]
-    check_plan(plan, c.registry, request["requested_limits"]["budget"])
+    check_responsibilities(plan["requirements"], plan["steps"])
+    budget = c.authority(result["task_id"])["limits"]["budget"]
+    check_allocation(plan, budget, zero())
     cycle = copy.deepcopy(plan)
     cycle["steps"][0]["depends_on"] = [cycle["steps"][0]["step_id"]]
     with pytest.raises(LasaError):
-        check_plan(cycle, c.registry, request["requested_limits"]["budget"])
+        check_responsibilities(cycle["requirements"], cycle["steps"])
+    missing = copy.deepcopy(plan)
+    missing["steps"][0]["requirement_ids"].clear()
+    with pytest.raises(LasaError, match="precondition_failed"):
+        check_responsibilities(missing["requirements"], missing["steps"])
+    duplicate = copy.deepcopy(plan["steps"][0])
+    duplicate["step_id"] = "duplicate-owner"
+    with pytest.raises(LasaError, match="precondition_failed"):
+        check_responsibilities(plan["requirements"], [*plan["steps"], duplicate])
     over = copy.deepcopy(plan)
-    over["steps"][0]["allocation"]["budget"]["model_calls"] = request["requested_limits"]["budget"][
-        "model_calls"
-    ]
+    over["steps"][0]["allocation"]["budget"]["model_calls"] = budget["model_calls"]
     with pytest.raises(LasaError):
-        check_plan(over, c.registry, request["requested_limits"]["budget"])
+        check_allocation(over, budget, zero())
     amount = zero()
-    amount["model_calls"] = request["requested_limits"]["budget"]["model_calls"]
+    amount["model_calls"] = budget["model_calls"]
     with pytest.raises(LasaError):
-        c.store.reserve(
-            result["task_id"], "overspend", "test", amount, request["requested_limits"]["budget"]
-        )
+        c.store.reserve(result["task_id"], "overspend", "test", amount, budget)
 
 
 async def test_narrow_binding_cannot_use_broad_caller_resource_policy(services, tmp_path):
@@ -280,16 +286,19 @@ async def test_active_step_cannot_spend_sibling_or_integration_budget(
             rule["budget"][dimension] = 1
     path.write_text(json.dumps(policy))
 
-    async def planner(c, task_id, request, peer_catalog, requirements):
+    async def planner(c, task_id, request, contracts, requirements):
         base = {
             "requirement_ids": [r["requirement_id"] for r in requirements],
             "depends_on": [],
             "contract_digest": request["selection"]["contract"]["digest"],
             "input_json": canonical(request["input"]).decode(),
-            "local_assessment": "sufficient",
-            "assessment_summary": "Two independently bounded steps.",
         }
-        return {"steps": [{**base, "step_id": "step-one"}, {**base, "step_id": "step-two"}]}
+        return {
+            "steps": [
+                {**base, "step_id": "step-one", "requirement_ids": []},
+                {**base, "step_id": "step-two", "depends_on": ["step-one"]},
+            ]
+        }
 
     calls = []
 

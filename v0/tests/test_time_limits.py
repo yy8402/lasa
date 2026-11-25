@@ -14,7 +14,7 @@ import pytest
 from lasa_service.capabilities import epoch
 from lasa_service.contracts import digest
 from lasa_service.gateway import TaskGateway
-from lasa_service.planning import VERDICT
+from lasa_service.planning import criterion_verdict_schema
 from lasa_service.store import encode
 
 from .conftest import FakeRuntime, documents, settled, submit, task_request
@@ -94,7 +94,7 @@ async def test_stalled_runtime_stops_at_allocation(services, tmp_path, boundary)
     assert entered.is_set() and stopped.is_set()
     assert elapsed < (1.7 if boundary in {"task", "cleanup"} else 0.8)
     assert epoch(request["requested_limits"]["deadline"]) > time.time() + 60
-    effective = result["admission"]["effective_limits"]["deadline"]
+    effective = c.authority(result["task_id"])["limits"]["deadline"]
     assert (
         epoch(effective)
         <= epoch(result["received_at"])
@@ -108,7 +108,9 @@ async def test_stalled_runtime_stops_at_allocation(services, tmp_path, boundary)
         if boundary == "cleanup":
             assert cleanup_stopped.is_set() and not c.ready
             await c.reconcile_internal(result["task_id"])
-            events = c.diagnostics.page(result["task_id"], {"subject": "alice"})["events"]
+            events = c.diagnostics.page(
+                result["task_id"], {"kind": "operator", "subject": "operator"}
+            )["events"]
             assert all(event["kind"] != "resolution" for event in events)
     else:
         assert result["status"] == "failed"
@@ -189,6 +191,7 @@ async def test_stalled_model_request_is_cancelled(services, tmp_path, boundary):
     stopped = asyncio.Event()
 
     async def upstream(request):
+        assert request.extensions["timeout"]["read"] is None
         entered.set()
         try:
             await asyncio.Event().wait()
@@ -196,7 +199,8 @@ async def test_stalled_model_request_is_cancelled(services, tmp_path, boundary):
             stopped.set()
 
     async def ask(c, task_id, purpose):
-        await c.models.ask(task_id, purpose, {"question": "Bounded assessment"}, VERDICT)
+        schema = criterion_verdict_schema([{"id": "criterion-example"}], ["candidate"])
+        await c.models.ask(task_id, purpose, {"question": "Bounded assessment"}, schema)
 
     async def proposal(c, task_id, request, catalog, requirements):
         await ask(c, task_id, "planning")
@@ -238,7 +242,8 @@ async def test_stalled_tool_connector_is_cancelled_at_step_limit(services, tmp_p
         resource = {"id": "fixture-connector"}
         worker = SimpleNamespace(done=lambda: False)
 
-        async def call(self, name, arguments, seconds):
+        async def call(self, name, arguments, seconds, *, before_use):
+            before_use()
             assert seconds <= 0.2
             entered.set()
             try:

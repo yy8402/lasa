@@ -2,7 +2,7 @@
 
 The [verification guide](../VERIFICATION.md) lists the checks for this implementation.
 
-This package specifies the architecture implemented by the Python runtime. It derives its design from requirements and current standards. Isolated implementation evidence and separately authorized deployed-service verification are distinguished in [the deployment report](../deployment/DEPLOYMENT.md).
+This package specifies the Python runtime and the [processing-boundary and recursive-fulfillment design](multi-peer-delegation.md). The packaged schemas and examples describe this checkout, including deadline-derived recursion. Deployment evidence is recorded separately in [the deployment report](../deployment/DEPLOYMENT.md).
 
 The central decision is to make a capability an immutable, versioned **outcome contract**. Keep that contract separate from how a service fulfills it, what a caller may request, present availability, and permission to execute one task. A parent delegates bounded steps and remains responsible for the original request.
 
@@ -13,7 +13,7 @@ Read in this order:
 3. [Discovery, identity, HTTP API, and caching](discovery.md)
 4. [Planning, routing, admission, execution, and evidence](execution.md)
 5. [Implementation acceptance checklist](acceptance.md)
-6. [Downstream multi-peer delegation](multi-peer-delegation.md)
+6. [Processing boundaries and recursive fulfillment](multi-peer-delegation.md)
 7. [Standards and sources](sources.md)
 
 [Content inspection and gateway profiles](content-security.md)
@@ -26,16 +26,10 @@ Machine-readable artifacts (also packaged for the runtime):
 
 The protocol version is `lasa/1.0.0`. JSON examples use reserved example domains and contain no usable credentials. Normative MUST and SHALL statements are LASA requirements. Shapes and behavioral invariants both apply.
 
-This design task has three finite acceptance milestones:
-
-- [x] Settle capability, discovery, authorization, and routing ownership and alternatives.
-- [x] Supply explicit schemas, API, configuration, examples, and implementation acceptance criteria.
-- [x] Validate the design artifacts offline and record the limits of that evidence.
-
 Run validation from the checkout:
 
 ```sh
 v0/.venv/bin/python v0/design/validate.py
 ```
 
-This validates design documents and fixtures. It neither tests nor modifies service execution.
+This validates the packaged schemas and fixtures. Target runtime qualification is separate and follows the [acceptance checklist](acceptance.md).

@@ -81,3 +81,19 @@ def sse_tool(name, arguments, sequence):
         ),
     ]
     return response_events(call, events, sequence)
+
+
+def verification_report(
+    criteria, passed=True, reason="Fixture independent verification.", evidence="candidate"
+):
+    return {
+        "criteria": [
+            {
+                "criterion_id": item["id"],
+                "disposition": "supported" if passed else "contradicted",
+                "evidence_refs": [evidence] if passed else [],
+                "reason": reason,
+            }
+            for item in criteria
+        ]
+    }

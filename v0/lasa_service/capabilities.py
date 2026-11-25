@@ -200,6 +200,9 @@ class CapabilityRegistry:
     def is_workflow(self, ref):
         return self.verifiers.get(digest(ref)) == REVIEW_CHECKLIST
 
+    def is_attempt(self, ref):
+        return self.verifiers.get(digest(ref)) == "task-attempt-v1"
+
     def input(self, ref, value):
         require(self.supported(ref), "unsupported_contract", 422)
         definition = self.get(ref)
@@ -238,9 +241,34 @@ class CapabilityRegistry:
         return output
 
 
+def public_offer(offer):
+    return {
+        "offer_id": offer["offer_id"],
+        "revision": offer["revision"],
+        "catalog_view": offer["catalog_view"],
+        "contract": offer["contract"],
+        "processing": offer["processing"],
+        **(
+            {"execution_commitment": offer["execution_commitment"]}
+            if "execution_commitment" in offer
+            else {}
+        ),
+        "restrictions": {
+            "allowed_effects": offer["restrictions"]["allowed_effects"],
+            "additional_preconditions": offer["restrictions"]["additional_preconditions"],
+        },
+        "max_budget": offer["max_budget"],
+        "valid_until": offer["valid_until"],
+    }
+
+
 def offer_terms(offer):
-    """Semantic pins exclude only the renewable discovery representation lease."""
-    return {key: value for key, value in offer.items() if key not in {"revision", "valid_until"}}
+    """Compare semantic pins across renewable discovery leases."""
+    return {
+        key: value
+        for key, value in offer.items()
+        if key not in {"revision", "valid_until", "execution_commitment"}
+    }
 
 
 class Publication:
@@ -255,19 +283,28 @@ class Publication:
         self.cursor_key = secrets.token_bytes(32)
 
     def snapshot(self, principal):
+        from .grants import configured_grants, execution_commitment, peer_execution, task_fanout
+        from .processing import DOMAIN_ONLY, modes, qualified_domain
+
         rules = self.rules(principal)
+        peer = principal["kind"] == "peer"
+        policy = self.config.policy() if hasattr(self.config, "policy") else {}
+        domain = qualified_domain(self.config, policy)
         view = (
             "view-"
-            + digest(
-                {
-                    "principal": principal["subject"],
-                    "policy": rules,
-                    "policy_revision": self.config.policy()["revision"]
-                    if hasattr(self.config, "policy")
-                    else None,
-                    "revision": self.config.revision,
-                }
-            )[7:39]
+            + hmac.digest(
+                self.cursor_key,
+                canonical(
+                    {
+                        "principal": principal["subject"],
+                        "policy": rules,
+                        "policy_revision": policy.get("revision"),
+                        "processing_domain": domain,
+                        "revision": self.config.revision,
+                    }
+                ),
+                "sha256",
+            ).hex()[:32]
         )
         previous = self.snapshots.get(principal["subject"])
         if (
@@ -281,14 +318,10 @@ class Publication:
         )
         offers = []
         configured = {x["digest"] for x in self.config.document["published_contracts"]}
-        peer_ids = {settings["expected_service_id"] for settings in self.config.peers}
         for rule in rules:
-            delegated = [
-                grant["contract"]
-                for grant in rule["delegation_grants"]
-                if grant["sender_service_id"] == self.config.service_id
-                and grant["receiver_service_id"] in peer_ids
-            ]
+            fanout = task_fanout(self.config, rule, peer=peer)
+            grants = configured_grants(self.config, rule)
+            delegated = [grant["contract"] for grant in grants] if fanout else []
             for ref in rule["contracts"]:
                 if (
                     ref["digest"] not in configured
@@ -301,59 +334,90 @@ class Publication:
                 can_delegate = ref in delegated
                 workflow = self.registry.is_workflow(ref)
                 if workflow:
-                    can_delegate = all(child in delegated for child in child_contracts().values())
+                    can_delegate = bool(delegated) and all(
+                        child in delegated for child in child_contracts().values()
+                    )
                 if not (can_local or can_delegate):
                     continue
                 allowed = sorted(set(rule["effects"]) & set(definition["max_effects"]))
-                offer_id = (
-                    "offer-"
-                    + digest(
-                        {
-                            "subject": principal["subject"],
-                            "authority": rule["authorization_ref"],
-                            "contract": ref,
-                        }
-                    )[7:39]
-                )
+                if peer:
+                    allowed = [effect for effect in allowed if effect.endswith(".read")]
                 offer = {
-                    "offer_id": offer_id,
-                    "revision": "offer-"
-                    + digest({"view": view, "rule": rule, "contract": ref, "expiry": expires})[
-                        7:39
-                    ],
                     "catalog_view": view,
                     "authorization_ref": rule["authorization_ref"],
                     "contract": ref,
                     "restrictions": {
                         "allowed_effects": allowed,
-                        "resources": copy.deepcopy(rule["resources"]),
-                        "additional_preconditions": copy.deepcopy(
-                            rule.get("offer_preconditions", [])
-                        ),
+                        "additional_preconditions": [],
                     },
+                    "resources": (
+                        [
+                            {"resource": item["resource"], "actions": ["read"]}
+                            for item in rule["resources"]
+                            if "read" in item["actions"]
+                        ]
+                        if peer
+                        else copy.deepcopy(rule["resources"])
+                    ),
+                    "offer_preconditions": [
+                        copy.deepcopy(item)
+                        for item in rule.get("offer_preconditions", [])
+                        if item["kind"] != "budget_minimum" or item["resource"] == "delegations"
+                    ],
                     "max_budget": {
                         key: min(limit, self.config.document["limits"]["max_task_budget"][key])
                         for key, limit in rule["budget"].items()
+                        if key != "delegations"
                     },
-                    "max_hops": min(rule["max_hops"], self.config.document["limits"]["max_hops"]),
                     "valid_until": expires,
                 }
+                minimums = {}
+                for predicate in rule.get("offer_preconditions", []):
+                    if predicate["kind"] == "budget_minimum":
+                        resource = predicate["resource"]
+                        if resource in offer["max_budget"]:
+                            minimums[resource] = max(
+                                minimums.get(resource, 0), predicate["minimum"]
+                            )
                 for resource in ("model_calls", "model_tokens"):
                     minimum = self.config.document["limits"]["integration_reserve"][resource]
-                    if self.config.peers and not workflow:
+                    if delegated and self.registry.is_attempt(ref):
                         minimum += self.config.document["limits"]["assessment_budget"][resource]
                     if resource == "model_calls":
                         minimum += 1
-                    if minimum:
-                        offer["restrictions"]["additional_preconditions"].append(
-                            {
-                                "kind": "budget_minimum",
-                                "description": "Minimum receiver assessment, execution, and verification allocation.",
-                                "resource": resource,
-                                "minimum": minimum,
-                            }
+                    minimums[resource] = max(minimums.get(resource, 0), minimum)
+                offer["restrictions"]["additional_preconditions"] = [
+                    {
+                        "kind": "budget_minimum",
+                        "description": "Minimum execution budget for this offer.",
+                        "resource": resource,
+                        "minimum": minimum,
+                    }
+                    for resource, minimum in sorted(minimums.items())
+                    if minimum
+                ]
+                for mode in modes(rule):
+                    terms = {"mode": mode}
+                    if mode == DOMAIN_ONLY:
+                        if not domain or ref not in domain["qualified_contracts"]:
+                            continue
+                        terms["domain"] = domain["id"]
+                    key = [principal["subject"], rule["authorization_ref"], ref, mode]
+                    published = {
+                        **offer,
+                        "offer_id": "offer-" + digest(key)[7:39],
+                        "revision": "offer-" + digest([view, key, terms, expires])[7:39],
+                        "processing": terms,
+                    }
+                    if peer:
+                        published["execution_commitment"] = execution_commitment(
+                            self.config.execution_key(rule["execution_key_ref"]),
+                            principal["service_id"],
+                            self.config.service_id,
+                            published,
+                            peer_execution(self.config, rule, fanout, grants),
                         )
-                offers.append(offer)
+                    offers.append(published)
         snapshot = {
             "service_id": self.config.service_id,
             "catalog_view": view,
@@ -419,7 +483,7 @@ class Publication:
             value["next_cursor"] = (
                 raw + "." + hmac.new(self.cursor_key, raw.encode(), hashlib.sha256).hexdigest()
             )
-        value["offers"] = value["offers"][start:end]
+        value["offers"] = [public_offer(item) for item in value["offers"][start:end]]
         return value
 
     def offer(self, principal, offer_id):

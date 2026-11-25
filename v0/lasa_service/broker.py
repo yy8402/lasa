@@ -11,6 +11,7 @@ from .content_security import Transfer
 from .contracts import canonical, digest, parse_json, validate_data
 from .errors import LasaError
 from .planning import object_schema
+from .processing import permits as processing_permits
 from .recovery import omit_fields
 from .store import encode, zero
 
@@ -63,6 +64,12 @@ class Broker:
             if name not in self.operations:
                 return "unavailable"
             connector, operation = self.operations[name]
+            if (
+                authority
+                and "selected_offer" in authority
+                and not processing_permits(authority, "connector:" + name)
+            ):
+                return "unavailable"
             ceilings = [(rule["effects"], rule["resources"])]
             if authority is not None:
                 ceilings.append((authority["allowed_effects"], authority["resources"]))
@@ -98,7 +105,7 @@ class Broker:
                 effect, action = "workspace.read", "read"
             if c.permits(task_id, effect, "workspace:self", action):
                 allowed.add(name)
-        if "delegation" in c.request(task_id):
+        if c.principal(task_id)["kind"] == "peer":
             allowed.discard("lasa.request_input")
         for name in context.binding["required_operations"]:
             _, operation = self.operations[name]
@@ -290,10 +297,12 @@ class Broker:
                     )
                 else:
                     try:
+                        c.check_processing(task_id, destination)
                         value = await connector.call(
                             name,
                             arguments,
                             max(0.001, c.remaining_seconds(task_id)),
+                            before_use=lambda: c.check_processing(task_id, destination),
                         )
                     except (LasaError, asyncio.CancelledError):
                         c.content.outcome(invoke, "delivery_unknown")

@@ -9,10 +9,19 @@ import pytest
 from lasa_service.contracts import canonical, digest, parse_json
 from lasa_service.errors import LasaError
 from lasa_service.evidence import MAX_BYTES, append_evidence, verification_material
-from lasa_service.planning import Planner
+from lasa_service.planning import Planner, criterion_verdicts
 from lasa_service.store import encode
 
-from .conftest import FakeRuntime, configuration, documents, settled, submit, task_request
+from .conftest import (
+    FakeRuntime,
+    configuration,
+    documents,
+    operator_get,
+    settled,
+    submit,
+    task_request,
+)
+from .protocol_helpers import verification_report
 
 
 @pytest.mark.parametrize("passed", [True, False])
@@ -55,12 +64,19 @@ async def test_review_verification_separates_candidate_from_evidence(services, t
             "claimed_evidence",
             "original_requirements",
             "trusted_execution_evidence",
+            "criteria",
+            "evidence_refs",
         }
         assert facts["input"] == inputs
+        verdict_fields = body["text"]["format"]["schema"]["properties"]["criteria"]["items"][
+            "properties"
+        ]
+        assert verdict_fields["criterion_id"]["enum"] == [item["id"] for item in facts["criteria"]]
+        assert verdict_fields["evidence_refs"]["items"]["enum"] == facts["evidence_refs"]
         assert "output_schema" not in facts["contract"]
         assert facts["contract"]["ref"]["id"].endswith("/design.review")
         assert json.loads(candidate["content"][0]["text"]) == output
-        verdict = {"passed": passed, "reason": "Independent semantic decision."}
+        verdict = verification_report(facts["criteria"], passed)
         requests.append(body)
         return httpx.Response(
             200,
@@ -135,10 +151,7 @@ async def test_verifier_gets_receiver_receipts_and_verified_artifact_without_for
             assert material["artifacts"][0]["content"]["text"] == "verified readback"
         else:
             assert material["operations"] == [] and material["artifacts"] == []
-        return {
-            "passed": performed and accept,
-            "reason": "Recorded evidence assessed independently.",
-        }
+        return verification_report(payload["criteria"], performed and accept)
 
     client, app = await services(runtime=FakeRuntime(handler))
     c = app.state.coordinator
@@ -151,7 +164,7 @@ async def test_verifier_gets_receiver_receipts_and_verified_artifact_without_for
     assert result["task_id"] not in c.diagnostics.active_secrets
     if not (performed and accept):
         assert result["problem"]["code"] == "verification_failed" and "result" not in result
-    page = (await client.get(response.headers["Location"] + "/events")).json()
+    page = (await operator_get(client, app, response.headers["Location"], "/events")).json()
     assert all("content" not in event for event in page["events"])
 
 
@@ -221,7 +234,7 @@ async def test_changed_execution_facts_invalidate_cached_semantic_verdict(servic
 
     async def assess(task_id, purpose, payload, schema, **_):
         calls.append(payload["trusted_execution_evidence"])
-        return {"passed": len(calls) == 1, "reason": "Each distinct durable fact set is assessed."}
+        return verification_report(payload["criteria"], len(calls) == 1)
 
     c.models.ask = assess
     planner = Planner(c)
@@ -245,6 +258,19 @@ async def test_changed_execution_facts_invalidate_cached_semantic_verdict(servic
     )
     assert not await planner.verify(*arguments)
     assert len(calls) == 2 and digest(calls[0]) != digest(calls[1])
+
+
+def test_criterion_verdicts_require_exact_coverage_and_known_evidence():
+    criteria = [{"id": "first"}, {"id": "second"}]
+    report = verification_report(criteria)
+    assert criterion_verdicts(report, criteria, {"candidate"})
+    report["criteria"][1]["disposition"] = "insufficient_evidence"
+    assert not criterion_verdicts(report, criteria, {"candidate"})
+    report["criteria"][1]["evidence_refs"] = ["unverified"]
+    with pytest.raises(LasaError, match="verification_failed"):
+        criterion_verdicts(report, criteria, {"candidate"})
+    with pytest.raises(LasaError, match="verification_failed"):
+        criterion_verdicts(verification_report(criteria[:1]), criteria, {"candidate"})
 
 
 async def test_artifact_material_rejects_other_task_or_corrupt_snapshot(services):

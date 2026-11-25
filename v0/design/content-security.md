@@ -4,6 +4,8 @@ The operator selects which content streams LASA inspects and how each verdict af
 
 LASA checks task authority, protects credentials, validates schemas and limits, governs disclosure and release, and records transfer metadata in every inspection mode. The endpoint's disclosure policy decides whether both the intended destination and the scanner may receive their respective representations. Binding a profile to a stream authorizes its gateway for the minimized projection only within that policy. Keep any required classification, residency, retention, and forwarding rules in the endpoint's disclosure policy. Derived content carries its source restrictions across transfers. Hold a disclosure when a required policy decision is unavailable. [Gateway architecture](../../doc/13-agent-endpoint-design-specification.md#10-enforcement-gateways) · [Release architecture](../../doc/07-artifacts-and-information-release.md)
 
+Under the target processing guarantee, the selected domain scope applies before the first intake projection is sent. Inspection and recovery destinations must qualify for the same scope as the intended recipient. When a required scanner is unavailable, recovery stays within scope or fails closed. [Target boundary enforcement](multi-peer-delegation.md#target-boundary-enforcement)
+
 ## Grouped bindings
 
 A stream is a semantic request or response at a LASA boundary. The runtime selects the projection and enforces the decision before the content is persisted, consumed, or released at the relevant point.
@@ -15,7 +17,7 @@ A stream is a semantic request or response at a LASA boundary. The runtime selec
 | `delegates` | Child request, predecessor outputs, and attached artifact data before dispatch | Authenticated child results, returned artifacts, and authorized diagnostic content before use or forwarding |
 | `connectors` | Validated arguments before dispatch to an app or MCP operation | Schema-validated, normalized results before use or storage as source evidence |
 
-An optional `artifact_profile` on a caller or delegate response rule selects the inspection profile for the artifact projection. Otherwise artifacts use the response rule's `profile`. Both use the response rule's effective mode. LASA defines projections for each supported content type. The ordinary settings require no field selection or per-contract allowlist. [Delegation lifecycle](execution.md#delegation-envelope-and-budgets) · [Connector schema and lifecycle](connectors.md#protocol-and-lifecycle)
+An optional `artifact_profile` on a caller or delegate response rule selects the inspection profile for the artifact projection. Otherwise artifacts use the response rule's `profile`. Both use the response rule's effective mode. LASA defines projections for each supported content type. The inspection protocol carries the complete consumer result in the output field. A text artifact carries its entire public manifest and its text. Task inspection includes typed inputs and attachments, and labels verified handoffs as dependencies in the inspector request. The ordinary settings require no field selection or per-contract allowlist. [Delegation lifecycle](execution.md#provider-local-reservations-and-budgets) · [Connector schema and lifecycle](connectors.md#protocol-and-lifecycle)
 
 ## Explicit modes and inheritance
 
@@ -142,7 +144,9 @@ Keep the full representation's digest private and link it to the projection dige
 
 Record the effective mode and its origin, logical stream and purpose, service and operation IDs, selected profile ID and gateway identity, policy revisions, digests, verdict, reason code, and timestamp. Limit routine content audit records to metadata. Record the approval for a scanner disclosure before sending its projection. Persist release evidence with visibility changes. Record the actual transfer outcome separately from permission to send. Preserve confirmed effects and usage when a result is withheld, and preserve the original receiver and operation identity during reconciliation. [Durable operations and diagnostics](execution.md#diagnostic-evidence)
 
-Bind each result and artifact release to its exact bytes, audience, disclosure policy, and mandatory `caller.response` profile. Resolve the artifact profile independently from the result profile. Request and other response bindings govern their own transfers. Changes to their settings leave existing release approvals valid. An applicable disclosure or mandatory release profile change holds subsequent reads and replays. When upgrading a legacy store, start the new supervisor with the existing inspection configuration first. It scopes each grant whose legacy revision still matches that configuration before reporting readiness.
+Bind each result and artifact release to its exact bytes, audience, disclosure policy, and mandatory `caller.response` profile. Inspect output, criterion evidence, artifact manifests, and workspace readbacks together for results leaving a receiver or entering a delegator. Artifact bytes use their own inspection. Routine routing and verification diagnostics report controller metadata. Free-text explanations use the separately authorized diagnostic content view.
+
+Resolve the artifact profile independently from the result profile. An applicable disclosure, mandatory release profile, or enforced result projection change holds subsequent reads and replays. Legacy artifact approvals and result approvals without mandatory inspection can acquire a scope under the exact matching configuration.
 
 ## Shared recovery
 

@@ -1,6 +1,5 @@
 {
   "offer_id": "offer-design-review",
-  "authorization_ref": "default",
   "revision": "offer-review-r1",
   "catalog_view": "view-layer1-policy7",
   "contract": {
@@ -12,26 +11,19 @@
     "allowed_effects": [
       "workspace.read"
     ],
-    "resources": [
-      {
-        "resource": "workspace:self",
-        "actions": [
-          "read"
-        ]
-      }
-    ],
     "additional_preconditions": []
   },
   "max_budget": {
     "model_tokens": 24000,
     "model_calls": 6,
     "tool_calls": 12,
-    "delegations": 2,
     "wall_time_ms": 180000,
     "input_bytes": 64000,
     "output_bytes": 32000,
     "artifact_bytes": 128000
   },
-  "max_hops": 0,
-  "valid_until": "2026-11-18T08:10:00Z"
+  "valid_until": "2026-11-18T08:10:00Z",
+  "processing": {
+    "mode": "approved_processing"
+  }
 }

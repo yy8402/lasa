@@ -16,7 +16,7 @@ The bootstrap document contains only approved links and public labels. It may be
 2. Fetch the configured descriptor. Verify `service_id` against the configured expected identity and bind that identity to the configured origin/path. Service identity is stable across restarts; `deployment_revision` describes a deployment, not a new identity.
 3. Select the exact LASA protocol version and required features. The `1.0.0` descriptor advertises `lasa/1.0.0`. Unknown mandatory features, an unsupported protocol version, or a changed service identity fail negotiation.
 4. Fetch the versioned OpenAPI document and caller-scoped offer catalog using this protocol. Peers match the advertised wire schema digest and required HTTP operations. OpenAPI's `info.version` identifies the implementation release. Fetch definitions as needed from the advertised contract endpoint and verify their digests and trusted publisher namespace.
-5. Match semantic requirements and preconditions against offers in the caller's configured authorization view. Refresh the selected offer and its availability by offer ID before submission. Submit the exact contract, offer revision, and public `authorization_ref` from that offer. Admission independently checks current authority and capacity.
+5. Match semantic requirements and preconditions against offers in the caller's configured authorization view. Refresh the selected offer and its availability by offer ID before submission. Submit the exact contract and offer revision from that catalog view. Admission independently checks current authority and capacity.
 
 The descriptor's `protocols` describe communication features; the capability catalog describes outcomes. Descriptor/catalog responses do not expose private model configuration or local tool bindings. Authentication metadata names a pretrusted issuer and intended resource audience; it is not permission to fetch arbitrary issuer/JWKS URLs. JWT access tokens require issuer, audience, subject, lifetime, and algorithm validation using preconfigured trust, as applicable to the chosen issuer profile. Revocation/expiry checks are receiver-owned. [RFC 9700](https://www.rfc-editor.org/rfc/rfc9700.html), [RFC 8725](https://www.rfc-editor.org/rfc/rfc8725.html)
 
@@ -37,10 +37,10 @@ Paths below are relative to the selected protocol base URL; they are not well-kn
 | `GET /tasks/{task_id}` | State, acceptance/rejection, released result or safe failure |
 | `POST /tasks/{task_id}/inputs` | Answer a pending clarification using its question ID and revision |
 | `POST /tasks/{task_id}/cancel` | Request cancellation and return current task state |
-| `GET /tasks/{task_id}/events` | Authorized metadata diagnostics, paged by sequence |
+| `GET /tasks/{task_id}/events` | Provider task progress, paged by sequence |
 | `GET /tasks/{task_id}/artifacts/{artifact_id}` | Authorized released bytes with digest and bounded content type |
 
-Sessions carry opaque server-issued IDs; workspace paths are private. One active task per session avoids ambiguous concurrent writes. The same task API serves callers and peers; only authenticated trusted peer principals may include a delegation envelope. A child uses its own session/workspace. Sessions are not shared filesystems.
+Sessions carry opaque server-issued IDs; workspace paths are private. One active task per session avoids ambiguous concurrent writes. Every consumer uses the same task API and each authenticated principal owns its receiving provider’s session. Setup and administration use private configuration and a separate operator credential.
 
 ## Revisions and caching
 

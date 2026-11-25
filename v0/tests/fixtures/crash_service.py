@@ -13,6 +13,7 @@ from lasa_service.api import create_app
 from tests.conftest import (
     FakeRuntime,
     configuration,
+    deterministic_planner,
     deterministic_verifier,
     documents,
     submit,
@@ -35,7 +36,12 @@ async def main():
             {"relative_path": "committed.txt", "text": "one committed write"},
         )
 
-    app = create_app(cfg, runtime=FakeRuntime(handler), verifier=deterministic_verifier)
+    app = create_app(
+        cfg,
+        runtime=FakeRuntime(handler),
+        planner=deterministic_planner,
+        verifier=deterministic_verifier,
+    )
     async with app.router.lifespan_context(app):
         app.state.coordinator.fault = lambda point, task_id: (
             os._exit(72) if point == "after_effect" else None

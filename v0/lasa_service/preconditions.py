@@ -13,8 +13,8 @@ def input_size(inputs, *context):
 def request_input_size(request):
     return input_size(
         request["input"],
-        request.get("dependency_results"),
-        request.get("delegation", {}).get("disclosed_artifacts"),
+        request.get("imports"),
+        request.get("attachments"),
     )
 
 
@@ -41,8 +41,8 @@ def input_artifacts(c, task_id, inputs, authority, predicates, *, prior_artifact
         return []
     require(isinstance(inputs, dict), "precondition_failed", 422)
     request = c.request(task_id)
-    rule = c.authorization.rule(c.principal(task_id), request["authorization_ref"])
-    incoming = request.get("delegation", {}).get("disclosed_artifacts", [])
+    rule = c.current_rule(task_id)
+    incoming = request.get("attachments", [])
     attached = {x["manifest"]["artifact_id"]: x for x in incoming}
     require(len(attached) == len(incoming), "invalid_input")
     _, task = c.store.task(task_id)
@@ -114,6 +114,17 @@ def check_inputs(c, task_id, definition, inputs, authority, additional=(), *, pr
     return artifacts
 
 
+def allows_resource(authority, predicate):
+    resource = predicate["resource"]
+    actions = set(predicate["actions"])
+    domain = "workspace" if resource == "workspace:self" else "external"
+    effects = {f"{domain}.read" if action == "read" else f"{domain}.write" for action in actions}
+    return effects <= set(authority["allowed_effects"]) and any(
+        rule["resource"] == resource and actions <= set(rule["actions"])
+        for rule in authority["resources"]
+    )
+
+
 def check_predicates(definition, inputs, authority, additional=(), artifacts=()):
     validate_data(definition["input_schema"], inputs)
     for predicate in [*definition["preconditions"], *additional]:
@@ -127,21 +138,7 @@ def check_predicates(definition, inputs, authority, additional=(), artifacts=())
                 429,
             )
         elif kind == "resource_authorized":
-            require(
-                any(
-                    r["resource"] == predicate["resource"]
-                    and set(predicate["actions"]) <= set(r["actions"])
-                    for r in authority["resources"]
-                ),
-                "authority_denied",
-                403,
-            )
-            workspace = predicate["resource"] == "workspace:self"
-            for action in predicate["actions"]:
-                effect = ("workspace." if workspace else "external.") + (
-                    "read" if action == "read" else "write"
-                )
-                require(effect in authority["allowed_effects"], "authority_denied", 403)
+            require(allows_resource(authority, predicate), "authority_denied", 403)
         elif kind == "artifact_present":
             value = inputs.get(predicate["input_field"]) if isinstance(inputs, dict) else None
             require(

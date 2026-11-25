@@ -10,14 +10,14 @@ from uuid import uuid4
 from .capabilities import instant, require
 from .contracts import canonical, parse_json
 
-STORAGE_SCHEMA_VERSION = 2
+STORAGE_SCHEMA_VERSION = 4
 TERMINAL = frozenset({"completed", "failed", "rejected", "cancelled", "indeterminate"})
 ACTIVE_TASKS = "state NOT IN (" + ",".join(repr(state) for state in sorted(TERMINAL)) + ")"
 RETENTION_UNTIL = "json_extract(document,'$.retention_until')"
 RESOLUTION_EVENT = "json_extract(document,'$.kind')='resolution'"
 PENDING_CHILD = (
     "json_extract(document,'$.dispatched')=1 AND "
-    "(json_extract(document,'$.state') NOT IN ('completed','failed','rejected','cancelled') "
+    "(json_extract(document,'$.state') NOT IN ('completed','failed','rejected','cancelled','indeterminate') "
     "OR json_extract(document,'$.effect_disposition')='unknown')"
 )
 BUDGET_KEYS = (
@@ -89,6 +89,23 @@ class Store:
         self.db.executescript(f"""
 CREATE TABLE IF NOT EXISTS sessions(id TEXT PRIMARY KEY,owner TEXT,document TEXT);
 CREATE TABLE IF NOT EXISTS tasks(id TEXT PRIMARY KEY,session_id TEXT REFERENCES sessions(id),state TEXT,document TEXT,request TEXT,principal TEXT,authority TEXT,plan TEXT);
+CREATE TABLE IF NOT EXISTS consumer_events(
+  task_id TEXT REFERENCES tasks(id) ON DELETE CASCADE,
+  sequence INTEGER, status TEXT NOT NULL, PRIMARY KEY(task_id,sequence)
+);
+CREATE TRIGGER IF NOT EXISTS consumer_task_received AFTER INSERT ON tasks
+BEGIN
+  INSERT INTO consumer_events VALUES(new.id, 1, new.state);
+END;
+CREATE TRIGGER IF NOT EXISTS consumer_task_changed AFTER UPDATE OF state ON tasks
+WHEN (CASE old.state WHEN 'waiting_child' THEN 'executing' ELSE old.state END)
+  != (CASE new.state WHEN 'waiting_child' THEN 'executing' ELSE new.state END)
+BEGIN
+  INSERT INTO consumer_events
+  SELECT new.id, COALESCE(MAX(sequence),1)+1,
+         CASE new.state WHEN 'waiting_child' THEN 'executing' ELSE new.state END
+  FROM consumer_events WHERE task_id=new.id;
+END;
 CREATE TABLE IF NOT EXISTS operations(owner TEXT,route TEXT,key TEXT,digest TEXT,operation_id TEXT,resource_id TEXT,kind TEXT,status INTEGER,PRIMARY KEY(owner,route,key),UNIQUE(owner,operation_id));
 CREATE TABLE IF NOT EXISTS allocations(task_id TEXT,operation_id TEXT,kind TEXT,state TEXT,reserved TEXT,usage TEXT,details TEXT,PRIMARY KEY(task_id,operation_id));
 CREATE TABLE IF NOT EXISTS children(delegation_id TEXT PRIMARY KEY,task_id TEXT,document TEXT);
@@ -96,10 +113,8 @@ CREATE TABLE IF NOT EXISTS actions(task_id TEXT,operation_id TEXT,digest TEXT,st
 CREATE TABLE IF NOT EXISTS events(task_id TEXT,sequence INTEGER,document TEXT,PRIMARY KEY(task_id,sequence));
 CREATE TABLE IF NOT EXISTS audit(task_id TEXT,kind TEXT,document TEXT,created_at TEXT);
 CREATE TABLE IF NOT EXISTS content_classes(task_id TEXT, class TEXT, PRIMARY KEY(task_id,class));
-CREATE TABLE IF NOT EXISTS content_releases(task_id TEXT, component TEXT, destination TEXT, digest TEXT, policy_revision TEXT, PRIMARY KEY(task_id,component));
-CREATE TABLE IF NOT EXISTS content_release_scopes(
-  task_id TEXT, component TEXT, revision TEXT NOT NULL, PRIMARY KEY(task_id,component),
-  FOREIGN KEY(task_id,component) REFERENCES content_releases(task_id,component) ON DELETE CASCADE
+CREATE TABLE IF NOT EXISTS content_releases(
+  task_id TEXT, component TEXT, destination TEXT, digest TEXT, revision TEXT, PRIMARY KEY(task_id,component)
 );
 CREATE TABLE IF NOT EXISTS artifacts(id TEXT PRIMARY KEY,task_id TEXT,manifest TEXT,content BLOB,released INTEGER);
 CREATE TABLE IF NOT EXISTS runtimes(task_id TEXT PRIMARY KEY REFERENCES tasks(id),attempt_id TEXT UNIQUE NOT NULL);
@@ -260,6 +275,21 @@ PRAGMA user_version={STORAGE_SCHEMA_VERSION};
                 (encode(session), session["session_id"]),
             )
 
+    def consumer_state(self, task_id, status):
+        row = self.db.execute(
+            "SELECT sequence,status FROM consumer_events WHERE task_id=? ORDER BY sequence DESC LIMIT 1",
+            (task_id,),
+        ).fetchone()
+        return tuple(row) if row else (1, "executing" if status == "waiting_child" else status)
+
+    def has_resolution(self, task_id):
+        return (
+            self.db.execute(
+                f"SELECT 1 FROM events WHERE task_id=? AND {RESOLUTION_EVENT}", (task_id,)
+            ).fetchone()
+            is not None
+        )
+
     def active(self, session_id=None):
         query = f"SELECT id FROM tasks WHERE {ACTIVE_TASKS}"
         rows = (
@@ -416,22 +446,44 @@ PRAGMA user_version={STORAGE_SCHEMA_VERSION};
         ).fetchone()
         return row[0] if row else 0
 
-    def reserve(self, task_id, operation_id, kind, amount, ceiling, details=None):
+    def subtree_usage(self, task_id):
+        return self.db.execute(
+            "SELECT coalesce(sum(json_extract(details,'$.subtree_charge')),0) FROM allocations "
+            "WHERE task_id=? AND (state='reserved' OR json_extract(usage,'$.delegations')>0)",
+            (task_id,),
+        ).fetchone()[0]
+
+    def reserve(
+        self, task_id, operation_id, kind, amount, ceiling, details=None, *, subtree_cap=None
+    ):
         require(self.task(task_id)[1]["status"] not in TERMINAL, "task_state_conflict", 409)
         require(
             set(amount) == set(zero()) and all(type(x) is int and x >= 0 for x in amount.values()),
             "invalid_input",
         )
+        details = details or {}
         existing = self.db.execute(
             "SELECT * FROM allocations WHERE task_id=? AND operation_id=?", (task_id, operation_id)
         ).fetchone()
         if existing:
-            require(parse_json(existing["reserved"]) == amount, "idempotency_conflict", 409)
+            require(
+                parse_json(existing["reserved"]) == amount
+                and parse_json(existing["details"]).get("subtree_charge")
+                == details.get("subtree_charge"),
+                "idempotency_conflict",
+                409,
+            )
             return False
         held = self.usage(task_id, reserved=True)
         require(
             all(held[key] + amount[key] <= ceiling[key] for key in held), "capacity_exhausted", 429
         )
+        if subtree_cap is not None:
+            require(
+                self.subtree_usage(task_id) + details["subtree_charge"] <= subtree_cap,
+                "capacity_exhausted",
+                429,
+            )
         self.db.execute(
             "INSERT INTO allocations VALUES(?,?,?,?,?,?,?)",
             (
@@ -441,7 +493,7 @@ PRAGMA user_version={STORAGE_SCHEMA_VERSION};
                 "reserved",
                 encode(amount),
                 encode(zero()),
-                encode(details or {}),
+                encode(details),
             ),
         )
         return True

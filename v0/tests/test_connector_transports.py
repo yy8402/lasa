@@ -38,6 +38,10 @@ OUTPUT = {
 }
 
 
+async def call_fixture(connector, operation, arguments, seconds):
+    return await connector.call(operation, arguments, seconds, before_use=lambda: None)
+
+
 async def wait_state(connector, name, state):
     for _ in range(100):
         if connector.state(name) == state:
@@ -184,11 +188,13 @@ async def test_stdio_structured_normalization_scope_and_owned_shutdown(tmp_path)
     }
     async with actor(tmp_path, resource) as connector:
         assert connector.state(op["operation_id"]) == "available"
-        assert await connector.call(op["operation_id"], {"report_id": "42"}, 1) == {
+        assert await call_fixture(connector, op["operation_id"], {"report_id": "42"}, 1) == {
             "text": "Report 42"
         }
         with pytest.raises(LasaError, match="authority_denied"):
-            await connector.call(op["operation_id"], {"report_id": "outside-approved-scope"}, 1)
+            await call_fixture(
+                connector, op["operation_id"], {"report_id": "outside-approved-scope"}, 1
+            )
 
 
 async def test_http_paged_discovery_drift_and_unrelated_operation_recovery(tmp_path):
@@ -211,7 +217,7 @@ async def test_http_paged_discovery_drift_and_unrelated_operation_recovery(tmp_p
             state["schemas"][0]["input_schema"]["properties"]["drift"] = {"type": "boolean"}
             await wait_state(connector, "reports.inspect", "unavailable")
             assert connector.state("reports.other") == "available"
-            assert await connector.call("reports.other", {"report_id": "42"}, 1) == {
+            assert await call_fixture(connector, "reports.other", {"report_id": "42"}, 1) == {
                 "text": "Report 42"
             }
             state["schemas"][0] = operation()
@@ -235,15 +241,17 @@ async def test_http_token_file_refresh_text_normalization_and_cancellation(tmp_p
             "operations": [op],
         }
         async with actor(tmp_path / "client", resource) as connector:
-            assert await connector.call("reports.inspect", {"report_id": "42"}, 1) == {
+            assert await call_fixture(connector, "reports.inspect", {"report_id": "42"}, 1) == {
                 "text": "Report 42"
             }
             token_file.write_text("refreshed-token")
             state["token"] = "refreshed-token"
-            assert await connector.call("reports.inspect", {"report_id": "42"}, 1) == {
+            assert await call_fixture(connector, "reports.inspect", {"report_id": "42"}, 1) == {
                 "text": "Report 42"
             }
-            task = asyncio.create_task(connector.call("reports.inspect", {"report_id": "stall"}, 1))
+            task = asyncio.create_task(
+                call_fixture(connector, "reports.inspect", {"report_id": "stall"}, 1)
+            )
             async with asyncio.timeout(2):
                 await state["entered"].wait()
             task.cancel()
@@ -302,13 +310,17 @@ async def test_json_application_projection_credentials_bounds_and_recovery(tmp_p
             "operations": [op],
         }
         async with actor(tmp_path / "client", resource) as connector:
-            assert await connector.call("records.read", {}, 1) == {"title": "Source record"}
+            assert await call_fixture(connector, "records.read", {}, 1) == {
+                "title": "Source record"
+            }
             token_file.write_text("second")
             state["token"] = "second"
-            assert await connector.call("records.read", {}, 1) == {"title": "Source record"}
+            assert await call_fixture(connector, "records.read", {}, 1) == {
+                "title": "Source record"
+            }
             state["status"] = 503
             with pytest.raises(LasaError):
-                await connector.call("records.read", {}, 1)
+                await call_fixture(connector, "records.read", {}, 1)
             assert connector.state("records.read") == "unavailable"
             state["status"] = 200
             await wait_state(connector, "records.read", "available")
@@ -335,7 +347,7 @@ async def test_http_unauthorized_and_rate_limited_are_distinct_and_recover(tmp_p
             await wait_state(connector, "reports.inspect", "available")
             state["http_status"] = 429
             with pytest.raises(LasaError):
-                await connector.call("reports.inspect", {"report_id": "42"}, 1)
+                await call_fixture(connector, "reports.inspect", {"report_id": "42"}, 1)
             await wait_state(connector, "reports.inspect", "busy")
             requests = len(state["seen_authorization"])
             await asyncio.sleep(0.15)
@@ -357,16 +369,16 @@ async def test_queue_is_bounded_and_cancelled_queued_work_is_not_executed(tmp_pa
         }
         async with actor(tmp_path / "client", resource) as connector:
             first = asyncio.create_task(
-                connector.call("reports.inspect", {"report_id": "stall"}, 1)
+                call_fixture(connector, "reports.inspect", {"report_id": "stall"}, 1)
             )
             async with asyncio.timeout(2):
                 await state["entered"].wait()
             second = asyncio.create_task(
-                connector.call("reports.inspect", {"report_id": "42"}, 0.05)
+                call_fixture(connector, "reports.inspect", {"report_id": "42"}, 0.05)
             )
             await asyncio.sleep(0)
             with pytest.raises(LasaError, match="capacity_exhausted"):
-                await connector.call("reports.inspect", {"report_id": "42"}, 1)
+                await call_fixture(connector, "reports.inspect", {"report_id": "42"}, 1)
             with pytest.raises(LasaError, match="deadline_exceeded"):
                 await second
             assert len(state["calls"]) == 1
@@ -375,7 +387,7 @@ async def test_queue_is_bounded_and_cancelled_queued_work_is_not_executed(tmp_pa
                 await first
             async with asyncio.timeout(2):
                 await state["cancelled"].wait()
-            assert await connector.call("reports.inspect", {"report_id": "42"}, 1) == {
+            assert await call_fixture(connector, "reports.inspect", {"report_id": "42"}, 1) == {
                 "text": "Report 42"
             }
             assert len(state["calls"]) == 2
@@ -406,9 +418,13 @@ async def test_schema_refresh_precedes_queued_call_after_refresh_deadline(tmp_pa
     monkeypatch.setattr(Connector, "_open", open_backend)
     resource = {"id": "reports", "limits": LIMITS, "operations": [operation()]}
     async with asyncio.timeout(2), actor(tmp_path, resource) as connector:
-        first = asyncio.create_task(connector.call("reports.inspect", {"report_id": "stall"}, 1))
+        first = asyncio.create_task(
+            call_fixture(connector, "reports.inspect", {"report_id": "stall"}, 1)
+        )
         await entered.wait()
-        queued = asyncio.create_task(connector.call("reports.inspect", {"report_id": "42"}, 1))
+        queued = asyncio.create_task(
+            call_fixture(connector, "reports.inspect", {"report_id": "42"}, 1)
+        )
         await asyncio.sleep(LIMITS["schema_refresh_seconds"] * 1.5)
         assert connector.queue.qsize() == 1
         release.set()
@@ -434,7 +450,7 @@ async def test_oversized_frames_or_http_response_fail_within_bound(tmp_path, tra
         async with actor(tmp_path / "client", resource) as connector:
             async with asyncio.timeout(2):
                 with pytest.raises(LasaError):
-                    await connector.call("reports.inspect", {"report_id": "large"}, 1)
+                    await call_fixture(connector, "reports.inspect", {"report_id": "large"}, 1)
     else:
         async with http_mcp(tmp_path / "server") as (origin, tls, state):
             resource = {
@@ -448,7 +464,7 @@ async def test_oversized_frames_or_http_response_fail_within_bound(tmp_path, tra
             async with actor(tmp_path / "client", resource) as connector:
                 async with asyncio.timeout(2):
                     with pytest.raises(LasaError):
-                        await connector.call("reports.inspect", {"report_id": "large"}, 1)
+                        await call_fixture(connector, "reports.inspect", {"report_id": "large"}, 1)
 
 
 async def test_stdio_secret_file_change_restarts_only_owned_connection(tmp_path):
@@ -465,7 +481,7 @@ async def test_stdio_secret_file_change_restarts_only_owned_connection(tmp_path)
         "operations": [operation()],
     }
     async with actor(tmp_path / "client", resource) as connector:
-        assert await connector.call("reports.inspect", {"report_id": "42"}, 1) == {
+        assert await call_fixture(connector, "reports.inspect", {"report_id": "42"}, 1) == {
             "text": "First42"
         }
         generation = connector.generation
@@ -475,6 +491,6 @@ async def test_stdio_secret_file_change_restarts_only_owned_connection(tmp_path)
                 break
             await asyncio.sleep(0.02)
         assert connector.generation > generation
-        assert await connector.call("reports.inspect", {"report_id": "42"}, 1) == {
+        assert await call_fixture(connector, "reports.inspect", {"report_id": "42"}, 1) == {
             "text": "Second42"
         }

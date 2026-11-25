@@ -43,7 +43,7 @@ def digest(value):
 
 
 def request_digest(request):
-    return digest({key: value for key, value in request.items() if key != "delegation"})
+    return digest(request)
 
 
 def validate_data(schema, value, code="invalid_input", status=400):

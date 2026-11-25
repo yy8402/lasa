@@ -30,85 +30,6 @@
       ],
       "additionalProperties": false
     },
-    "Budget": {
-      "type": "object",
-      "properties": {
-        "model_tokens": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 9007199254740991
-        },
-        "model_calls": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 9007199254740991
-        },
-        "tool_calls": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 9007199254740991
-        },
-        "delegations": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 9007199254740991
-        },
-        "wall_time_ms": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 9007199254740991
-        },
-        "input_bytes": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 9007199254740991
-        },
-        "output_bytes": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 9007199254740991
-        },
-        "artifact_bytes": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 9007199254740991
-        }
-      },
-      "required": [
-        "model_tokens",
-        "model_calls",
-        "tool_calls",
-        "delegations",
-        "wall_time_ms",
-        "input_bytes",
-        "output_bytes",
-        "artifact_bytes"
-      ],
-      "additionalProperties": false
-    },
-    "ExecutionLimits": {
-      "type": "object",
-      "properties": {
-        "budget": {
-          "$ref": "#/$defs/Budget"
-        },
-        "deadline": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "max_hops": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 32
-        }
-      },
-      "required": [
-        "budget",
-        "deadline",
-        "max_hops"
-      ],
-      "additionalProperties": false
-    },
     "ResourceRule": {
       "type": "object",
       "properties": {
@@ -517,11 +438,6 @@
           "type": "string",
           "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
         },
-        "authorization_ref": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 512
-        },
         "contract": {
           "$ref": "#/$defs/CapabilityRef"
         },
@@ -541,49 +457,74 @@
               },
               "uniqueItems": true
             },
-            "resources": {
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/ResourceRule"
-              }
-            },
             "additional_preconditions": {
               "type": "array",
               "items": {
-                "$ref": "#/$defs/Precondition"
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "const": "budget_minimum"
+                  },
+                  "description": {
+                    "const": "Minimum execution budget for this offer."
+                  },
+                  "resource": {
+                    "enum": [
+                      "model_tokens",
+                      "model_calls",
+                      "tool_calls",
+                      "wall_time_ms",
+                      "input_bytes",
+                      "output_bytes",
+                      "artifact_bytes"
+                    ]
+                  },
+                  "minimum": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "kind",
+                  "description",
+                  "resource",
+                  "minimum"
+                ],
+                "additionalProperties": false
               }
             }
           },
           "required": [
             "allowed_effects",
-            "resources",
             "additional_preconditions"
           ],
           "additionalProperties": false
         },
         "max_budget": {
-          "$ref": "#/$defs/Budget"
-        },
-        "max_hops": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 32
+          "$ref": "#/$defs/ConsumerBudget"
         },
         "valid_until": {
           "type": "string",
           "format": "date-time"
+        },
+        "processing": {
+          "$ref": "#/$defs/ProcessingTerms"
+        },
+        "execution_commitment": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
         }
       },
       "required": [
         "offer_id",
         "revision",
         "catalog_view",
-        "authorization_ref",
         "contract",
         "restrictions",
         "max_budget",
-        "max_hops",
-        "valid_until"
+        "valid_until",
+        "processing"
       ],
       "additionalProperties": false
     },
@@ -704,11 +645,9 @@
           "items": {
             "type": "string",
             "enum": [
-              "metadata-diagnostics",
-              "content-diagnostics",
+              "consumer-events",
               "clarification",
-              "artifacts",
-              "bounded-delegation"
+              "artifacts"
             ]
           },
           "uniqueItems": true
@@ -718,8 +657,9 @@
           "items": {
             "type": "string",
             "enum": [
-              "metadata-diagnostics",
-              "bounded-delegation"
+              "consumer-events",
+              "clarification",
+              "artifacts"
             ]
           },
           "uniqueItems": true
@@ -919,97 +859,6 @@
       ],
       "additionalProperties": false
     },
-    "TaskAuthorization": {
-      "type": "object",
-      "properties": {
-        "decision_id": {
-          "type": "string",
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
-        },
-        "authorization_ref": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 512
-        },
-        "principal_id": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 512
-        },
-        "receiver_service_id": {
-          "type": "string",
-          "format": "uri",
-          "pattern": "^https://",
-          "maxLength": 2048
-        },
-        "request_digest": {
-          "type": "string",
-          "pattern": "^sha256:[a-f0-9]{64}$"
-        },
-        "contract": {
-          "$ref": "#/$defs/CapabilityRef"
-        },
-        "valid_until": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "resources": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/ResourceRule"
-          }
-        },
-        "allowed_effects": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "enum": [
-              "workspace.read",
-              "workspace.write",
-              "external.read",
-              "external.write"
-            ]
-          },
-          "uniqueItems": true
-        },
-        "limits": {
-          "$ref": "#/$defs/ExecutionLimits"
-        },
-        "content_diagnostics_allowed": {
-          "type": "boolean"
-        },
-        "delegation_grants": {
-          "type": "array",
-          "uniqueItems": true,
-          "items": {
-            "$ref": "#/$defs/DelegationGrant"
-          }
-        },
-        "verifier_trust": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/VerifierTrust"
-          },
-          "uniqueItems": true,
-          "maxItems": 32
-        }
-      },
-      "required": [
-        "decision_id",
-        "authorization_ref",
-        "principal_id",
-        "receiver_service_id",
-        "request_digest",
-        "contract",
-        "valid_until",
-        "resources",
-        "allowed_effects",
-        "limits",
-        "content_diagnostics_allowed",
-        "delegation_grants"
-      ],
-      "additionalProperties": false
-    },
     "OfferSelection": {
       "type": "object",
       "properties": {
@@ -1037,158 +886,6 @@
       ],
       "additionalProperties": false
     },
-    "ArtifactManifest": {
-      "type": "object",
-      "properties": {
-        "artifact_id": {
-          "type": "string",
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
-        },
-        "digest": {
-          "type": "string",
-          "pattern": "^sha256:[a-f0-9]{64}$"
-        },
-        "bytes": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 9007199254740991
-        },
-        "media_type": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 128
-        },
-        "source_task_id": {
-          "type": "string",
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
-        },
-        "provenance": {
-          "$ref": "#/$defs/OperationProvenance"
-        }
-      },
-      "required": [
-        "artifact_id",
-        "digest",
-        "bytes",
-        "media_type",
-        "source_task_id"
-      ],
-      "additionalProperties": false
-    },
-    "DelegationEnvelope": {
-      "type": "object",
-      "properties": {
-        "delegation_id": {
-          "type": "string",
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
-        },
-        "root_task_id": {
-          "type": "string",
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
-        },
-        "parent_service_id": {
-          "type": "string",
-          "format": "uri",
-          "pattern": "^https://",
-          "maxLength": 2048
-        },
-        "parent_task_id": {
-          "type": "string",
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
-        },
-        "step_id": {
-          "type": "string",
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
-        },
-        "requirement_ids": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
-          },
-          "minItems": 1,
-          "uniqueItems": true
-        },
-        "ancestry": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "format": "uri",
-            "pattern": "^https://",
-            "maxLength": 2048
-          },
-          "minItems": 1,
-          "maxItems": 32,
-          "uniqueItems": true
-        },
-        "remaining_hops": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 31
-        },
-        "request_digest": {
-          "type": "string",
-          "pattern": "^sha256:[a-f0-9]{64}$"
-        },
-        "allocation": {
-          "$ref": "#/$defs/ExecutionLimits"
-        },
-        "disclosed_artifacts": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "manifest": {
-                "$ref": "#/$defs/ArtifactManifest"
-              },
-              "text": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "manifest",
-              "text"
-            ],
-            "additionalProperties": false
-          },
-          "maxItems": 16
-        },
-        "authority_ceiling": {
-          "$ref": "#/$defs/AuthorityCeiling"
-        },
-        "recipient_service_id": {
-          "type": "string",
-          "format": "uri",
-          "pattern": "^https://",
-          "maxLength": 2048
-        },
-        "dependency_resources": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          },
-          "uniqueItems": true
-        }
-      },
-      "required": [
-        "delegation_id",
-        "root_task_id",
-        "parent_service_id",
-        "parent_task_id",
-        "step_id",
-        "requirement_ids",
-        "ancestry",
-        "remaining_hops",
-        "request_digest",
-        "allocation",
-        "disclosed_artifacts",
-        "authority_ceiling",
-        "recipient_service_id",
-        "dependency_resources"
-      ],
-      "additionalProperties": false
-    },
     "TaskRequest": {
       "type": "object",
       "properties": {
@@ -1200,39 +897,43 @@
           "$ref": "#/$defs/OfferSelection"
         },
         "input": {},
-        "dependency_results": {
-          "type": "object",
-          "maxProperties": 64,
-          "propertyNames": {
-            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
-          }
-        },
         "requested_limits": {
-          "$ref": "#/$defs/ExecutionLimits"
+          "$ref": "#/$defs/ConsumerLimits"
         },
-        "authorization_ref": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 512
+        "imports": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EvidenceImport"
+          },
+          "minItems": 1,
+          "maxItems": 64
         },
-        "diagnostics": {
-          "type": "string",
-          "enum": [
-            "metadata",
-            "content"
-          ]
-        },
-        "delegation": {
-          "$ref": "#/$defs/DelegationEnvelope"
+        "attachments": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": {
+            "type": "object",
+            "properties": {
+              "manifest": {
+                "$ref": "#/$defs/ConsumerArtifact"
+              },
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "manifest",
+              "text"
+            ],
+            "additionalProperties": false
+          }
         }
       },
       "required": [
         "operation_id",
         "selection",
-        "input",
-        "requested_limits",
-        "authorization_ref",
-        "diagnostics"
+        "input"
       ],
       "additionalProperties": false
     },
@@ -1373,42 +1074,6 @@
       ],
       "additionalProperties": false
     },
-    "Admission": {
-      "type": "object",
-      "properties": {
-        "accepted_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "contract": {
-          "$ref": "#/$defs/CapabilityRef"
-        },
-        "request_digest": {
-          "type": "string",
-          "pattern": "^sha256:[a-f0-9]{64}$"
-        },
-        "effective_limits": {
-          "$ref": "#/$defs/ExecutionLimits"
-        },
-        "authorization_decision_id": {
-          "type": "string",
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
-        },
-        "plan_digest": {
-          "type": "string",
-          "pattern": "^sha256:[a-f0-9]{64}$"
-        }
-      },
-      "required": [
-        "accepted_at",
-        "contract",
-        "request_digest",
-        "effective_limits",
-        "authorization_decision_id",
-        "plan_digest"
-      ],
-      "additionalProperties": false
-    },
     "Evidence": {
       "type": "object",
       "properties": {
@@ -1443,119 +1108,6 @@
         "disposition",
         "summary",
         "artifact_ids"
-      ],
-      "additionalProperties": false
-    },
-    "WorkspaceReadback": {
-      "type": "object",
-      "properties": {
-        "service_id": {
-          "type": "string",
-          "format": "uri",
-          "pattern": "^https://",
-          "maxLength": 2048
-        },
-        "task_id": {
-          "type": "string",
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
-        },
-        "relative_path": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 512
-        },
-        "write_operation_id": {
-          "type": "string",
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
-        },
-        "read_operation_id": {
-          "type": "string",
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
-        },
-        "content_digest": {
-          "type": "string",
-          "pattern": "^sha256:[a-f0-9]{64}$"
-        },
-        "bytes": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 262144
-        },
-        "quoted_text": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 512
-        }
-      },
-      "required": [
-        "service_id",
-        "task_id",
-        "relative_path",
-        "write_operation_id",
-        "read_operation_id",
-        "content_digest",
-        "bytes"
-      ],
-      "additionalProperties": false
-    },
-    "TaskResult": {
-      "type": "object",
-      "properties": {
-        "contract": {
-          "$ref": "#/$defs/CapabilityRef"
-        },
-        "request_digest": {
-          "type": "string",
-          "pattern": "^sha256:[a-f0-9]{64}$"
-        },
-        "output": {},
-        "usage": {
-          "$ref": "#/$defs/Budget"
-        },
-        "effect_disposition": {
-          "type": "string",
-          "enum": [
-            "none",
-            "known",
-            "unknown"
-          ]
-        },
-        "artifacts": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/ArtifactManifest"
-          },
-          "maxItems": 64,
-          "uniqueItems": true
-        },
-        "workspace_readbacks": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/WorkspaceReadback"
-          },
-          "minItems": 1,
-          "maxItems": 8,
-          "uniqueItems": true
-        },
-        "evidence": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/Evidence"
-          },
-          "minItems": 1
-        },
-        "verification_receipt": {
-          "$ref": "#/$defs/VerificationReceipt"
-        }
-      },
-      "required": [
-        "contract",
-        "request_digest",
-        "output",
-        "usage",
-        "effect_disposition",
-        "artifacts",
-        "evidence"
       ],
       "additionalProperties": false
     },
@@ -1611,7 +1163,10 @@
             "task_state_conflict",
             "stale_revision",
             "precondition_required",
-            "internal_error"
+            "internal_error",
+            "service_unavailable",
+            "outcome_unknown",
+            "processing_unavailable"
           ]
         },
         "retry": {
@@ -1640,818 +1195,6 @@
         "code",
         "retry",
         "effect_disposition"
-      ],
-      "additionalProperties": false
-    },
-    "Task": {
-      "type": "object",
-      "properties": {
-        "task_id": {
-          "type": "string",
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
-        },
-        "session_id": {
-          "type": "string",
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
-        },
-        "service_id": {
-          "type": "string",
-          "format": "uri",
-          "pattern": "^https://",
-          "maxLength": 2048
-        },
-        "operation_id": {
-          "type": "string",
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
-        },
-        "revision": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 9007199254740991
-        },
-        "status": {
-          "type": "string",
-          "enum": [
-            "evaluating",
-            "awaiting_input",
-            "accepted",
-            "executing",
-            "waiting_child",
-            "cancelling",
-            "completed",
-            "rejected",
-            "failed",
-            "cancelled",
-            "indeterminate"
-          ]
-        },
-        "received_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "updated_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "selection": {
-          "$ref": "#/$defs/OfferSelection"
-        },
-        "request_digest": {
-          "type": "string",
-          "pattern": "^sha256:[a-f0-9]{64}$"
-        },
-        "admission": {
-          "$ref": "#/$defs/Admission"
-        },
-        "question": {
-          "$ref": "#/$defs/Question"
-        },
-        "result": {
-          "$ref": "#/$defs/TaskResult"
-        },
-        "problem": {
-          "$ref": "#/$defs/Problem"
-        }
-      },
-      "required": [
-        "task_id",
-        "session_id",
-        "service_id",
-        "operation_id",
-        "revision",
-        "status",
-        "received_at",
-        "updated_at",
-        "selection",
-        "request_digest"
-      ],
-      "additionalProperties": false,
-      "allOf": [
-        {
-          "if": {
-            "properties": {
-              "status": {
-                "const": "completed"
-              }
-            }
-          },
-          "then": {
-            "required": [
-              "admission",
-              "result"
-            ],
-            "not": {
-              "required": [
-                "problem"
-              ]
-            }
-          },
-          "else": {
-            "not": {
-              "required": [
-                "result"
-              ]
-            }
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "status": {
-                "const": "awaiting_input"
-              }
-            }
-          },
-          "then": {
-            "required": [
-              "question"
-            ]
-          },
-          "else": {
-            "not": {
-              "required": [
-                "question"
-              ]
-            }
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "status": {
-                "enum": [
-                  "rejected",
-                  "failed",
-                  "indeterminate"
-                ]
-              }
-            }
-          },
-          "then": {
-            "required": [
-              "problem"
-            ]
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "status": {
-                "enum": [
-                  "accepted",
-                  "executing",
-                  "waiting_child",
-                  "completed"
-                ]
-              }
-            }
-          },
-          "then": {
-            "required": [
-              "admission"
-            ]
-          }
-        }
-      ]
-    },
-    "Requirement": {
-      "type": "object",
-      "properties": {
-        "requirement_id": {
-          "type": "string",
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
-        },
-        "source": {
-          "type": "string",
-          "enum": [
-            "caller",
-            "derived"
-          ]
-        },
-        "mandatory": {
-          "type": "boolean"
-        },
-        "description": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 8192
-        },
-        "acceptance": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/VerificationCriterion"
-          },
-          "minItems": 1
-        }
-      },
-      "required": [
-        "requirement_id",
-        "source",
-        "mandatory",
-        "description",
-        "acceptance"
-      ],
-      "additionalProperties": false
-    },
-    "PlanStep": {
-      "type": "object",
-      "properties": {
-        "step_id": {
-          "type": "string",
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
-        },
-        "requirement_ids": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
-          },
-          "minItems": 1,
-          "uniqueItems": true
-        },
-        "depends_on": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
-          },
-          "uniqueItems": true
-        },
-        "contract": {
-          "$ref": "#/$defs/CapabilityRef"
-        },
-        "executor": {
-          "type": "string",
-          "enum": [
-            "local",
-            "peer"
-          ]
-        },
-        "input_digest": {
-          "type": "string",
-          "pattern": "^sha256:[a-f0-9]{64}$"
-        },
-        "allocation": {
-          "$ref": "#/$defs/ExecutionLimits"
-        }
-      },
-      "required": [
-        "step_id",
-        "requirement_ids",
-        "depends_on",
-        "contract",
-        "executor",
-        "input_digest",
-        "allocation"
-      ],
-      "additionalProperties": false
-    },
-    "ResponsibilityPlan": {
-      "type": "object",
-      "properties": {
-        "revision": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 9007199254740991
-        },
-        "requirements": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/Requirement"
-          },
-          "minItems": 1
-        },
-        "steps": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/PlanStep"
-          },
-          "minItems": 1,
-          "maxItems": 64
-        },
-        "integration_requirement_ids": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
-          },
-          "uniqueItems": true
-        },
-        "integration_reserve": {
-          "$ref": "#/$defs/Budget"
-        }
-      },
-      "required": [
-        "revision",
-        "requirements",
-        "steps",
-        "integration_requirement_ids",
-        "integration_reserve"
-      ],
-      "additionalProperties": false
-    },
-    "RoutingPolicy": {
-      "type": "object",
-      "properties": {
-        "preferred_executor": {
-          "type": "string",
-          "enum": [
-            "local",
-            "peer"
-          ]
-        },
-        "unclaimed_peer_fallback": {
-          "type": "string",
-          "enum": [
-            "reject",
-            "attempt"
-          ]
-        }
-      },
-      "required": [
-        "preferred_executor",
-        "unclaimed_peer_fallback"
-      ],
-      "additionalProperties": false
-    },
-    "RoutingEvidence": {
-      "type": "object",
-      "properties": {
-        "step_id": {
-          "type": "string",
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
-        },
-        "requirement_ids": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
-          },
-          "minItems": 1,
-          "uniqueItems": true
-        },
-        "local_assessment": {
-          "type": "string",
-          "enum": [
-            "sufficient",
-            "insufficient",
-            "unknown"
-          ]
-        },
-        "peer_assessment": {
-          "type": "string",
-          "enum": [
-            "matched",
-            "not_claimed",
-            "unknown",
-            "unavailable",
-            "denied",
-            "not_configured",
-            "busy",
-            "ancestor"
-          ]
-        },
-        "assessment_summary": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 2048
-        },
-        "catalog_revision": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "offer_revision": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "authorization_decision_id": {
-          "type": "string",
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
-        },
-        "policy": {
-          "$ref": "#/$defs/RoutingPolicy"
-        },
-        "selected_executor": {
-          "type": "string",
-          "enum": [
-            "local",
-            "peer",
-            "none"
-          ]
-        },
-        "contract": {
-          "$ref": "#/$defs/CapabilityRef"
-        },
-        "decision_reason": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 2048
-        },
-        "peer_service_id": {
-          "type": "string",
-          "format": "uri",
-          "pattern": "^https://",
-          "maxLength": 2048
-        }
-      },
-      "required": [
-        "step_id",
-        "requirement_ids",
-        "local_assessment",
-        "peer_assessment",
-        "assessment_summary",
-        "catalog_revision",
-        "offer_revision",
-        "authorization_decision_id",
-        "policy",
-        "selected_executor",
-        "contract",
-        "decision_reason"
-      ],
-      "additionalProperties": false
-    },
-    "CallEvidence": {
-      "type": "object",
-      "properties": {
-        "operation_id": {
-          "type": "string",
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
-        },
-        "call_type": {
-          "type": "string",
-          "enum": [
-            "model",
-            "tool",
-            "child"
-          ]
-        },
-        "phase": {
-          "type": "string",
-          "enum": [
-            "started",
-            "finished",
-            "indeterminate"
-          ]
-        },
-        "input_digest": {
-          "type": "string",
-          "pattern": "^sha256:[a-f0-9]{64}$"
-        },
-        "input_bytes": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 9007199254740991
-        },
-        "output_digest": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "pattern": "^sha256:[a-f0-9]{64}$"
-        },
-        "output_bytes": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 9007199254740991
-        },
-        "reserved": {
-          "$ref": "#/$defs/Budget"
-        },
-        "usage": {
-          "$ref": "#/$defs/Budget"
-        },
-        "payload_truncated": {
-          "type": "boolean"
-        },
-        "contract": {
-          "$ref": "#/$defs/CapabilityRef"
-        },
-        "peer_service_id": {
-          "type": "string",
-          "pattern": "^https://"
-        },
-        "child_task_id": {
-          "type": "string",
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
-        },
-        "purpose": {
-          "enum": [
-            "planning",
-            "execution",
-            "verification"
-          ]
-        }
-      },
-      "required": [
-        "operation_id",
-        "call_type",
-        "phase",
-        "input_digest",
-        "input_bytes",
-        "output_digest",
-        "output_bytes",
-        "reserved",
-        "usage",
-        "payload_truncated"
-      ],
-      "additionalProperties": false
-    },
-    "VerificationEvidence": {
-      "type": "object",
-      "properties": {
-        "step_id": {
-          "type": "string",
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
-        },
-        "contract": {
-          "$ref": "#/$defs/CapabilityRef"
-        },
-        "request_digest": {
-          "type": "string",
-          "pattern": "^sha256:[a-f0-9]{64}$"
-        },
-        "checks": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/Evidence"
-          },
-          "minItems": 1
-        },
-        "release": {
-          "type": "string",
-          "enum": [
-            "accepted",
-            "rejected",
-            "quarantined"
-          ]
-        }
-      },
-      "required": [
-        "step_id",
-        "contract",
-        "request_digest",
-        "checks",
-        "release"
-      ],
-      "additionalProperties": false
-    },
-    "ResolutionEvidence": {
-      "type": "object",
-      "properties": {
-        "operation_id": {
-          "type": "string",
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
-        },
-        "original_terminal_state": {
-          "type": "string",
-          "enum": [
-            "indeterminate",
-            "failed",
-            "cancelled"
-          ]
-        },
-        "resolved_effect_disposition": {
-          "type": "string",
-          "enum": [
-            "none",
-            "known",
-            "unknown"
-          ]
-        },
-        "summary": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 8192
-        },
-        "receipt_digest": {
-          "type": "string",
-          "pattern": "^sha256:[a-f0-9]{64}$"
-        }
-      },
-      "required": [
-        "operation_id",
-        "original_terminal_state",
-        "resolved_effect_disposition",
-        "summary",
-        "receipt_digest"
-      ],
-      "additionalProperties": false
-    },
-    "DiagnosticEvent": {
-      "type": "object",
-      "properties": {
-        "event_id": {
-          "type": "string",
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
-        },
-        "service_id": {
-          "type": "string",
-          "format": "uri",
-          "pattern": "^https://",
-          "maxLength": 2048
-        },
-        "task_id": {
-          "type": "string",
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
-        },
-        "sequence": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 9007199254740991
-        },
-        "timestamp": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "causal_parent_event_id": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
-        },
-        "kind": {
-          "type": "string",
-          "enum": [
-            "routing",
-            "call",
-            "verification",
-            "resolution"
-          ]
-        },
-        "payload": {},
-        "content": {
-          "type": "object",
-          "properties": {
-            "media_type": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 128
-            },
-            "text": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 65536
-            }
-          },
-          "required": [
-            "media_type",
-            "text"
-          ],
-          "additionalProperties": false
-        },
-        "redacted": {
-          "type": "boolean"
-        }
-      },
-      "required": [
-        "event_id",
-        "service_id",
-        "task_id",
-        "sequence",
-        "timestamp",
-        "causal_parent_event_id",
-        "kind",
-        "payload",
-        "redacted"
-      ],
-      "additionalProperties": false,
-      "allOf": [
-        {
-          "if": {
-            "properties": {
-              "kind": {
-                "const": "routing"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "payload": {
-                "$ref": "#/$defs/RoutingEvidence"
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "kind": {
-                "const": "call"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "payload": {
-                "$ref": "#/$defs/CallEvidence"
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "kind": {
-                "const": "verification"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "payload": {
-                "$ref": "#/$defs/VerificationEvidence"
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "kind": {
-                "const": "resolution"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "payload": {
-                "$ref": "#/$defs/ResolutionEvidence"
-              }
-            }
-          }
-        }
-      ]
-    },
-    "EventPage": {
-      "type": "object",
-      "properties": {
-        "task_id": {
-          "type": "string",
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
-        },
-        "events": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/DiagnosticEvent"
-          },
-          "maxItems": 100
-        },
-        "next_sequence": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 9007199254740991
-        }
-      },
-      "required": [
-        "task_id",
-        "events",
-        "next_sequence"
-      ],
-      "additionalProperties": false
-    },
-    "AuthorityCeiling": {
-      "type": "object",
-      "properties": {
-        "resources": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/ResourceRule"
-          }
-        },
-        "allowed_effects": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "enum": [
-              "workspace.read",
-              "workspace.write",
-              "external.read",
-              "external.write"
-            ]
-          },
-          "uniqueItems": true
-        },
-        "content_diagnostics_allowed": {
-          "type": "boolean"
-        },
-        "delegation_grants": {
-          "type": "array",
-          "uniqueItems": true,
-          "items": {
-            "$ref": "#/$defs/DelegationGrant"
-          }
-        }
-      },
-      "required": [
-        "resources",
-        "allowed_effects",
-        "content_diagnostics_allowed",
-        "delegation_grants"
       ],
       "additionalProperties": false
     },
@@ -2493,6 +1236,12 @@
           "type": "integer",
           "minimum": 200,
           "maximum": 299
+        },
+        "selection": {
+          "$ref": "#/$defs/OfferSelection"
+        },
+        "processing": {
+          "$ref": "#/$defs/ProcessingTerms"
         }
       },
       "required": [
@@ -2502,242 +1251,188 @@
         "resource_id",
         "http_status"
       ],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "resource_type": {
+                "const": "task"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "selection",
+              "processing"
+            ]
+          },
+          "else": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "selection"
+                  ]
+                },
+                {
+                  "required": [
+                    "processing"
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      ]
     },
-    "DelegationReport": {
+    "EvidenceImport": {
       "type": "object",
       "properties": {
-        "task_id": {
+        "contract": {
+          "$ref": "#/$defs/CapabilityRef"
+        },
+        "output": {},
+        "output_digest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "label": {
           "type": "string",
           "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
-        },
-        "children": {
-          "type": "array",
-          "maxItems": 64,
-          "items": {
-            "type": "object",
-            "properties": {
-              "delegation_id": {
-                "type": "string",
-                "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
-              },
-              "service_id": {
-                "type": "string",
-                "format": "uri",
-                "pattern": "^https://",
-                "maxLength": 2048
-              },
-              "state": {
-                "type": "string",
-                "minLength": 1
-              },
-              "task_id": {
-                "type": "string",
-                "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
-              },
-              "trace": {
-                "$ref": "#/$defs/EventPage"
-              },
-              "problem": {
-                "$ref": "#/$defs/Problem"
-              }
-            },
-            "required": [
-              "delegation_id",
-              "service_id",
-              "state"
-            ],
-            "additionalProperties": false
-          }
         }
       },
       "required": [
-        "task_id",
-        "children"
+        "label",
+        "contract",
+        "output",
+        "output_digest"
       ],
       "additionalProperties": false
     },
-    "OperationProvenance": {
+    "ConsumerArtifact": {
       "type": "object",
       "properties": {
-        "kind": {
-          "const": "operation-result"
+        "artifact_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
         },
+        "digest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "media_type": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "source_task_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "digest",
+        "bytes",
+        "media_type",
+        "source_task_id"
+      ],
+      "additionalProperties": false
+    },
+    "ConsumerReceipt": {
+      "type": "object",
+      "properties": {
         "service_id": {
           "type": "string",
           "format": "uri",
-          "pattern": "^https://"
+          "pattern": "^https://",
+          "maxLength": 2048
         },
         "task_id": {
           "type": "string",
-          "minLength": 1,
-          "maxLength": 4096
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
         },
         "operation_id": {
           "type": "string",
-          "minLength": 1,
-          "maxLength": 4096
-        },
-        "resource": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 4096
-        },
-        "input_digest": {
-          "type": "string",
-          "pattern": "^sha256:[0-9a-f]{64}$"
-        },
-        "result_digest": {
-          "type": "string",
-          "pattern": "^sha256:[0-9a-f]{64}$"
-        },
-        "schema_digest": {
-          "type": "string",
-          "pattern": "^sha256:[0-9a-f]{64}$"
-        },
-        "contract": {
-          "$ref": "#/$defs/CapabilityRef"
-        },
-        "sequence": {
-          "type": "integer",
-          "minimum": 1
-        }
-      },
-      "required": [
-        "kind",
-        "service_id",
-        "task_id",
-        "operation_id",
-        "resource",
-        "input_digest",
-        "result_digest",
-        "schema_digest",
-        "contract",
-        "sequence"
-      ],
-      "additionalProperties": false
-    },
-    "DelegationGrant": {
-      "type": "object",
-      "properties": {
-        "sender_service_id": {
-          "type": "string",
-          "format": "uri",
-          "pattern": "^https://",
-          "maxLength": 2048
-        },
-        "receiver_service_id": {
-          "type": "string",
-          "format": "uri",
-          "pattern": "^https://",
-          "maxLength": 2048
-        },
-        "contract": {
-          "$ref": "#/$defs/CapabilityRef"
-        },
-        "effects": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "enum": [
-              "workspace.read",
-              "workspace.write",
-              "external.read",
-              "external.write"
-            ]
-          },
-          "uniqueItems": true
-        },
-        "resources": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/ResourceRule"
-          }
-        },
-        "disclosure_resources": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          },
-          "uniqueItems": true
-        }
-      },
-      "required": [
-        "sender_service_id",
-        "receiver_service_id",
-        "contract",
-        "effects",
-        "resources",
-        "disclosure_resources"
-      ],
-      "additionalProperties": false
-    },
-    "VerifierTrust": {
-      "type": "object",
-      "properties": {
-        "service_id": {
-          "type": "string",
-          "format": "uri",
-          "pattern": "^https://",
-          "maxLength": 2048
-        },
-        "contract": {
-          "$ref": "#/$defs/CapabilityRef"
-        },
-        "verifier_revision": {
-          "type": "string",
-          "pattern": "^sha256:[a-f0-9]{64}$"
-        }
-      },
-      "required": [
-        "service_id",
-        "contract",
-        "verifier_revision"
-      ],
-      "additionalProperties": false
-    },
-    "VerificationReceipt": {
-      "type": "object",
-      "properties": {
-        "service_id": {
-          "type": "string",
-          "format": "uri",
-          "pattern": "^https://",
-          "maxLength": 2048
-        },
-        "task_id": {
-          "type": "string",
           "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
-        },
-        "delegation_id": {
-          "type": "string",
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
-        },
-        "verifier_revision": {
-          "type": "string",
-          "pattern": "^sha256:[a-f0-9]{64}$"
         },
         "result_digest": {
           "type": "string",
           "pattern": "^sha256:[a-f0-9]{64}$"
         },
-        "dependency_digest": {
-          "type": "string",
-          "pattern": "^sha256:[a-f0-9]{64}$"
+        "selection": {
+          "$ref": "#/$defs/OfferSelection"
+        },
+        "processing": {
+          "$ref": "#/$defs/ProcessingTerms"
         }
       },
       "required": [
         "service_id",
         "task_id",
-        "delegation_id",
-        "verifier_revision",
+        "operation_id",
         "result_digest",
-        "dependency_digest"
+        "selection",
+        "processing"
       ],
       "additionalProperties": false
     },
-    "TaskDisposition": {
+    "ConsumerResult": {
+      "type": "object",
+      "properties": {
+        "contract": {
+          "$ref": "#/$defs/CapabilityRef"
+        },
+        "request_digest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "output": {},
+        "effect_disposition": {
+          "type": "string",
+          "enum": [
+            "none",
+            "known",
+            "unknown"
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Evidence"
+          },
+          "minItems": 1
+        },
+        "artifacts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ConsumerArtifact"
+          },
+          "maxItems": 64,
+          "uniqueItems": true
+        },
+        "receipt": {
+          "$ref": "#/$defs/ConsumerReceipt"
+        }
+      },
+      "required": [
+        "contract",
+        "request_digest",
+        "output",
+        "effect_disposition",
+        "evidence",
+        "artifacts",
+        "receipt"
+      ],
+      "additionalProperties": false
+    },
+    "ConsumerTask": {
       "type": "object",
       "properties": {
         "task_id": {
@@ -2758,6 +1453,17 @@
           "type": "string",
           "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
         },
+        "received_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "selection": {
+          "$ref": "#/$defs/OfferSelection"
+        },
+        "request_digest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
         "revision": {
           "type": "integer",
           "minimum": 1,
@@ -2770,7 +1476,6 @@
             "awaiting_input",
             "accepted",
             "executing",
-            "waiting_child",
             "cancelling",
             "completed",
             "rejected",
@@ -2779,12 +1484,127 @@
             "indeterminate"
           ]
         },
+        "problem": {
+          "$ref": "#/$defs/Problem"
+        },
+        "question": {
+          "$ref": "#/$defs/Question"
+        },
+        "result": {
+          "$ref": "#/$defs/ConsumerResult"
+        }
+      },
+      "required": [
+        "task_id",
+        "session_id",
+        "service_id",
+        "operation_id",
+        "received_at",
+        "selection",
+        "request_digest",
+        "revision",
+        "status"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "completed"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "result"
+            ]
+          },
+          "else": {
+            "not": {
+              "required": [
+                "result"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "awaiting_input"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "question"
+            ]
+          },
+          "else": {
+            "not": {
+              "required": [
+                "question"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "ConsumerTaskDisposition": {
+      "type": "object",
+      "properties": {
+        "task_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
+        },
+        "session_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
+        },
+        "service_id": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://",
+          "maxLength": 2048
+        },
+        "operation_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
+        },
+        "received_at": {
+          "type": "string",
+          "format": "date-time"
+        },
         "selection": {
           "$ref": "#/$defs/OfferSelection"
         },
         "request_digest": {
           "type": "string",
           "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "evaluating",
+            "awaiting_input",
+            "accepted",
+            "executing",
+            "cancelling",
+            "completed",
+            "rejected",
+            "failed",
+            "cancelled",
+            "indeterminate"
+          ]
+        },
+        "problem": {
+          "$ref": "#/$defs/Problem"
         },
         "effect_disposition": {
           "type": "string",
@@ -2793,9 +1613,6 @@
             "known",
             "unknown"
           ]
-        },
-        "usage": {
-          "$ref": "#/$defs/Budget"
         }
       },
       "required": [
@@ -2803,14 +1620,164 @@
         "session_id",
         "service_id",
         "operation_id",
-        "revision",
-        "status",
+        "received_at",
         "selection",
         "request_digest",
-        "effect_disposition",
-        "usage"
+        "revision",
+        "status",
+        "effect_disposition"
       ],
       "additionalProperties": false
+    },
+    "ConsumerEventPage": {
+      "type": "object",
+      "properties": {
+        "task_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "sequence": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 9007199254740991
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "evaluating",
+                  "awaiting_input",
+                  "accepted",
+                  "executing",
+                  "cancelling",
+                  "completed",
+                  "rejected",
+                  "failed",
+                  "cancelled",
+                  "indeterminate"
+                ]
+              }
+            },
+            "required": [
+              "sequence",
+              "status"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "next_sequence": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "task_id",
+        "events",
+        "next_sequence"
+      ],
+      "additionalProperties": false
+    },
+    "ConsumerBudget": {
+      "type": "object",
+      "properties": {
+        "model_tokens": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "model_calls": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "tool_calls": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "wall_time_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "input_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "output_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "artifact_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "model_tokens",
+        "model_calls",
+        "tool_calls",
+        "wall_time_ms",
+        "input_bytes",
+        "output_bytes",
+        "artifact_bytes"
+      ],
+      "additionalProperties": false
+    },
+    "ConsumerLimits": {
+      "type": "object",
+      "properties": {
+        "deadline": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "budget": {
+          "$ref": "#/$defs/ConsumerBudget"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ProcessingTerms": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "mode": {
+              "const": "provider_domain_only"
+            },
+            "domain": {
+              "type": "string",
+              "format": "uri",
+              "maxLength": 2048
+            }
+          },
+          "required": [
+            "mode",
+            "domain"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "mode": {
+              "const": "approved_processing"
+            }
+          },
+          "required": [
+            "mode"
+          ],
+          "additionalProperties": false
+        }
+      ]
     }
   }
 }

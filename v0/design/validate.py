@@ -225,37 +225,20 @@ def validate() -> dict[str, int]:
             Draft202012Validator(contract["input_schema"], format_checker=FORMAT).validate(
                 value["input"]
             )
+            if budget := value.get("requested_limits", {}).get("budget"):
+                require(
+                    len(rfc8785.dumps(value["input"])) <= budget["input_bytes"],
+                    "budget_exceeded",
+                    "Input bytes",
+                )
+            imports = value.get("imports", [])
             require(
-                len(rfc8785.dumps(value["input"]))
-                <= value["requested_limits"]["budget"]["input_bytes"],
-                "budget_exceeded",
-                "Input bytes",
+                len({item["label"] for item in imports}) == len(imports)
+                and all(digest(item["output"]) == item["output_digest"] for item in imports),
+                "import_binding",
+                "Imported evidence must have unique labels and match its digest",
             )
-            if "delegation" in value:
-                envelope = value["delegation"]
-                core = {key: item for key, item in value.items() if key != "delegation"}
-                require(
-                    digest(core) == envelope["request_digest"],
-                    "request_digest",
-                    "Delegated core changed",
-                )
-                require(
-                    envelope["ancestry"][-1] == envelope["parent_service_id"]
-                    and envelope["recipient_service_id"] not in envelope["ancestry"],
-                    "ancestry",
-                    "Parent ends ancestry and recipient is outside it",
-                )
-                require(
-                    envelope["allocation"] == value["requested_limits"],
-                    "allocation",
-                    "Child request differs from reserved allocation",
-                )
-                require(
-                    envelope["remaining_hops"] == value["requested_limits"]["max_hops"],
-                    "hops",
-                    "Child hop ceiling differs",
-                )
-        elif name == "TaskResult":
+        elif name == "ConsumerResult":
             contract = definition_for(value["contract"])
             Draft202012Validator(contract["output_schema"], format_checker=FORMAT).validate(
                 value["output"]
@@ -271,28 +254,29 @@ def validate() -> dict[str, int]:
                 "postcondition_evidence",
                 "Required completion evidence missing",
             )
-        elif name == "Task":
-            if "admission" in value:
-                require(
-                    value["admission"]["request_digest"] == value["request_digest"],
-                    "task_consistency",
-                    "Admission request mismatch",
-                )
-                require(
-                    value["admission"]["contract"] == value["selection"]["contract"],
-                    "task_consistency",
-                    "Admission contract mismatch",
-                )
-            if "result" in value:
-                result = value["result"]
-                require(
-                    result["request_digest"] == value["request_digest"]
-                    and result["contract"] == value["selection"]["contract"],
-                    "task_consistency",
-                    "Result binding mismatch",
-                )
-                budget_fits(result["usage"], value["admission"]["effective_limits"]["budget"])
-                semantics(result, "TaskResult")
+            require(
+                digest({key: item for key, item in value.items() if key != "receipt"})
+                == value["receipt"]["result_digest"],
+                "receipt_binding",
+                "Receipt does not match the released representation",
+            )
+        elif name == "ConsumerTask" and "result" in value:
+            result = value["result"]
+            require(
+                result["request_digest"] == value["request_digest"]
+                and result["contract"] == value["selection"]["contract"],
+                "task_consistency",
+                "Result binding mismatch",
+            )
+            require(
+                all(
+                    result["receipt"][key] == value[key]
+                    for key in ("service_id", "task_id", "operation_id", "selection")
+                ),
+                "receipt_binding",
+                "Receipt does not match the provider operation",
+            )
+            semantics(result, "ConsumerResult")
         elif name == "ResponsibilityPlan":
             requirements = {item["requirement_id"]: item for item in value["requirements"]}
             steps = {step["step_id"]: step for step in value["steps"]}
@@ -302,7 +286,9 @@ def validate() -> dict[str, int]:
                 "duplicate_identity",
                 "Plan IDs",
             )
-            covered = set(value["integration_requirement_ids"])
+            ownership = [key for step in steps.values() for key in step["requirement_ids"]]
+            covered = set(ownership)
+            require(len(covered) == len(ownership), "duplicate_identity", "Requirement owners")
             visited, active = set(), set()
 
             def visit(step_id):
@@ -317,8 +303,8 @@ def validate() -> dict[str, int]:
                 visited.add(step_id)
 
             for step in steps.values():
-                covered.update(step["requirement_ids"])
-                visit(step["step_id"])
+                if step["requirement_ids"]:
+                    visit(step["step_id"])
             require(
                 covered <= set(requirements),
                 "unknown_requirement",
@@ -330,6 +316,7 @@ def validate() -> dict[str, int]:
                 "uncovered_requirement",
                 "Mandatory requirement lacks an owner",
             )
+            require(len(visited) == len(steps), "dependency", "Unused support step")
         elif name == "Config":
             executors = {executor["id"] for executor in value["executors"]}
             for binding in value.get("bindings", []):
@@ -406,37 +393,23 @@ def validate() -> dict[str, int]:
     def example(name):
         return documents["examples/" + name + ".json"]
 
-    # Cross-artifact checks with receiver and parent context.
-    child = example("delegated-task-request")
+    # Both requests use TaskRequest. The provider owns the downstream authority and the local plan.
+    child = example("downstream-task-request")
     root_request = example("task-request")
     authority = example("authorization")
     require(
-        authority["request_digest"] == child["delegation"]["request_digest"],
+        authority["request_digest"] == digest(child)
+        and authority["receiver_service_id"] == example("descriptor")["service_id"]
+        and authority["contract"] == child["selection"]["contract"],
         "authority_binding",
-        "Receiver authority request binding",
+        "Provider-local authority binds the authenticated submission",
     )
     require(
-        authority["principal_id"] == child["delegation"]["parent_service_id"],
-        "authority_binding",
-        "Authenticated delegator",
-    )
-    require(
-        authority["receiver_service_id"] == child["delegation"]["recipient_service_id"],
-        "authority_binding",
-        "Delegation addressed to the receiver",
-    )
-    require(
-        authority["contract"] == child["selection"]["contract"]
-        and authority["limits"] == child["requested_limits"],
-        "authority_binding",
-        "Receiver exact contract/ceiling",
+        authority["limits"]["budget"]["delegations"] == 0 and not authority["delegation_grants"],
+        "delegation_budget",
+        "Inbound service principal is a leaf by default",
     )
     budget_fits(child["requested_limits"]["budget"], root_request["requested_limits"]["budget"])
-    require(
-        child["requested_limits"]["max_hops"] < root_request["requested_limits"]["max_hops"],
-        "hops",
-        "Strict hop attenuation",
-    )
     reserve_ms = example("plan")["integration_reserve"]["wall_time_ms"]
     remaining_ms = (
         timestamp(root_request["requested_limits"]["deadline"])
@@ -446,9 +419,9 @@ def validate() -> dict[str, int]:
     plan_budget(example("plan"), root_request["requested_limits"]["budget"])
     plan_budget(example("child-plan"), child["requested_limits"]["budget"])
     require(
-        example("task-completed")["admission"]["plan_digest"] == digest(example("child-plan")),
-        "plan_digest",
-        "Accepted child plan",
+        example("task-completed")["request_digest"] == digest(child),
+        "request_digest",
+        "Completed task matches the consumer request",
     )
     for name in ["descriptor", "catalog", "offer", "availability"]:
         forbidden = {
@@ -458,12 +431,15 @@ def validate() -> dict[str, int]:
             "state_root",
             "model",
             "jwks_url",
+            "authorization_ref",
+            "delegation_grants",
+            "execution_commitment",
         }
         require(
             not any(forbidden & set(node) for node in walk(example(name))), "private_leak", name
         )
     require(
-        example("call-event")["payload"]["input_digest"] == child["delegation"]["request_digest"],
+        example("call-event")["payload"]["input_digest"] == digest(child),
         "event_binding",
         "Child call metadata",
     )

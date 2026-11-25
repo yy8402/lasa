@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create a LASA session, submit typed work, and show authorized routing evidence."""
+"""Create a LASA session, submit typed work, and show consumer-visible progress."""
 
 import argparse
 import json
@@ -29,14 +29,12 @@ def main():
     )
     parser.add_argument("--capability", default="task.attempt")
     parser.add_argument("--offer-id")
-    parser.add_argument("--authorization-ref", default="default")
     parser.add_argument(
         "--input-json",
         type=Path,
         help="Capability-specific input JSON; default builds task.attempt input",
     )
     parser.add_argument("--ca-file", type=Path)
-    parser.add_argument("--diagnostics", choices=["metadata", "content"], default="metadata")
     parser.add_argument("--timeout", type=int, default=240)
     args = parser.parse_args()
     if args.timeout <= 0:
@@ -137,10 +135,7 @@ def main():
             "requested_limits": {
                 "budget": offer["max_budget"],
                 "deadline": (datetime.now(UTC) + timedelta(seconds=seconds)).isoformat(),
-                "max_hops": offer["max_hops"],
             },
-            "authorization_ref": args.authorization_ref,
-            "diagnostics": args.diagnostics,
         }
         print("Task operation: " + body["operation_id"], flush=True)
         response = post(base + "/sessions/" + session["session_id"] + "/tasks", body)
@@ -164,12 +159,10 @@ def main():
         while True:
             page = get(task_url + "/events", params={"after_sequence": after, "limit": 100})
             for event in page["events"]:
-                if event["kind"] in {"routing", "call", "verification", "resolution"}:
-                    print(json.dumps(event))
+                print(json.dumps(event))
             if len(page["events"]) < 100:
                 break
             after = page["next_sequence"] - 1
-        print(json.dumps(get(task_url + "/delegations"), indent=2))
         return (
             0
             if task["status"] == "completed"
