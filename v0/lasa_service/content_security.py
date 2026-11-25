@@ -82,6 +82,7 @@ class ContentSecurity:
         self.c = coordinator
         self.revision = digest(coordinator.config.document.get("content_security", {}))
         self.bindings = coordinator.config.inspection
+        self.recovery = coordinator.config.document["limits"]["content_recovery"]
         self.clients = {
             key: new_client(profile, transport) for key, profile in self.bindings.profiles.items()
         }
@@ -190,6 +191,90 @@ class ContentSecurity:
         defer_permit=False,
         wire=None,
     ):
+        if remaining is None:
+            clock = asyncio.get_running_loop().time
+            deadline = clock() + 2 * INSPECTION_TIMEOUT_SECONDS
+            remaining = lambda: deadline - clock()  # noqa: E731
+        decision = await self.evaluate(
+            transfer, value, projection, media_type, remaining, defer_permit, wire
+        )
+        return self.finish(decision)
+
+    async def check_request(self, transfer, value, *, project, remaining, revise=None):
+        decision = await self.evaluate(
+            transfer, value, project(value), "application/json", remaining, False, None
+        )
+        if (
+            revise is not None
+            and decision["mode"] == "enforce"
+            and decision["reason_code"] in {"gateway_hard_deny", "known_secret"}
+            and remaining() > 0
+            and self.reserve_recovery(decision, "candidate_revision")
+        ):
+            try:
+                revised = revise(value)
+            except LasaError:
+                revised = value
+            if revised != value:
+                value = revised
+                decision = await self.evaluate(
+                    transfer,
+                    value,
+                    project(value),
+                    "application/json",
+                    remaining,
+                    False,
+                    None,
+                    candidate_revision=1,
+                )
+        return value, self.finish(decision)
+
+    def reserve_recovery(self, decision, action):
+        record = {
+            key: decision[key]
+            for key in (
+                "task_id",
+                "transfer_id",
+                "operation_id",
+                "channel",
+                "payload_digest",
+                "candidate_revision",
+                "reason_code",
+            )
+        }
+        record.update(action=action, timestamp=instant())
+        if "inspection_id" in decision:
+            record["inspection_id"] = decision["inspection_id"]
+        if action == "candidate_revision":
+            record["adjustment"] = "omit_optional_context"
+        limit = {
+            "inspection_retry": "max_inspection_retries_per_transfer",
+            "candidate_revision": "max_candidate_revisions_per_transfer",
+        }[action]
+        try:
+            return self.c.store.reserve_content_recovery(
+                record,
+                per_transfer=self.recovery[limit],
+                per_task=self.recovery["max_actions_per_task"],
+            )
+        except sqlite3.Error:
+            raise LasaError("content_gateway_unavailable", 503) from None
+
+    def ensure_current(self, decision):
+        require(digest(self.disclosure()) == decision["policy_revision"], "disclosure_denied", 403)
+
+    async def evaluate(
+        self,
+        transfer,
+        value,
+        projection,
+        media_type,
+        remaining,
+        defer_permit,
+        wire,
+        *,
+        candidate_revision=0,
+    ):
         disclosure = self.disclosure()
         policy_revision = digest(disclosure)
         source_classes = self.source_classes(transfer.source, disclosure)
@@ -210,7 +295,17 @@ class ContentSecurity:
             "service_id": self.c.config.service_id,
             "task_id": transfer.task_id,
             "operation_id": transfer.operation_id,
-            "transfer_id": identity("transfer"),
+            "transfer_id": "transfer-"
+            + digest(
+                [
+                    transfer.task_id,
+                    transfer.channel,
+                    transfer.destination,
+                    transfer.purpose,
+                    transfer.operation_id,
+                ]
+            )[7:],
+            "candidate_revision": candidate_revision,
             "channel": transfer.channel,
             "destination": transfer.destination,
             "purpose": transfer.purpose,
@@ -239,14 +334,21 @@ class ContentSecurity:
         )
         verdict = "hard_deny" if reason else "permit"
         if verdict == "permit" and profile is not None:
-            gateway_verdict, gateway_reason = await self.inspect(
-                decision,
-                profile,
-                projection,
-                media_type,
-                remaining,
-                disclosed=classes <= set(destinations.get("inspection:" + profile_id, UNKNOWN)),
+            disclosed = classes <= set(destinations.get("inspection:" + profile_id, UNKNOWN))
+            scanned, retryable = await self.inspect(
+                decision, profile, projection, media_type, remaining, disclosed=disclosed
             )
+            if (
+                mode == "enforce"
+                and retryable
+                and remaining() > 0
+                and digest(self.disclosure()) == policy_revision
+                and self.reserve_recovery(scanned, "inspection_retry")
+            ):
+                scanned, _ = await self.inspect(
+                    decision, profile, projection, media_type, remaining, disclosed=disclosed
+                )
+            gateway_verdict, gateway_reason = scanned["verdict"], scanned["reason_code"]
             if mode == "enforce" and gateway_verdict != "permit":
                 verdict, reason = gateway_verdict, gateway_reason
             elif digest(self.disclosure()) != policy_revision:
@@ -254,11 +356,20 @@ class ContentSecurity:
         decision.update(verdict=verdict, reason_code=reason or "policy_permit")
         if verdict != "permit" or not defer_permit:
             self.record(decision)
-        if verdict != "permit":
+        return decision
+
+    def finish(self, decision):
+        if decision["verdict"] != "permit":
             self.outcome(decision, "blocked")
-            if verdict == "indeterminate":
-                raise LasaError("content_gateway_unavailable", 503)
-            raise LasaError("disclosure_denied", 403)
+            instance = "urn:lasa:" + decision["transfer_id"]
+            if decision["verdict"] == "indeterminate":
+                raise LasaError("content_gateway_unavailable", 503, instance=instance)
+            detail = (
+                "Supply corrected input that can be disclosed under the task policy."
+                if decision["channel"] == "caller.request"
+                else None
+            )
+            raise LasaError("disclosure_denied", 403, instance=instance, detail=detail)
         return decision
 
     async def inspect(
@@ -283,16 +394,18 @@ class ContentSecurity:
             "inspection_id": identity("inspection"),
             "inspection_digest": digest(selected),
         }
+
+        def outcome(verdict, reason, *, retryable=False):
+            result = {**metadata, "verdict": verdict, "reason_code": reason}
+            self.record(result)
+            return result, retryable
+
         try:
             credential = self.c.config.secret(profile["credential_ref"], label="Inspection profile")
         except (OSError, ValueError):
-            reason = "invalid_or_unavailable_gateway"
-            self.record({**metadata, "verdict": "indeterminate", "reason_code": reason})
-            return "indeterminate", reason
+            return outcome("indeterminate", "invalid_or_unavailable_gateway")
         if not selected or not disclosed or self.contains_secret(selected, decision["task_id"]):
-            reason = "scanner_disclosure_denied"
-            self.record({**metadata, "verdict": "hard_deny", "reason_code": reason})
-            return "hard_deny", reason
+            return outcome("hard_deny", "scanner_disclosure_denied")
         request = {
             "version": "1",
             **{
@@ -311,13 +424,9 @@ class ContentSecurity:
             "content": selected,
         }
         raw = canonical(request)
-        limit = INSPECTION_TIMEOUT_SECONDS
-        if remaining is not None:
-            limit = min(limit, remaining())
+        limit = min(INSPECTION_TIMEOUT_SECONDS, remaining())
         if len(raw) > MAX_INSPECTION_REQUEST_BYTES or limit <= 0:
-            reason = "inspection_limit"
-            self.record({**metadata, "verdict": "indeterminate", "reason_code": reason})
-            return "indeterminate", reason
+            return outcome("indeterminate", "inspection_limit")
         self.c.contracts.validate("ContentInspectionRequest", request)
         self.record({**metadata, "verdict": "permit", "reason_code": "scanner_disclosure"})
         try:
@@ -331,6 +440,7 @@ class ContentSecurity:
                         "Content-Type": "application/json",
                     },
                 ) as reply:
+                    reply.raise_for_status()
                     require(reply.status_code == 200, "content_gateway_unavailable", 503)
                     buffer = bytearray()
                     async for chunk in reply.aiter_bytes():
@@ -356,8 +466,25 @@ class ContentSecurity:
                 "content_gateway_unavailable",
                 503,
             )
-            verdict, reason = response["verdict"], "gateway_" + response["verdict"]
-        except (TimeoutError, httpx.HTTPError, LasaError, ValueError):
-            verdict, reason = "indeterminate", "invalid_or_unavailable_gateway"
-        self.record({**metadata, "verdict": verdict, "reason_code": reason})
-        return verdict, reason
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code in {408, 502, 503, 504}:
+                return outcome("indeterminate", "gateway_transient_failure", retryable=True)
+            return outcome("indeterminate", "invalid_or_unavailable_gateway")
+        except (TimeoutError, httpx.TimeoutException, httpx.NetworkError) as exc:
+            cause = exc.__cause__
+            while cause is not None:
+                if isinstance(cause, ssl.SSLError):
+                    return outcome("indeterminate", "invalid_or_unavailable_gateway")
+                cause = cause.__cause__
+            return outcome("indeterminate", "gateway_transient_failure", retryable=True)
+        except (httpx.HTTPError, LasaError, ValueError):
+            return outcome("indeterminate", "invalid_or_unavailable_gateway")
+        verdict = response["verdict"]
+        return outcome(
+            verdict,
+            "gateway_" + verdict,
+            retryable=verdict == "indeterminate"
+            and bool(response["reason_codes"])
+            and set(response["reason_codes"])
+            <= {"scanner_unavailable", "presidio_unavailable", "betterleaks_unavailable"},
+        )

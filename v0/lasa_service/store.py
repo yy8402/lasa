@@ -106,6 +106,8 @@ CREATE INDEX IF NOT EXISTS operation_resources ON operations(kind,resource_id);
 CREATE INDEX IF NOT EXISTS children_by_task ON children(task_id);
 CREATE INDEX IF NOT EXISTS audit_by_task ON audit(task_id);
 CREATE INDEX IF NOT EXISTS content_intake_retention ON audit(created_at) WHERE task_id IS NULL;
+CREATE INDEX IF NOT EXISTS content_recovery_intake ON audit(json_extract(document,'$.transfer_id'))
+  WHERE task_id IS NULL AND kind='content_recovery';
 CREATE INDEX IF NOT EXISTS artifacts_by_task ON artifacts(task_id);
 PRAGMA user_version={STORAGE_SCHEMA_VERSION};
 """)
@@ -351,6 +353,36 @@ PRAGMA user_version={STORAGE_SCHEMA_VERSION};
     def event(self, task_id, kind, document):
         self.db.execute(
             "INSERT INTO audit VALUES(?,?,?,?)", (task_id, kind, encode(document), instant())
+        )
+
+    def reserve_content_recovery(self, record, *, per_transfer, per_task):
+        if not per_transfer or not per_task:
+            return False
+        task_id = record["task_id"]
+        transfer_id = record["transfer_id"]
+        with self.transaction():
+            scope = (
+                "task_id=?"
+                if task_id
+                else ("task_id IS NULL AND json_extract(document,'$.transfer_id')=?")
+            )
+            total, matching = self.db.execute(
+                "SELECT count(*), count(*) FILTER (WHERE json_extract(document,'$.transfer_id')=? "
+                "AND json_extract(document,'$.action')=?) FROM audit "
+                f"WHERE kind='content_recovery' AND {scope}",
+                (transfer_id, record["action"], task_id or transfer_id),
+            ).fetchone()
+            if total >= per_task or matching >= per_transfer:
+                return False
+            self.event(task_id, "content_recovery", record)
+        return True
+
+    def adopt_intake_recovery(self, task_id, transfer_id):
+        self.db.execute(
+            "UPDATE audit SET task_id=?, document=json_set(document,'$.task_id',?) "
+            "WHERE kind='content_recovery' AND task_id IS NULL "
+            "AND json_extract(document,'$.transfer_id')=?",
+            (task_id, task_id, transfer_id),
         )
 
     def content_classes(self, task_id):

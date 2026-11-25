@@ -11,6 +11,7 @@ from .content_security import Transfer
 from .contracts import canonical, digest, parse_json, validate_data
 from .errors import LasaError
 from .planning import object_schema
+from .recovery import omit_fields
 from .store import encode, zero
 
 TEXT = {"type": "string", "minLength": 1, "maxLength": 65536}
@@ -156,50 +157,54 @@ class Broker:
                 effect="unknown" if self.coordinator.store.uncertain(task_id) else "known",
             ) from None
 
+    def validate_arguments(self, task_id, name, arguments):
+        schema = (
+            self.operations[name][1]["input_schema"] if name in self.operations else SCHEMAS[name]
+        )
+        if name in self.operations:
+            validate_connector(schema, arguments, "invalid_input", 400)
+            validate_connector(
+                self.operations[name][1]["argument_constraints"],
+                arguments,
+                "authority_denied",
+                403,
+            )
+            for match in self.operations[name][1]["task_input_bindings"]:
+                selected = self.coordinator.contexts[task_id].prompt["input"]
+                value = arguments.get(match["argument_field"])
+                if match["comparison"] == "basename":
+                    require(isinstance(value, str), "authority_denied", 403)
+                    value = PurePosixPath(value).name
+                require(
+                    match["input_field"] in selected and value == selected[match["input_field"]],
+                    "authority_denied",
+                    403,
+                )
+        else:
+            validate_data(schema, arguments)
+
     async def _invoke(self, task_id, operation_id, name, arguments):
         lock = self.locks.setdefault(task_id, asyncio.Lock())
         async with lock:
             c = self.coordinator
             c.check_active(task_id)
             require(name in self._authorized(task_id), "authority_denied", 403)
-            schema = (
-                self.operations[name][1]["input_schema"]
-                if name in self.operations
-                else SCHEMAS[name]
-            )
-            if name in self.operations:
-                validate_connector(schema, arguments, "invalid_input", 400)
-                validate_connector(
-                    self.operations[name][1]["argument_constraints"],
-                    arguments,
-                    "authority_denied",
-                    403,
-                )
-                for match in self.operations[name][1]["task_input_bindings"]:
-                    selected = self.coordinator.contexts[task_id].prompt["input"]
-                    value = arguments.get(match["argument_field"])
-                    if match["comparison"] == "basename":
-                        require(isinstance(value, str), "authority_denied", 403)
-                        value = PurePosixPath(value).name
-                    require(
-                        match["input_field"] in selected
-                        and value == selected[match["input_field"]],
-                        "authority_denied",
-                        403,
-                    )
-            else:
-                validate_data(schema, arguments)
+            self.validate_arguments(task_id, name, arguments)
             body = {"name": name, "arguments": arguments}
             hashed = digest(body)
             existing = c.store.db.execute(
-                "SELECT * FROM actions WHERE task_id=? AND operation_id=?", (task_id, operation_id)
+                "SELECT a.*,COALESCE(json_extract(l.details,'$.requested_digest'),a.digest) "
+                "AS request_digest FROM actions a JOIN allocations l USING(task_id,operation_id) "
+                "WHERE a.task_id=? AND a.operation_id=?",
+                (task_id, operation_id),
             ).fetchone()
             if existing:
-                require(existing["digest"] == hashed, "idempotency_conflict", 409)
+                require(existing["request_digest"] == hashed, "idempotency_conflict", 409)
                 require(existing["state"] == "finished", "child_outcome_unknown", 503)
                 result = parse_json(existing["result"])
                 if "error" in result:
-                    raise LasaError(result["error"]["code"], result["error"]["status"])
+                    error = result["error"]
+                    raise LasaError(error["code"], error["status"], instance=error["instance"])
                 return result["value"]
             amount = zero()
             amount["tool_calls"] = 1
@@ -208,7 +213,14 @@ class Broker:
             if name in self.operations:
                 connector, permission = self.operations[name]
                 destination = "connector:" + name
-                invoke = await c.content.check(
+                optional = set(permission.get("optional_context_arguments", []))
+
+                def revise(value):
+                    candidate = omit_fields(value, optional)
+                    self.validate_arguments(task_id, name, candidate)
+                    return candidate
+
+                arguments, invoke = await c.content.check_request(
                     Transfer(
                         "tool.invoke",
                         destination,
@@ -220,11 +232,13 @@ class Broker:
                         operation=name,
                     ),
                     arguments,
-                    projection={"arguments": arguments},
+                    project=lambda candidate: {"arguments": candidate},
+                    revise=revise if optional & arguments.keys() else None,
                     remaining=lambda: c.remaining_seconds(task_id),
                 )
                 c.check_active(task_id)
                 require(name in self._authorized(task_id), "authority_denied", 403)
+                body = {"name": name, "arguments": arguments}
                 resource, permission_effect, action = (
                     permission["resource"],
                     permission["effect"],
@@ -244,6 +258,7 @@ class Broker:
                     amount,
                     {
                         "step_id": context.step_id,
+                        "requested_digest": hashed,
                         "resource": resource,
                         "action": action,
                         "effect": permission_effect,
@@ -251,7 +266,7 @@ class Broker:
                 )
                 c.store.db.execute(
                     "INSERT INTO actions VALUES(?,?,?,?,NULL,?,?)",
-                    (task_id, operation_id, hashed, "started", effect, encode(body)),
+                    (task_id, operation_id, digest(body), "started", effect, encode(body)),
                 )
             c.diagnostics.call(
                 task_id, operation_id, "tool", "started", body, reserved=amount, content=body
@@ -368,5 +383,6 @@ class Broker:
                 content=stored,
             )
             if "error" in stored:
-                raise LasaError(stored["error"]["code"], stored["error"]["status"])
+                error = stored["error"]
+                raise LasaError(error["code"], error["status"], instance=error["instance"])
             return value

@@ -105,7 +105,7 @@ The field names below are relative to `executors[].connectors[]`. Required conne
 
 ### Connector operation fields
 
-These fields are relative to `executors[].connectors[].operations[]`. Every applicable field is required and has no default. Operation schemas are JSON Schema objects. Use Draft 2020-12 by default or declare Draft 7, use local `#/` references, and omit `$id`.
+These fields are relative to `executors[].connectors[].operations[]`. Fields are required where applicable unless marked optional. Operation schemas are JSON Schema objects. Use Draft 2020-12 by default or declare Draft 7, use local `#/` references, and omit `$id`.
 
 | Setting | Applies to | Allowed values | What it does and when to set it |
 | --- | --- | --- | --- |
@@ -117,6 +117,7 @@ These fields are relative to `executors[].connectors[].operations[]`. Every appl
 | `argument_constraints` | All | JSON Schema object | Restricts arguments beyond the input schema. Use it for an approved path, repository, or query allowlist. |
 | `output_schema` | All | JSON Schema object | Validates the normalized result LASA records. Match the fields the fulfillment binding needs. |
 | `task_input_bindings` | All | List of 0–16 objects with the three fields below | Ties arguments to the task input. Use it when a caller-selected identifier must govern which source item is read. |
+| `optional_context_arguments` | All | Optional list of up to 32 distinct argument names | Lets LASA omit declared context after an enforced denial. Select non-required arguments outside `task_input_bindings` whose omission preserves the requested operation and effect. LASA validates the revised arguments before inspection. |
 | `task_input_bindings[].input_field` | Each match | Non-empty name of a contract input property | Selects the authoritative value from the task input. |
 | `task_input_bindings[].argument_field` | Each match | Non-empty name of an operation input property | Selects the argument constrained by that value. |
 | `task_input_bindings[].comparison` | Each match | `exact` or `basename` | Requires equality or compares the operation argument's POSIX basename with the task value. Use basename for an approved path chosen by a filename input. |
@@ -204,6 +205,7 @@ The service ceiling combines with the caller's requested budget, the receiver po
 | --- | --- | --- | --- | --- |
 | `limits.max_task_budget` | No | See budget table | Complete budget object | Caps task usage. Adjust to the largest task this service is prepared to accept. |
 | `limits.assessment_budget` | No | See budget table | Complete budget object | Sets the assessment envelope, including caps on planning calls, model tokens, and assessment time. Increase it for larger planning inputs or more complex decomposition. |
+| `limits.content_recovery` | No | One retry, one revision, four actions per task | Partial recovery limits object. Each integer ranges from zero through its default. | Bounds scanner retries and eligible outbound revisions across bindings. A zero task limit disables automatic recovery. [Fields and example](design/content-security.md#service-limits) |
 | `limits.integration_reserve` | No | See budget table | Complete budget object | Reserves part of the task budget for final integration. Adjust it for multi-step results and leave enough budget for fulfillment. |
 | `limits.max_hops` | No | `2` | Integer 0–32 | Caps delegation depth. Use `0` to forbid onward delegation or raise it for a deeper authorized topology. |
 | `limits.max_children` | No | `2` | Integer 0–64 | Caps immediate delegated children per task. Adjust for the intended fan-out. |

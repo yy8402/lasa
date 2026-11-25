@@ -2,6 +2,7 @@
 
 from .capabilities import reference, require
 from .contracts import canonical, digest, parse_json, validate_data
+from .recovery import capability_context, revise_model_context
 from .workflows import review_checklist_steps
 
 
@@ -75,7 +76,15 @@ class ModelService:
         self.coordinator = coordinator
 
     async def ask(
-        self, task_id, purpose, payload, schema, *, instruction="", candidate_output=_NO_CANDIDATE
+        self,
+        task_id,
+        purpose,
+        payload,
+        schema,
+        *,
+        instruction="",
+        candidate_output=_NO_CANDIDATE,
+        revised_payload=None,
     ):
         c = self.coordinator
         c.check_active(task_id, evaluating=True)
@@ -109,7 +118,15 @@ class ModelService:
             body["model"] = settings["model"]
             if effort := settings.get("reasoning_effort"):
                 body["reasoning"] = {"effort": effort}
-        response = await c.model_client.exchange(task_id, executor, body, purpose)
+        response = await c.model_client.exchange(
+            task_id,
+            executor,
+            body,
+            purpose,
+            revise=revise_model_context(body, payload, revised_payload)
+            if revised_payload is not None
+            else None,
+        )
         texts = [
             part["text"]
             for item in response.value.get("output", [])
@@ -223,6 +240,15 @@ class Planner:
                 payload,
                 PROPOSAL,
                 instruction=c.config.prompts["plan_proposal"],
+                revised_payload={
+                    **payload,
+                    "request": {
+                        **payload["request"],
+                        "input": capability_context(
+                            c.registry.get(request["selection"]["contract"]), request["input"]
+                        ),
+                    },
+                },
             )
         validate_data(PROPOSAL, value)
         c.store.event(task_id, "planning_proposal", value)
@@ -237,27 +263,39 @@ class Planner:
         ):
             return True
         plan = private_plan["document"]
+        payload = {
+            "original_request": request["input"],
+            "original_contract": c.registry.get(request["selection"]["contract"]),
+            "requirements": plan["requirements"],
+            "steps": [
+                {
+                    "step": step,
+                    "contract": c.registry.get(step["contract"]),
+                    "input": private_plan["inputs"][step["step_id"]],
+                    "bounded_fallback": private_plan["offers"]
+                    .get(step["step_id"], {})
+                    .get("fallback", False),
+                }
+                for step in plan["steps"]
+            ],
+        }
+        revised = {
+            **payload,
+            "original_request": capability_context(
+                payload["original_contract"], payload["original_request"]
+            ),
+            "steps": [
+                {**step, "input": capability_context(step["contract"], step["input"])}
+                for step in payload["steps"]
+            ],
+        }
         verdict = await c.models.ask(
             task_id,
             "planning",
-            {
-                "original_request": request["input"],
-                "original_contract": c.registry.get(request["selection"]["contract"]),
-                "requirements": plan["requirements"],
-                "steps": [
-                    {
-                        "step": step,
-                        "contract": c.registry.get(step["contract"]),
-                        "input": private_plan["inputs"][step["step_id"]],
-                        "bounded_fallback": private_plan["offers"]
-                        .get(step["step_id"], {})
-                        .get("fallback", False),
-                    }
-                    for step in plan["steps"]
-                ],
-            },
+            payload,
             VERDICT,
             instruction=c.config.prompts["plan_verification"],
+            revised_payload=revised,
         )
         c.store.event(task_id, "plan_semantic_verdict", verdict)
         return verdict["passed"]
@@ -371,24 +409,26 @@ class Planner:
             )
             self.verified[key] = passed
             return passed
+        payload = {
+            "contract": {
+                "ref": contract,
+                "outcome": definition["outcome"],
+                "effect_safety": definition["effect_safety"],
+                "postconditions": definition["postconditions"],
+            },
+            "input": inputs,
+            "claimed_evidence": evidence,
+            "original_requirements": requirements or [],
+            "trusted_execution_evidence": material,
+        }
         verdict = await c.models.ask(
             task_id,
             purpose,
-            {
-                "contract": {
-                    "ref": contract,
-                    "outcome": definition["outcome"],
-                    "effect_safety": definition["effect_safety"],
-                    "postconditions": definition["postconditions"],
-                },
-                "input": inputs,
-                "claimed_evidence": evidence,
-                "original_requirements": requirements or [],
-                "trusted_execution_evidence": material,
-            },
+            payload,
             VERDICT,
             instruction=instruction,
             candidate_output=output,
+            revised_payload={**payload, "input": capability_context(definition, inputs)},
         )
         c.store.event(
             task_id,

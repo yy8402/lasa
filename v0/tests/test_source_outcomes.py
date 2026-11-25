@@ -154,7 +154,7 @@ async def test_source_receipts_exact_assembly_scope_and_independent_rejection(
     client, app = await services(raw=raw, runtime=FakeRuntime(handler))
     c = app.state.coordinator
 
-    async def assess(task_id, purpose, payload, schema, *, candidate_output, instruction):
+    async def assess(task_id, purpose, payload, schema, *, candidate_output, instruction, **_):
         if purpose == "verification":
             verified_document_receipt(payload, candidate_output, instruction)
         return {"passed": mode != "semantic-rejection", "reason": "Controlled independent verdict."}
@@ -219,7 +219,7 @@ async def test_parent_verifies_actual_child_source_artifact_bytes(services, tmp_
     verified = {}
 
     def observe(coordinator):
-        async def assess(task_id, purpose, payload, schema, *, candidate_output, instruction):
+        async def assess(task_id, purpose, payload, schema, *, candidate_output, instruction, **_):
             assert purpose == "verification"
             verified[coordinator.config.service_id] = verified_document_receipt(
                 payload, candidate_output, instruction

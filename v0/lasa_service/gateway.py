@@ -13,6 +13,7 @@ from fastapi.responses import JSONResponse, Response
 from .capabilities import require
 from .contracts import parse_json
 from .errors import LasaError
+from .recovery import capability_context, revise_model_context
 
 
 def validate_local_tools(value):
@@ -84,6 +85,11 @@ class TaskGateway:
         c = self.context.coordinator
         task_id = self.context.task_id
         executor = c.config.executor(self.context.binding)
+        prompt = self.context.model_prompt()
+        revised_prompt = {
+            **prompt,
+            "input": capability_context(self.context.definition, prompt["input"]),
+        }
         c.diagnostics.register_secret(task_id, self.token)
         app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 
@@ -129,6 +135,7 @@ class TaskGateway:
                 "compaction" if suffix.endswith("/compact") else "execution",
                 suffix=suffix,
                 worker=True,
+                revise=revise_model_context(value, prompt, revised_prompt),
             )
             return Response(result.body, media_type=result.media_type)
 

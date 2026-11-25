@@ -250,6 +250,12 @@
             "text"
           ]
         },
+        "optional_context_arguments": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1, "maxLength": 128 },
+          "maxItems": 32,
+          "uniqueItems": true
+        },
         "task_input_bindings": {
           "type": "array",
           "maxItems": 16,
@@ -344,6 +350,12 @@
         },
         "probe_arguments": {
           "type": "object"
+        },
+        "optional_context_arguments": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1, "maxLength": 128 },
+          "maxItems": 32,
+          "uniqueItems": true
         },
         "task_input_bindings": {
           "type": "array",

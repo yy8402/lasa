@@ -323,7 +323,7 @@ class ModelTransport:
         self.opaque.pop(task_id, None)
 
     async def exchange(
-        self, task_id, executor, body, purpose, *, suffix="/responses", worker=False
+        self, task_id, executor, body, purpose, *, suffix="/responses", worker=False, revise=None
     ):
         c = self.c
         operation = identity("model")
@@ -331,10 +331,11 @@ class ModelTransport:
         destination = "model:" + executor["id"]
         opaque = self.opaque.setdefault(task_id, {}).setdefault(destination, set())
         require(set(opaque_fields(body)) <= opaque, "disclosure_denied", 403)
-        outgoing = await c.content.check(
+        body, outgoing = await c.content.check_request(
             Transfer("reasoning.request", destination, purpose, operation, task_id, source),
             body,
-            projection=request_projection(body),
+            project=request_projection,
+            revise=revise,
             remaining=lambda: c.remaining_seconds(task_id),
         )
         c.check_active(task_id, evaluating=not worker)

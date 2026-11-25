@@ -85,6 +85,11 @@
     }
   ],
   "limits": {
+    "content_recovery": {
+      "max_inspection_retries_per_transfer": 1,
+      "max_candidate_revisions_per_transfer": 1,
+      "max_actions_per_task": 4
+    },
     "max_task_budget": {
       "model_tokens": 24000,
       "model_calls": 6,

@@ -584,9 +584,11 @@ def capture(directory, document):
 
 def serve_fixture(directory):
     app = FastAPI()
+    transient_sent = False
 
     @app.post("/inspect/{profile}")
     async def inspect_content(request: Request, profile: str):
+        nonlocal transient_sent
         assert request.headers["Authorization"] == "Bearer " + GATEWAY_KEY
         body = await request.json()
         revision = PROFILE_REVISIONS[profile]
@@ -595,6 +597,13 @@ def serve_fixture(directory):
         assert body["inspection_digest"] == digest(body["content"])
         assert set(body["content"]) <= GATEWAY_FIELDS[body["channel"]]
         markers = json.dumps(body["content"])
+        if (
+            not transient_sent
+            and body["channel"] == "reasoning.request"
+            and "SMOKE_TRANSIENT_INSPECTION" in markers
+        ):
+            transient_sent = True
+            return Response(status_code=503)
         blocked = any(MARKERS[key] in markers for key in CHANNEL_DENIALS.get(body["channel"], ()))
         return {
             "version": "1",
@@ -846,6 +855,37 @@ def inspection_decisions(root, receiver, task_id, channel):
 
 def verify_content(client, root):
     outcomes = {}
+    marker = "SMOKE_TRANSIENT_INSPECTION"
+    model_start = len(read_traffic(root, "model"))
+    _, recovered, _ = checked_task(
+        client,
+        root,
+        "review",
+        "design.review",
+        {
+            "design": marker,
+            "criteria": [{"id": "fixture", "description": "Check transient recovery."}],
+        },
+        "transient-inspection",
+    )
+    assert recovered["status"] == "completed", recovered
+    decisions = inspection_decisions(root, "review", recovered["task_id"], "reasoning.request")
+    (failed,) = [row for row in decisions if row["reason_code"] == "gateway_transient_failure"]
+    (retried,) = [
+        row
+        for row in decisions
+        if row.get("inspection_id") != failed["inspection_id"]
+        and row.get("inspection_digest") == failed["inspection_digest"]
+        and row["reason_code"] == "gateway_permit"
+    ]
+    assert failed["transfer_id"] == retried["transfer_id"]
+    dispatched = [
+        row
+        for row in read_traffic(root, "model")[model_start:]
+        if row.get("stream") and marker in json.dumps(row)
+    ]
+    assert len(dispatched) == 1, dispatched
+    outcomes["transient_inspection"] = {"retries": 1, "model_dispatches": 1}
     for scenario in (
         "caller",
         "model_request",

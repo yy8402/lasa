@@ -85,6 +85,8 @@ def effective_document(manifest, defaults):
         "authorization",
     ):
         document[section] = copy.deepcopy(defaults[section]) | document.get(section, {})
+    limits = document["limits"]
+    limits["content_recovery"] = defaults["limits"]["content_recovery"] | limits["content_recovery"]
     authn = document["authentication"]
     if authn.setdefault("mode", "jwt") == "static_token":
         authn.setdefault("tokens_file", defaults["static_tokens_file"])
@@ -305,6 +307,16 @@ class Configuration:
                         schemas.append(operation["upstream_output_schema"])
                     for schema in schemas:
                         check_schema(schema)
+                    optional = set(operation.get("optional_context_arguments", []))
+                    required = set(operation["input_schema"].get("required", [])) | set(
+                        operation["argument_constraints"].get("required", [])
+                    )
+                    bound = {match["argument_field"] for match in operation["task_input_bindings"]}
+                    require(
+                        optional
+                        <= set(operation["input_schema"].get("properties", {})) - required - bound,
+                        "Optional connector context must name a non-required, unbound argument",
+                    )
             executor_operations[executor["id"]] = operations
         bindings = {digest(binding["contract"]) for binding in document["bindings"]}
         require(len(bindings) == len(document["bindings"]), "Duplicate contract bindings")

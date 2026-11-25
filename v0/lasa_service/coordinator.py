@@ -39,6 +39,15 @@ class ExecutionContext:
     baseline: dict
     step_id: str | None = None
 
+    def model_prompt(self):
+        return {
+            **{key: value for key, value in self.prompt.items() if key != "instruction"},
+            "outcome_contract": self.definition,
+            "required_evidence_criterion_ids": [
+                item["id"] for item in self.definition["postconditions"]
+            ],
+        }
+
 
 class Coordinator:
     def __init__(
@@ -426,6 +435,12 @@ class Coordinator:
         delegation = body.get("delegation", {})
         if principal.get("kind") == "peer":
             source = (source, "peer:" + principal["service_id"])
+
+        def intake_remaining():
+            if self.store.replay(owner, route, key, request_hash, operation_id):
+                return 0
+            return epoch(authority["limits"]["deadline"]) - time.time()
+
         inspection = await self.content.check(
             Transfer(
                 "caller.request",
@@ -440,7 +455,7 @@ class Coordinator:
                 "attachments": delegation.get("disclosed_artifacts", []),
                 "dependencies": body.get("dependency_results", {}),
             },
-            remaining=lambda: epoch(authority["limits"]["deadline"]) - time.time(),
+            remaining=intake_remaining,
         )
         with self.store.transaction():
             replay = self.store.replay(owner, route, key, request_hash, operation_id)
@@ -474,6 +489,7 @@ class Coordinator:
                 ),
             )
             self.content.remember_source(task_id, inspection)
+            self.store.adopt_intake_recovery(task_id, inspection["transfer_id"])
             self.content.outcome({**inspection, "task_id": task_id}, "admitted")
             self.store.operation(
                 owner, route, key, request_hash, body["operation_id"], task_id, "task", 202

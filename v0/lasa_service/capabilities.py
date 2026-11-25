@@ -14,6 +14,7 @@ from jsonschema import Draft202012Validator
 from .contracts import canonical, digest, parse_json, protocol_contracts, validate_data
 from .errors import LasaError
 from .outcomes import SOURCE_PROFILES
+from .recovery import optional_context
 from .workflows import REVIEW_CHECKLIST, child_contracts
 
 
@@ -65,6 +66,17 @@ def validate_definition(definition):
                             current = current[part.replace("~1", "/").replace("~0", "~")]
                     except (KeyError, TypeError):
                         raise LasaError("invalid_input") from None
+    try:
+        optional_context(
+            definition["input_schema"],
+            {
+                item["input_field"]
+                for item in definition["preconditions"]
+                if item["kind"] == "artifact_present"
+            },
+        )
+    except ValueError:
+        raise LasaError("invalid_input") from None
     if "external.write" in definition["max_effects"]:
         require(
             definition["effect_safety"]["external_write_commit_evidence_required"], "invalid_input"

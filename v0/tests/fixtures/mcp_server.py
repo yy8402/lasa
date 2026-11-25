@@ -17,6 +17,11 @@ OUTPUT = {
     "additionalProperties": False,
 }
 
+if "--optional-note" in sys.argv:
+    INPUT["properties"]["note"] = {"type": "string"}
+if "--required-with-report" in sys.argv:
+    INPUT["dependentRequired"] = {"report_id": ["note"]}
+
 for line in sys.stdin:
     request = json.loads(line)
     if "id" not in request:

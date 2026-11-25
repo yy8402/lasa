@@ -129,7 +129,7 @@ Requests to `legal-review` inherit required local DLP. The explicit response `of
 
 ## Inspection contract and evidence
 
-Use one bounded HTTPS request with closed, versioned request and response schemas. Authenticate the configured endpoint and verify TLS. Apply adapter-wide request and response size limits and cap the inspection timeout by the remaining operation deadline. Disable redirects and ambient proxy settings. Bind the exact, minimized projection to a fresh inspection ID and digest. Private prompts, transport credentials, hidden reasoning, and opaque provider state stay within their designated boundaries.
+Use one bounded HTTPS request per inspection attempt with closed, versioned request and response schemas. Authenticate the configured endpoint and verify TLS. Apply adapter-wide request and response size limits and cap the inspection timeout by the remaining operation deadline. Disable redirects and ambient proxy settings. Bind the exact, minimized projection to a fresh inspection ID and digest. Private prompts, transport credentials, hidden reasoning, and opaque provider state stay within their designated boundaries.
 
 | Message | Required fields |
 | --- | --- |
@@ -138,9 +138,64 @@ Use one bounded HTTPS request with closed, versioned request and response schema
 
 Use the resolved profile's `policy_revision` as the request's `gateway_policy_revision`. Accept `permit`, `hard_deny`, and `indeterminate`. Validate the returned `gateway_id` and `gateway_policy_revision` against the profile and bind the verdict to the inspection ID and digest. LASA derives `binding_revision` from the resolved rule after inheritance and overrides. The request's `policy_revision` identifies the LASA disclosure policy used for the decision.
 
-Keep the full representation's digest private and link it to the projection digest in the decision record. Recheck applicable revocations on subsequent transfers or reads. A future transformation produces a new candidate that needs its own digest, source lineage, verification, and release decision. [Governance updates and revocation](../../doc/13-agent-endpoint-design-specification.md#84-governance-update-and-revocation) · [Candidate release semantics](../../doc/13-agent-endpoint-design-specification.md#19-candidate-artifacts-and-release)
+Keep the full representation's digest private and link it to the projection digest in the decision record. Recheck applicable revocations on subsequent transfers or reads. Each transformation produces a new candidate with its own digest, source lineage, verification, and release decision. [Governance updates and revocation](../../doc/13-agent-endpoint-design-specification.md#84-governance-update-and-revocation) · [Candidate release semantics](../../doc/13-agent-endpoint-design-specification.md#19-candidate-artifacts-and-release)
 
 Record the effective mode and its origin, logical stream and purpose, service and operation IDs, selected profile ID and gateway identity, policy revisions, digests, verdict, reason code, and timestamp. Limit routine content audit records to metadata. Record the approval for a scanner disclosure before sending its projection. Persist release evidence with visibility changes. Record the actual transfer outcome separately from permission to send. Preserve confirmed effects and usage when a result is withheld, and preserve the original receiver and operation identity during reconciliation. [Durable operations and diagnostics](execution.md#diagnostic-evidence)
+
+## Shared recovery
+
+The supervisor owns recovery for every binding. It uses the inspection verdict, the transfer's dispatch state, and the remaining budget to decide whether to retry inspection, revise an undispatched request, request corrected input, reconcile a dispatched operation, or hold the transfer. Inspection bindings select mode and profile. The capability or connector operation declares which adjustments preserve its contract. The gateway supplies the verdict.
+
+### Service limits
+
+The proposed `limits.content_recovery` manifest settings apply across all bindings on the service. Each limit counts extra actions after the initial inspection. Omitted settings take the defaults below. The first implementation accepts integers from zero through each default. Zero disables the corresponding automatic action. A task-level limit of zero disables both.
+
+| Setting | Default | Scope |
+| --- | --- | --- |
+| `max_inspection_retries_per_transfer` | 1 | Extra scanner calls for transient failures, shared by the original candidate and any revision of the same transfer |
+| `max_candidate_revisions_per_transfer` | 1 | Automatic local revisions after a policy denial, available before outbound dispatch when the operation declares an eligible adjustment |
+| `max_actions_per_task` | 4 | Combined scanner retries and candidate revisions across the task, including parallel branches and release |
+
+With both per-transfer defaults, a transfer can make up to three scanner calls. The original deadline and the remaining task budget bound all attempts. Reserve each recovery action durably before starting it so concurrent branches and restarts consume the same limits. Before a task exists, account for intake recovery under the authenticated submission's operation identity. Carry any intake charges into the task when LASA creates it.
+
+### Recovery decisions
+
+1. **Retry a transient inspection failure in `enforce`.** Inspect the same projection through the same authorized profile with a fresh inspection ID. Retry a timeout, transient transport failure, or explicitly retryable gateway outage while both budgets allow it. A malformed verdict, profile or digest mismatch, configuration error, or unavailable mandatory audit storage holds the transfer immediately. An exhausted transient failure reports `content_gateway_unavailable`. In `observe`, record the verdict or failure from the initial inspection. In `off`, skip gateway inspection. LASA applies its independent disclosure controls in all modes.
+2. **Revise an eligible outbound candidate after a denial.** Start with deterministic omission of context explicitly declared optional for that operation. Apply the adjustment inside the supervisor. Keep the same task, step, destination, and authorized effect. Carry forward source restrictions and preserve required inputs, resource identities, and effect-bearing arguments. Validate the new candidate against the schema, authority, required inputs, and current policy. Dispatch only the exact candidate with its own permit. If recovery is unavailable or the revised candidate is denied, report `disclosure_denied` and use a supported correction checkpoint where appropriate. Independent steps may continue within the authorized plan.
+3. **Preserve dispatched operations.** Once dispatched, retain the request digest, receiver, operation ID, and idempotency key. A withheld response keeps its original usage, receipts, and confirmed effects. Reconcile any uncertain dispatch against that receiver before considering another execution. A future capability may authorize a locally produced derivative of a withheld response. Verify its provenance and contract compliance and inspect the derivative before use. [Idempotency and reconciliation](execution.md#durable-lifecycle-and-failures)
+
+Use a stable transfer ID across attempts. Link the original and revised candidate digests, inspection IDs, applied adjustment, budget consumption, and final transfer outcome in metadata-only audit records. Return safe problem details and a decision reference where recorded. Keep matched text and detector internals in their existing authorized boundaries.
+
+Capability publishers mark eligible top-level input properties with `"x-lasa-optional-context": true` in the trusted definition's `input_schema`. A marked property must be optional and outside required artifact preconditions. Model recovery revises only matching supervisor-built user context. Connector operators list eligible arguments in `optional_context_arguments` on the private operation, alongside the pinned upstream schema. Revalidation also checks conditional requirements and task input constraints.
+
+### Behavior by binding
+
+| Binding | Behavior when content is held |
+| --- | --- |
+| `caller.request` | Reject blocked task input before evaluation and ask for corrected content. A blocked clarification answer leaves the task at its existing checkpoint. |
+| `caller.response` | Hold a blocked clarification prompt and return a safe problem. Publish the final result and required artifacts together after each clears its applicable check, including `artifact_profile` when selected. Return authorized diagnostic metadata with withheld content omitted. |
+| `model.request` | Rebuild a request from approved task data and omit only declared optional context. Apply this rule to planning, verification, execution, and compaction. |
+| `model.response` | Withhold the full response, including buffered streaming output, from the worker or planner. Settle observed model usage. |
+| `delegates.request` | Omit explicitly optional child context or attachments when the child contract permits it. Preserve required predecessor evidence and the authorized peer. |
+| `delegates.response` | Withhold child result or artifact content from downstream work and preserve the child receipt, confirmed effects, and usage. Return authorized trace metadata when trace content is withheld. |
+| `connectors.request` | Apply the operation's declared adjustment to optional arguments. Preserve the selected resource, operation, required arguments, and caller-authorized scope. |
+| `connectors.response` | Withhold the result from the worker and source evidence. Settle the original connector call and preserve its receipt. |
+
+### JSON settings
+
+Set `content_recovery` in the supervisor manifest's top-level `limits` object alongside the existing task budgets. The grouped `content_security` settings above select which inspections use it.
+
+```json
+{
+  "limits": {
+    "content_recovery": {
+      "max_inspection_retries_per_transfer": 1,
+      "max_candidate_revisions_per_transfer": 1,
+      "max_actions_per_task": 4
+    }
+  }
+}
+```
 
 ## Implementation and acceptance
 
@@ -153,5 +208,6 @@ Replace the flat inspection binding list and remove the duplicated route, execut
 | Model and release | Apply policy to planning, verification, worker execution, and compaction. Validate complete bounded JSON or SSE responses before exposing content to a worker, including content split across frames. Count observed model usage when withholding a response. Bind final result and artifact permits to the exact representation before publication and protect later reads and replays. |
 | Caller and delegation | Withheld caller input stays out of evaluation. Withheld child requests never dispatch. Withheld returned results stay private while confirmed effects, usage, and authenticated control metadata remain available. Check clarification and diagnostic content before exposure. |
 | Connectors and evidence | Withheld arguments never reach the tool and withheld results stay out of worker input and source evidence. Approved operations preserve provenance, schema checks, and accounting. Audit records preserve permit and outcome metadata without carrying raw payloads. |
+| Shared recovery | Validate defaults, zero limits, and invalid counts. Recover a transient failure over the same projection and dispatch only after a valid permit. Revise eligible model, delegate, and connector requests and verify that the original bytes never dispatch. Exercise exhaustion, parallel budget reservations, crash and replay, missing required inputs, denied responses, and ambiguous dispatch. Verify that `observe` findings produce audit evidence without triggering revision. |
 
 Use the existing HTTP, transport, and durability fixtures with deterministic inspection endpoints. Validate the updated private schema and operator examples as part of implementation. [Runtime verification](../VERIFICATION.md)

@@ -247,6 +247,15 @@
         "assessment_budget": {
           "$ref": "contracts.schema.json#/$defs/Budget"
         },
+        "content_recovery": {
+          "type": "object",
+          "properties": {
+            "max_inspection_retries_per_transfer": {"type": "integer", "minimum": 0, "maximum": 1},
+            "max_candidate_revisions_per_transfer": {"type": "integer", "minimum": 0, "maximum": 1},
+            "max_actions_per_task": {"type": "integer", "minimum": 0, "maximum": 4}
+          },
+          "additionalProperties": false
+        },
         "integration_reserve": {
           "$ref": "contracts.schema.json#/$defs/Budget"
         },

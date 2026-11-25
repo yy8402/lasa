@@ -223,7 +223,7 @@ async def test_required_gateway_and_audit_fail_closed(
         """)
     task = await settled(client, await submit(client, app, await task_request(client, app)))
     assert task["problem"]["code"] == code
-    assert len(calls) == int(failure not in {"class", "audit"})
+    assert len(calls) == (2 if failure == "timeout" else int(failure not in {"class", "audit"}))
     assert "result" not in task
 
 

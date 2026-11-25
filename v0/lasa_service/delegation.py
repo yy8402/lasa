@@ -13,6 +13,7 @@ from .errors import LasaError
 from .evidence import validate_child_readbacks
 from .grants import find_grant, intersect_grants
 from .preconditions import check_inputs, request_input_size, restrict
+from .recovery import omit_fields, optional_context
 from .routing import fallback_input
 from .store import TERMINAL, encode, identity, zero
 from .verification import receipt_for
@@ -272,7 +273,7 @@ class DelegationController:
                 self.scope(task_id, step, route["offer"]["contract"], peer)
                 async with asyncio.timeout(peer.settings["request_timeout_seconds"]):
                     offer = await peer.refresh_offer(route["offer"])
-                ceiling, artifacts = self.prepare_inputs(
+                self.prepare_inputs(
                     task_id,
                     step,
                     peer,
@@ -313,9 +314,6 @@ class DelegationController:
             "input": delegated_input,
             "requested_limits": allocation,
             "authorization_ref": offer["authorization_ref"],
-            "diagnostics": request["diagnostics"]
-            if authority["content_diagnostics_allowed"]
-            else "metadata",
         }
         if predecessors:
             body["dependency_results"] = {
@@ -331,14 +329,9 @@ class DelegationController:
             "requirement_ids": step["requirement_ids"],
             "ancestry": c.routing.ancestry(request),
             "remaining_hops": allocation["max_hops"],
-            "request_digest": request_digest(body),
             "allocation": allocation,
-            "disclosed_artifacts": artifacts,
             "dependency_resources": sorted(dependency_resources),
-            "authority_ceiling": ceiling,
         }
-        input_bytes = request_input_size(body)
-        require(input_bytes <= allocation["budget"]["input_bytes"], "capacity_exhausted", 429)
         child = {
             "delegation_id": delegation_id,
             "parent_task_id": task_id,
@@ -358,6 +351,81 @@ class DelegationController:
             self.save(child)
         try:
             c.hit("before_child_dispatch", task_id)
+            ceiling, artifacts = self.prepare_inputs(
+                task_id, step, peer, offer, delegated_input, prior_artifacts, dependency_resources
+            )
+            body["delegation"].update(authority_ceiling=ceiling, disclosed_artifacts=artifacts)
+            body["diagnostics"] = (
+                request["diagnostics"] if ceiling["content_diagnostics_allowed"] else "metadata"
+            )
+            body["delegation"]["request_digest"] = request_digest(body)
+            require(
+                request_input_size(body) <= allocation["budget"]["input_bytes"],
+                "capacity_exhausted",
+                429,
+            )
+            optional = optional_context(c.registry.get(offer["contract"])["input_schema"])
+
+            def revise(candidate):
+                revised_input = omit_fields(candidate["input"], optional)
+                current, visible = self.prepare_inputs(
+                    task_id, step, peer, offer, revised_input, prior_artifacts, dependency_resources
+                )
+                require(current == ceiling, "authority_denied", 403)
+                revised = {
+                    **candidate,
+                    "input": revised_input,
+                    "delegation": {
+                        **candidate["delegation"],
+                        "disclosed_artifacts": visible,
+                    },
+                }
+                revised["delegation"]["request_digest"] = request_digest(revised)
+                return revised
+
+            body, dispatch = await c.content.check_request(
+                Transfer(
+                    "delegation.request",
+                    "peer:" + peer.service_id,
+                    "task",
+                    delegation_id,
+                    task_id,
+                    request["selection"]["contract"]["id"],
+                ),
+                body,
+                project=lambda candidate: {
+                    "input": candidate["input"],
+                    "dependencies": candidate.get("dependency_results", {}),
+                    "attachments": candidate["delegation"]["disclosed_artifacts"],
+                },
+                revise=revise
+                if isinstance(delegated_input, dict) and optional & delegated_input.keys()
+                else None,
+                remaining=lambda: min(
+                    c.remaining_seconds(task_id), epoch(allocation["deadline"]) - time.time()
+                ),
+            )
+            delegated_input = body["input"]
+            artifacts = body["delegation"]["disclosed_artifacts"]
+            input_bytes = request_input_size(body)
+            require(input_bytes <= allocation["budget"]["input_bytes"], "capacity_exhausted", 429)
+
+            def check_submission():
+                c.check_active(task_id)
+                require(time.time() < epoch(allocation["deadline"]), "deadline_exceeded", 422)
+                c.content.ensure_current(dispatch)
+                current, visible = self.prepare_inputs(
+                    task_id,
+                    step,
+                    peer,
+                    offer,
+                    delegated_input,
+                    prior_artifacts,
+                    dependency_resources,
+                )
+                require(current == ceiling and visible == artifacts, "authority_denied", 403)
+
+            check_submission()
             session_body = {
                 "operation_id": delegation_id + "-session",
                 "label": "Delegated " + step["step_id"],
@@ -378,46 +446,6 @@ class DelegationController:
             child["session_id"] = value["session_id"]
             child["state"] = "session_created"
             self.save(child)
-            ceiling, artifacts = self.prepare_inputs(
-                task_id, step, peer, offer, delegated_input, prior_artifacts, dependency_resources
-            )
-            body["delegation"].update(authority_ceiling=ceiling, disclosed_artifacts=artifacts)
-            body["diagnostics"] = (
-                request["diagnostics"] if ceiling["content_diagnostics_allowed"] else "metadata"
-            )
-            body["delegation"]["request_digest"] = request_digest(body)
-            input_bytes = request_input_size(body)
-            require(input_bytes <= allocation["budget"]["input_bytes"], "capacity_exhausted", 429)
-
-            def check_submission():
-                current, visible = self.prepare_inputs(
-                    task_id,
-                    step,
-                    peer,
-                    offer,
-                    delegated_input,
-                    prior_artifacts,
-                    dependency_resources,
-                )
-                require(current == ceiling and visible == artifacts, "authority_denied", 403)
-
-            dispatch = await c.content.check(
-                Transfer(
-                    "delegation.request",
-                    "peer:" + peer.service_id,
-                    "task",
-                    delegation_id,
-                    task_id,
-                    request["selection"]["contract"]["id"],
-                ),
-                body,
-                projection={
-                    "input": delegated_input,
-                    "dependencies": body.get("dependency_results", {}),
-                    "attachments": artifacts,
-                },
-                remaining=lambda: c.remaining_seconds(task_id),
-            )
             check_submission()
             child["request"] = body
             child["state"] = "submitting"

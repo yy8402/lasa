@@ -121,18 +121,11 @@ class CodexRuntime:
             "type": "string",
             "enum": [p["id"] for p in context.definition["postconditions"]],
         }
-        prompt = {
-            **{key: value for key, value in context.prompt.items() if key != "instruction"},
-            "outcome_contract": context.definition,
-            "required_evidence_criterion_ids": [
-                p["id"] for p in context.definition["postconditions"]
-            ],
-        }
         await client.request(
             "turn/start",
             {
                 "threadId": client.thread_id,
-                "input": [{"type": "text", "text": canonical(prompt).decode()}],
+                "input": [{"type": "text", "text": canonical(context.model_prompt()).decode()}],
                 "outputSchema": provider_schema(output_schema),
             },
         )
