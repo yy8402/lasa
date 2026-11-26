@@ -181,7 +181,7 @@ When a revised model request for a plan step is confirmed delivered, record the 
 | Binding | Behavior when content is held |
 | --- | --- |
 | `caller.request` | Reject blocked task input before evaluation and ask for corrected content. A blocked clarification answer leaves the task at its existing checkpoint. |
-| `caller.response` | Hold a blocked clarification prompt and return a safe problem. Publish the final result and required artifacts together after each clears its applicable check, including `artifact_profile` when selected. Return authorized diagnostic metadata with withheld content omitted. |
+| `caller.response` | Hold a blocked clarification prompt and return a safe problem. Apply the current caller-response policy to the original input and accepted replies before redisplaying them in the task conversation. Publish the final result and required artifacts together after each clears its applicable check, including `artifact_profile` when selected. Return authorized diagnostic metadata with withheld content omitted. |
 | `model.request` | Rebuild a request from approved task data and omit only declared optional context. Apply this rule to planning, verification, execution, and compaction. |
 | `model.response` | Withhold the full response, including buffered streaming output, from the worker or planner. Settle observed model usage. |
 | `delegates.request` | Omit explicitly optional child context or attachments when the child contract permits it. Preserve required predecessor evidence and the authorized peer. |

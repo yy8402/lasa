@@ -710,7 +710,114 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "contracts.schema.json#/$defs/TaskRequest"
+                "$ref": "#/components/schemas/TaskRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tasks": {
+      "get": {
+        "operationId": "listCallerTasks",
+        "summary": "List owned tasks for an authenticated user",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 465
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Newest-first public metadata scoped to the authenticated owner.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "tasks": {
+                      "type": "array",
+                      "maxItems": 100,
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "task_id": {
+                            "$ref": "contracts.schema.json#/$defs/ConsumerTask/properties/task_id"
+                          },
+                          "contract": {
+                            "$ref": "contracts.schema.json#/$defs/CapabilityRef"
+                          },
+                          "received_at": {
+                            "$ref": "contracts.schema.json#/$defs/ConsumerTask/properties/received_at"
+                          },
+                          "status": {
+                            "$ref": "contracts.schema.json#/$defs/ConsumerTask/properties/status"
+                          },
+                          "title": {
+                            "description": "Short title from the original request when currently authorized for disclosure.",
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "minLength": 1,
+                            "maxLength": 64
+                          }
+                        },
+                        "required": [
+                          "task_id",
+                          "title",
+                          "contract",
+                          "received_at",
+                          "status"
+                        ]
+                      }
+                    },
+                    "next_cursor": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "tasks",
+                    "next_cursor"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Typed authentication, authorization, or pagination error.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "contracts.schema.json#/$defs/Problem"
+                }
               }
             }
           }
@@ -1039,6 +1146,375 @@
         }
       }
     },
+    "/tasks/{task_id}/conversation": {
+      "get": {
+        "operationId": "getTaskConversation",
+        "summary": "Read one page of conversation turns as the authorized task owner",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "contracts.schema.json#/$defs/ConsumerTask/properties/task_id"
+            }
+          },
+          {
+            "name": "after_sequence",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740990,
+              "default": 0
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 32,
+              "default": 8
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ordered released conversation turns. Continue with next_after as after_sequence.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "task_id",
+                    "title",
+                    "latest_task_id",
+                    "latest_delegation",
+                    "work_clock",
+                    "follow_up_processing",
+                    "turns",
+                    "next_after"
+                  ],
+                  "properties": {
+                    "task_id": {
+                      "$ref": "contracts.schema.json#/$defs/ConsumerTask/properties/task_id",
+                      "description": "The stable first task in the conversation."
+                    },
+                    "next_after": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "turns": {
+                      "type": "array",
+                      "maxItems": 32,
+                      "items": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "sequence",
+                              "task_id",
+                              "kind",
+                              "content",
+                              "delegation"
+                            ],
+                            "properties": {
+                              "sequence": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 9007199254740991
+                              },
+                              "kind": {
+                                "const": "request"
+                              },
+                              "delegation": {
+                                "$ref": "#/components/schemas/DelegationMode"
+                              },
+                              "content": {
+                                "$ref": "contracts.schema.json#/$defs/TaskRequest/properties/input"
+                              },
+                              "task_id": {
+                                "$ref": "contracts.schema.json#/$defs/ConsumerTask/properties/task_id"
+                              }
+                            }
+                          },
+                          {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "sequence",
+                              "task_id",
+                              "kind",
+                              "content"
+                            ],
+                            "properties": {
+                              "sequence": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 9007199254740991
+                              },
+                              "kind": {
+                                "const": "question"
+                              },
+                              "content": {
+                                "$ref": "contracts.schema.json#/$defs/Question"
+                              },
+                              "task_id": {
+                                "$ref": "contracts.schema.json#/$defs/ConsumerTask/properties/task_id"
+                              }
+                            }
+                          },
+                          {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "sequence",
+                              "task_id",
+                              "kind",
+                              "content"
+                            ],
+                            "properties": {
+                              "sequence": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 9007199254740991
+                              },
+                              "kind": {
+                                "const": "reply"
+                              },
+                              "content": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "question_id",
+                                  "question_revision",
+                                  "answer"
+                                ],
+                                "properties": {
+                                  "question_id": {
+                                    "$ref": "contracts.schema.json#/$defs/TaskInput/properties/question_id"
+                                  },
+                                  "question_revision": {
+                                    "$ref": "contracts.schema.json#/$defs/TaskInput/properties/question_revision"
+                                  },
+                                  "answer": {
+                                    "$ref": "contracts.schema.json#/$defs/TaskInput/properties/answer"
+                                  }
+                                }
+                              },
+                              "task_id": {
+                                "$ref": "contracts.schema.json#/$defs/ConsumerTask/properties/task_id"
+                              }
+                            }
+                          },
+                          {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "sequence",
+                              "task_id",
+                              "kind",
+                              "content",
+                              "work_ms"
+                            ],
+                            "properties": {
+                              "sequence": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 9007199254740991
+                              },
+                              "kind": {
+                                "const": "result"
+                              },
+                              "content": {
+                                "$ref": "contracts.schema.json#/$defs/ConsumerResult"
+                              },
+                              "task_id": {
+                                "$ref": "contracts.schema.json#/$defs/ConsumerTask/properties/task_id"
+                              },
+                              "work_ms": {
+                                "description": "Frozen duration when LASA released this result. Null when historic records cannot establish duration.",
+                                "type": [
+                                  "integer",
+                                  "null"
+                                ],
+                                "minimum": 0
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    "latest_task_id": {
+                      "$ref": "contracts.schema.json#/$defs/ConsumerTask/properties/task_id",
+                      "description": "The latest native task in the conversation."
+                    },
+                    "latest_delegation": {
+                      "$ref": "#/components/schemas/DelegationMode",
+                      "description": "The latest task's effective caller delegation choice."
+                    },
+                    "follow_up_processing": {
+                      "description": "The latest result’s required processing terms when it is eligible for continuation.",
+                      "anyOf": [
+                        {
+                          "$ref": "contracts.schema.json#/$defs/ProcessingTerms"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "work_clock": {
+                      "description": "Worker-side elapsed duration for the latest task, excluding time awaiting caller input. Null when historic records cannot establish duration.",
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "elapsed_ms",
+                            "running"
+                          ],
+                          "properties": {
+                            "elapsed_ms": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "running": {
+                              "type": "boolean"
+                            }
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "title": {
+                      "description": "Short title from the original request when currently authorized for disclosure.",
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "minLength": 1,
+                      "maxLength": 64
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Typed authentication, ownership, release, or pagination failure.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "contracts.schema.json#/$defs/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tasks/{task_id}/follow-ups": {
+      "post": {
+        "operationId": "submitTaskFollowUp",
+        "summary": "Durably receive a follow-up to the latest released result of an owned task conversation",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "contracts.schema.json#/$defs/ConsumerTask/properties/task_id"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "description": "Stable key for this principal, method, and concrete route."
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Durably receive work for evaluation; acceptance occurs later",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "contracts.schema.json#/$defs/ConsumerTask"
+                }
+              }
+            },
+            "headers": {
+              "ETag": {
+                "description": "Strong representation tag; task mutations use If-Match.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Private, policy-scoped discovery cache directives; task data is no-store.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Location": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Created resource URL."
+              }
+            }
+          },
+          "default": {
+            "description": "Typed failure. Retry advice cannot authorize replay of uncertain effects.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "contracts.schema.json#/$defs/Problem"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskRequest"
+              }
+            }
+          }
+        },
+        "description": "User only. Uses the same pure task.attempt contract and processing terms. The receiver adds the previous released output to the effective task input and inherits the predecessor's delegation choice when omitted. The operation receipt binds the submitted body and the new ConsumerTask and result bind the effective request."
+      }
+    },
     "/tasks/{task_id}/artifacts/{artifact_id}": {
       "get": {
         "operationId": "getArtifact",
@@ -1319,7 +1795,29 @@
         "$ref": "contracts.schema.json#/$defs/OfferSelection"
       },
       "TaskRequest": {
-        "$ref": "contracts.schema.json#/$defs/TaskRequest"
+        "oneOf": [
+          { "$ref": "contracts.schema.json#/$defs/TaskRequest" },
+          { "$ref": "#/components/schemas/CallerTaskRequest" }
+        ]
+      },
+      "CallerTaskRequest": {
+        "description": "Authenticated users may set a delegation restriction for this task.",
+        "type": "object",
+        "required": ["operation_id", "selection", "input", "delegation"],
+        "additionalProperties": false,
+        "properties": {
+          "operation_id": { "$ref": "contracts.schema.json#/$defs/TaskRequest/properties/operation_id" },
+          "selection": { "$ref": "contracts.schema.json#/$defs/TaskRequest/properties/selection" },
+          "input": { "$ref": "contracts.schema.json#/$defs/TaskRequest/properties/input" },
+          "requested_limits": { "$ref": "contracts.schema.json#/$defs/TaskRequest/properties/requested_limits" },
+          "imports": { "$ref": "contracts.schema.json#/$defs/TaskRequest/properties/imports" },
+          "attachments": { "$ref": "contracts.schema.json#/$defs/TaskRequest/properties/attachments" },
+          "delegation": { "$ref": "#/components/schemas/DelegationMode" }
+        }
+      },
+      "DelegationMode": {
+        "description": "none bars peer tasks; policy permits only delegation authorized by receiver policy.",
+        "enum": ["policy", "none"]
       },
       "CreateSession": {
         "$ref": "contracts.schema.json#/$defs/CreateSession"

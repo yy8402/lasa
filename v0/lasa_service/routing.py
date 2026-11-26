@@ -286,7 +286,10 @@ class RoutingController:
                 evidence["peer_service_id"] = selected["service_id"]
             c.diagnostics.emit(task_id, "routing", evidence)
             if choice == "none":
-                if authority["selected_offer"]["processing"]["mode"] == DOMAIN_ONLY:
+                if (
+                    request.get("delegation") == "none"
+                    or authority["selected_offer"]["processing"]["mode"] == DOMAIN_ONLY
+                ):
                     raise LasaError("processing_unavailable", 503)
                 if binding and state in {"not_configured", "not_claimed", "denied"}:
                     if local_failure:

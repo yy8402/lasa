@@ -10,7 +10,14 @@ from weakref import WeakValueDictionary
 
 from .auth import Authentication, Authorization
 from .capabilities import CapabilityRegistry, Publication, epoch, instant, require
-from .consumer import artifact_release, require_public_data, result_view, task_view
+from .consumer import (
+    artifact_release,
+    conversation_title,
+    require_public_data,
+    result_view,
+    task_view,
+    title_source,
+)
 from .content_security import ContentSecurity, Transfer, payload_digest, task_inspection
 from .contracts import canonical, digest, parse_json, request_digest, validate_data
 from .diagnostics import Diagnostics
@@ -101,6 +108,7 @@ class Coordinator:
         self.diagnostics = Diagnostics(self)
         self.content = ContentSecurity(self, inspection_transport)
         self.jobs = {}
+        self.title_inspections = asyncio.Semaphore(8)
         self.contexts = {}
         self.expiries = {}
         self.assessment_expiries = {}
@@ -465,7 +473,53 @@ class Coordinator:
         require(epoch(authority["limits"]["deadline"]) > time.time(), "deadline_exceeded", 422)
         return session, authority
 
-    async def submit(self, principal, session_id, body, key, route):
+    def followup_context(self, principal, parent_id, request):
+        row, parent = self.store.task(parent_id, principal["id"])
+        self.check_read_authority(row, principal)
+        link = self.store.followup(parent_id)
+        root_id = link["root_id"] if link else parent_id
+        tip = self.store.conversation_tip(root_id)
+        require(tip is None or tip["task_id"] == parent_id, "task_state_conflict", 409)
+        require(self.supports_followup(row, parent), "task_state_conflict", 409)
+        self.check_release_read(parent_id, "result", parent["result"], principal)
+        ref = parent["selection"]["contract"]
+        require(request["selection"]["contract"] == ref, "invalid_input")
+        require(not ({"attachments", "imports"} & request.keys()), "invalid_input")
+        self.registry.input(ref, request["input"])
+        original_context = request["input"].get("context")
+        context = (
+            "Previous released LASA output:\n" + canonical(parent["result"]["output"]).decode()
+        )
+        if original_context is not None:
+            context += "\n\nCaller-provided context:\n" + original_context
+        effective = {**request, "input": {**request["input"], "context": context}}
+        if "delegation" not in request and parse_json(row["request"]).get("delegation") == "none":
+            effective["delegation"] = "none"
+        return (
+            effective,
+            root_id,
+            (link["start_after"] if link else 0) + self.store.result_sequence(parent_id),
+            original_context,
+            parent["processing"],
+            frozenset(self.store.content_classes(parent_id)),
+        )
+
+    def supports_followup(self, row, task):
+        return (
+            task["status"] == "completed"
+            and "result" in task
+            and task["result"]["effect_disposition"] == "none"
+            and self.registry.is_attempt(task["selection"]["contract"])
+            and not parse_json(row["authority"])["allowed_effects"]
+        )
+
+    async def follow_up(self, principal, parent_id, body, key, route):
+        row, _ = self.store.task(parent_id, principal["id"])
+        return await self.submit(
+            principal, row["session_id"], body, key, route, parent_id=parent_id
+        )
+
+    async def submit(self, principal, session_id, body, key, route, *, parent_id=None):
         received_monotonic = asyncio.get_running_loop().time()
         received_at = instant()
         owner = principal["id"]
@@ -474,7 +528,20 @@ class Coordinator:
         replay = self.store.replay(owner, route, key, request_hash, operation_id)
         if replay:
             return self.store.task(replay["resource_id"], owner)[1], replay["status"]
+        original = body
+        continuation = None
+        inherited_classes = frozenset()
+        if parent_id:
+            continuation = self.followup_context(principal, parent_id, original)
+            body, _, _, _, processing, inherited_classes = continuation
         _, authority = self.submission_scope(principal, session_id, body, received_at)
+        if continuation:
+            require(
+                not authority["allowed_effects"]
+                and authority["selected_offer"]["processing"] == processing,
+                "authority_denied",
+                403,
+            )
         source = body["selection"]["contract"]["id"]
         if principal.get("kind") == "peer":
             source = (source, "peer:" + principal["service_id"])
@@ -492,6 +559,7 @@ class Coordinator:
                 operation_id,
                 source=source,
                 intake=(principal, authority),
+                inherited_classes=inherited_classes,
             ),
             body,
             projection=task_inspection(body),
@@ -501,6 +569,13 @@ class Coordinator:
             replay = self.store.replay(owner, route, key, request_hash, operation_id)
             if replay:
                 return self.store.task(replay["resource_id"], owner)[1], replay["status"]
+            if continuation:
+                require(
+                    self.followup_context(principal, parent_id, original) == continuation,
+                    "task_state_conflict",
+                    409,
+                )
+                self.content.ensure_current(inspection)
             session, current_authority = self.submission_scope(
                 principal, session_id, body, received_at
             )
@@ -516,6 +591,7 @@ class Coordinator:
                 "status": "evaluating",
                 "received_at": created,
                 "updated_at": created,
+                "work_ms": 0,
                 "selection": body["selection"],
                 "processing": authority["selected_offer"]["processing"],
                 "request_digest": request_digest(body),
@@ -533,6 +609,12 @@ class Coordinator:
                 ),
             )
             self.content.remember_source(task_id, inspection)
+            if not continuation and principal["kind"] == "user":
+                self.store.save_task_title(task_id, conversation_title(body))
+            if continuation:
+                _, root_id, start_after, caller_context, _, _ = continuation
+                self.store.add_followup(task_id, parent_id, root_id, start_after, caller_context)
+                self.store.add_content_classes(task_id, inherited_classes)
             self.store.adopt_intake_recovery(task_id, inspection["transfer_id"])
             self.content.outcome({**inspection, "task_id": task_id}, "admitted")
             self.store.operation(
@@ -1162,25 +1244,220 @@ class Coordinator:
         require(request["selection"]["contract"] in rule["contracts"], "authority_denied", 403)
         check_processing_scope(self.config, self.config.policy(), rule, authority)
 
-    def check_release_read(self, task_id, component, value, principal):
-        row, _ = self.store.task(task_id, principal["id"])
-        self.check_read_authority(row, principal)
-        grant = self.store.db.execute(
-            "SELECT destination,digest,revision FROM content_releases WHERE task_id=? AND component=?",
-            (task_id, component),
-        ).fetchone()
-        require(
+    def release_matches(self, task_id, component, value, principal, *, artifact=False):
+        grant = self.store.content_release(task_id, component)
+        return (
             grant is not None
             and grant["destination"] == self.release_destination(principal)
             and grant["digest"] == payload_digest(value)
             and grant["revision"]
             == self.content.release_scope(
-                artifact=component != "result",
+                artifact=artifact,
                 disclosure_revision=digest(self.content.disclosure()),
-            ),
+            )
+        )
+
+    def check_release_read(self, task_id, component, value, principal, *, artifact=False):
+        row, _ = self.store.task(task_id, principal["id"])
+        self.check_read_authority(row, principal)
+        require(
+            self.release_matches(task_id, component, value, principal, artifact=artifact),
             "disclosure_denied",
             403,
         )
+
+    def publish_content_release(self, task_id, component, decision):
+        self.content.record(decision)
+        self.store.save_content_release(task_id, component, decision)
+        self.content.outcome(decision, "released")
+
+    async def prepare_conversation_release(
+        self, principal, transfer, component, content, projection
+    ):
+        task_id = transfer.task_id
+        if self.release_matches(task_id, component, content, principal):
+            return
+        proof = await self.content.check(
+            transfer, content, projection=projection, defer_permit=True
+        )
+        row, _ = self.store.task(task_id, principal["id"])
+        self.check_read_authority(row, principal)
+        self.content.ensure_current(proof)
+        with self.store.transaction():
+            self.publish_content_release(task_id, component, proof)
+
+    def title_transfer(self, principal, task):
+        return Transfer(
+            "caller.response",
+            self.release_destination(principal),
+            "conversation_title",
+            task["operation_id"],
+            task["task_id"],
+            task["selection"]["contract"]["id"],
+        )
+
+    def released_title(self, principal, root_id, title):
+        if title is None:
+            return None
+        try:
+            row, task = self.store.task(root_id, principal["id"])
+            self.check_release_read(root_id, "conversation:title", title, principal)
+            transfer = self.title_transfer(principal, task)
+            self.content.ensure_caller_replay(transfer, title_source(parse_json(row["request"])))
+            self.content.ensure_caller_replay(transfer, title)
+        except LasaError:
+            return None
+        return title
+
+    async def visible_title(self, principal, root_id):
+        try:
+            row, task = self.store.task(root_id, principal["id"])
+            self.check_read_authority(row, principal)
+            request = parse_json(row["request"])
+            saved = self.store.task_title(root_id)
+            if saved is None:
+                title = conversation_title(request)
+                self.store.save_task_title(root_id, title)
+            else:
+                title = saved["title"]
+            if title is None:
+                return None
+            transfer = self.title_transfer(principal, task)
+            component = "conversation:title"
+            source = title_source(request)
+            self.content.ensure_caller_replay(transfer, source)
+            self.content.ensure_caller_replay(transfer, title)
+            if not self.release_matches(root_id, component, title, principal):
+                async with asyncio.timeout(2.5), self.title_inspections:
+                    await self.prepare_conversation_release(
+                        principal,
+                        transfer,
+                        component,
+                        title,
+                        {"content": {"title": title, "source": source}},
+                    )
+            return title
+        except (LasaError, TimeoutError):
+            return None
+
+    def conversation_turns(self, row, task, segment, after, limit):
+        task_id = task["task_id"]
+        turns = []
+        if after < 1:
+            request = parse_json(row["request"])
+            inputs = request["input"]
+            if segment:
+                if segment["caller_context"] is None:
+                    inputs.pop("context")
+                else:
+                    inputs["context"] = segment["caller_context"]
+            turns.append(
+                {
+                    "sequence": 1,
+                    "kind": "request",
+                    "operation_id": task["operation_id"],
+                    "content": inputs,
+                    "delegation": request.get("delegation", "policy"),
+                }
+            )
+        if len(turns) < limit:
+            turns.extend(self.store.clarification_page(task_id, after, limit - len(turns)))
+        if "result" in task and len(turns) < limit:
+            sequence = self.store.result_sequence(task_id)
+            if sequence > after:
+                clock = self.store.work_clock(task)
+                turns.append(
+                    {
+                        "sequence": sequence,
+                        "kind": "result",
+                        "operation_id": task["operation_id"],
+                        "content": task["result"],
+                        "work_ms": clock["elapsed_ms"] if clock else None,
+                    }
+                )
+        return turns
+
+    async def conversation(self, principal, task_id, after, limit):
+        row, task = self.store.task(task_id, principal["id"])
+        self.check_read_authority(row, principal)
+        link = self.store.followup(task_id)
+        root_id = link["root_id"] if link else task_id
+        title = await self.visible_title(principal, root_id)
+        tip = self.store.conversation_tip(root_id)
+        latest_id = tip["task_id"] if tip else root_id
+        latest_row, latest = self.store.task(latest_id, principal["id"])
+        self.check_read_authority(latest_row, principal)
+        segments = self.store.conversation_segments(root_id, after, limit + 1)
+        if not segments or segments[0]["start_after"] > after:
+            segments.insert(0, None)
+        turns = []
+        for segment in segments:
+            offset = segment["start_after"] if segment else 0
+            segment_id = segment["task_id"] if segment else root_id
+            row, task = self.store.task(segment_id, principal["id"])
+            self.check_read_authority(row, principal)
+            for turn in self.conversation_turns(
+                row, task, segment, after - offset, limit + 1 - len(turns)
+            ):
+                turn["sequence"] += offset
+                turn["task_id"] = segment_id
+                turns.append((turn, task["selection"]["contract"]["id"]))
+            if len(turns) > limit:
+                break
+        page = turns[:limit]
+        releases = []
+        destination = self.release_destination(principal)
+        for turn, source in page:
+            task_id = turn["task_id"]
+            content = turn["content"]
+            kind = turn["kind"]
+            if kind == "result":
+                releases.append((task_id, "result", content, None))
+                continue
+            operation_id = turn["operation_id"]
+            component = "conversation:" + kind + ":" + operation_id
+            transfer = Transfer(
+                "caller.response",
+                destination,
+                "task" if kind == "request" else "clarification",
+                operation_id,
+                task_id,
+                source,
+            )
+            if kind in {"request", "reply"}:
+                await self.prepare_conversation_release(
+                    principal,
+                    transfer,
+                    component,
+                    content,
+                    projection={
+                        "content": {"input": content}
+                        if kind == "request"
+                        else {"answer": content["answer"]}
+                    },
+                )
+            releases.append((task_id, component, content, transfer))
+        for task_id, component, content, transfer in releases:
+            self.check_release_read(task_id, component, content, principal)
+            if transfer is not None:
+                self.content.ensure_caller_replay(transfer, content)
+        _, session = self.store.session(latest["session_id"], principal["id"])
+        can_follow_up = (
+            self.supports_followup(latest_row, latest)
+            and epoch(session["retention_until"]) > time.time()
+            and session["active_task_id"] is None
+            and self.release_matches(latest_id, "result", latest["result"], principal)
+        )
+        return {
+            "task_id": root_id,
+            "title": self.released_title(principal, root_id, title),
+            "latest_task_id": latest_id,
+            "work_clock": self.store.work_clock(latest),
+            "latest_delegation": parse_json(latest_row["request"]).get("delegation", "policy"),
+            "follow_up_processing": latest["processing"] if can_follow_up else None,
+            "turns": [{k: v for k, v in turn.items() if k != "operation_id"} for turn, _ in page],
+            "next_after": page[-1][0]["sequence"] if len(turns) > limit else None,
+        }
 
     async def release(self, task_id, final):
         self.check_active(task_id)
@@ -1264,18 +1541,7 @@ class Coordinator:
             task["status"] = "completed"
             task["result"] = result
             for component, decision in permits:
-                self.content.record(decision)
-                self.store.db.execute(
-                    "INSERT INTO content_releases VALUES(?,?,?,?,?)",
-                    (
-                        task_id,
-                        component,
-                        destination,
-                        decision["payload_digest"],
-                        decision["release_scope"],
-                    ),
-                )
-                self.content.outcome(decision, "released")
+                self.publish_content_release(task_id, component, decision)
             self.hit("before_release_commit", task_id)
             self.store.save_task(task)
             for artifact in artifacts:
@@ -1355,14 +1621,18 @@ class Coordinator:
             question,
             projection={"question": message},
             remaining=lambda: self.remaining_seconds(task_id),
+            defer_permit=True,
         )
         _, task = self.check_active(task_id)
+        self.content.ensure_current(proof)
         prior = task["status"]
         task["status"] = "awaiting_input"
         task["question"] = question
         with self.store.transaction():
             self.store.save_task(task)
-            self.content.outcome(proof, "released")
+            question_id = question["question_id"]
+            self.store.append_clarification(task_id, "question", question_id, question)
+            self.publish_content_release(task_id, "conversation:question:" + question_id, proof)
         future = asyncio.get_running_loop().create_future()
         self.questions[task_id] = (question, future)
         answer = await future
@@ -1441,6 +1711,12 @@ class Coordinator:
                 amount["input_bytes"] = len(canonical(body["answer"]))
                 self.reserve(task_id, question["question_id"], "input", amount)
                 self.store.settle(task_id, question["question_id"], amount)
+                self.store.append_clarification(
+                    task_id,
+                    "reply",
+                    operation_id,
+                    {key: body[key] for key in ("question_id", "question_revision", "answer")},
+                )
                 self.content.outcome(decision, "admitted")
                 answer = future
             elif task["status"] not in TERMINAL and task["status"] != "cancelling":

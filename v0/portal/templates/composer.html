@@ -1,0 +1,69 @@
+{% macro processing() %}
+<div class="processing">
+  <p class="processing-label">Processing</p>
+  <div id="offer-picker" hidden>
+    <label class="sr-only" for="offers">Where can LASA process this?</label>
+    <select id="offers" aria-describedby="offer-note"></select>
+  </div>
+  <p id="offer-summary" class="processing-summary" hidden></p>
+  <p id="offer-note" aria-live="polite">Loading processing offers.</p>
+  <p id="offer-limit" class="muted"></p>
+</div>
+{% endmacro %}
+{% macro delegation_option() %}
+<label class="delegation-option" for="no-delegation">
+  <input id="no-delegation" type="checkbox" aria-describedby="delegation-hint">
+  Run without delegation
+</label>
+<p id="delegation-hint" class="muted">Ask this LASA receiver to do the work without sending tasks to peers.</p>
+{% endmacro %}
+{% macro input_options(follow_up) %}
+<fieldset>
+  <legend>{{ 'Acceptance checks (optional)' if follow_up else 'What would count as done?' }}</legend>
+  <div id="checks"><label class="sr-only" for="check-1">Requirement 1</label><input id="check-1" name="check"{% if not follow_up %} required{% endif %} maxlength="2048" type="text"></div>
+  <button id="add-check" type="button" class="quiet">Add a requirement</button>
+</fieldset>
+<details id="context-details"><summary>Add context</summary>
+  <label class="sr-only" for="context">What should LASA use?</label>
+  <textarea id="context" rows="5" maxlength="32000" placeholder="Paste text LASA should use"></textarea>
+</details>
+{% endmacro %}
+{% set follow_up = page == "task" %}
+<form id="composer" data-body-bytes="{{ body_bytes }}" aria-label="{{ 'Follow-up' if follow_up else 'New task' }}">
+  {% if follow_up %}
+  <div class="compose-bar">
+    <button id="options-toggle" class="toolbar-button" type="button" aria-haspopup="dialog" aria-controls="follow-up-options" aria-expanded="false">Options</button>
+    <label class="sr-only" for="objective">Message LASA</label>
+    <textarea id="objective" name="objective" rows="1" maxlength="16000" placeholder="Message LASA" aria-describedby="draft-hint" required></textarea>
+    <button id="submit-task" class="primary" type="submit" aria-label="Send follow-up" disabled>Send</button>
+  </div>
+  <p id="draft-hint" class="sr-only">You can draft a follow-up. Send becomes available when a result supports it.</p>
+  <p id="compose-unavailable" class="compose-unavailable muted" hidden></p>
+  <dialog id="follow-up-options" class="task-options" aria-labelledby="options-title">
+    <header>
+      <h2 id="options-title">Task options</h2>
+      <button id="options-close" class="secondary" type="button" autofocus>Done</button>
+    </header>
+    <div class="options-fields">
+      {{ delegation_option() }}
+      {{ input_options(true) }}
+      {{ processing() }}
+      <p class="muted">LASA uses its previous released output as context.</p>
+    </div>
+  </dialog>
+  <p class="notice" id="form-error" role="alert" hidden></p>
+  {% else %}
+  <label for="objective">What do you want done?</label>
+  <textarea id="objective" name="objective" rows="4" maxlength="16000" required></textarea>
+  {{ input_options(false) }}
+  <details class="new-task-options">
+    <summary>Options</summary>
+    {{ delegation_option() }}
+  </details>
+  <p class="notice" id="form-error" role="alert" hidden></p>
+  <div class="submit-row">
+    {{ processing() }}
+    <button id="submit-task" class="primary" type="submit" disabled>Submit task</button>
+  </div>
+  {% endif %}
+</form>

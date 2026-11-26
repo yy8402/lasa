@@ -11,6 +11,8 @@ from referencing import Registry, Resource
 
 from .errors import LasaError
 
+DELEGATION_MODES = ("policy", "none")
+
 
 def _pairs(pairs):
     result = {}
@@ -81,6 +83,17 @@ class Contracts:
         except (ValidationError, TypeError, ValueError) as exc:
             raise LasaError(code, status) from exc
         return value
+
+    def validate_task_request(self, value, *, caller):
+        if caller and isinstance(value, dict) and "delegation" in value:
+            if value["delegation"] not in DELEGATION_MODES:
+                raise LasaError("invalid_input")
+            # This caller-only field is carried in the effective request and its digest.
+            self.validate(
+                "TaskRequest", {key: item for key, item in value.items() if key != "delegation"}
+            )
+        else:
+            self.validate("TaskRequest", value)
 
     def expanded(self, name):
         def expand(value):

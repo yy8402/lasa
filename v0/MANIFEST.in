@@ -1,6 +1,8 @@
 include *.md
 include run_task.py
 include Dockerfile .dockerignore Dockerfile.service Dockerfile.service.dockerignore pyproject.toml uv.lock
+include Dockerfile.portal Dockerfile.portal.dockerignore
+recursive-include portal *.py *.html *.css *.js *.md
 recursive-include design *.json *.md *.py
 recursive-include tools *.py
 recursive-include tests *.py

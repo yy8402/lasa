@@ -268,6 +268,8 @@ class Authorization:
                 409,
             )
             require("deadline" in requested, "deadline_exceeded", 422)
+        elif request.get("delegation") == "none":
+            fanout = 0
         budget = {
             **requested_budget,
             "delegations": fanout,

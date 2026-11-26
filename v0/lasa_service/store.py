@@ -7,13 +7,15 @@ from contextlib import contextmanager
 from pathlib import Path
 from uuid import uuid4
 
-from .capabilities import instant, require
+from .capabilities import epoch, instant, require
 from .contracts import canonical, parse_json
 
 STORAGE_SCHEMA_VERSION = 4
 TERMINAL = frozenset({"completed", "failed", "rejected", "cancelled", "indeterminate"})
+WORKING = frozenset({"evaluating", "accepted", "executing", "waiting_child"})
 ACTIVE_TASKS = "state NOT IN (" + ",".join(repr(state) for state in sorted(TERMINAL)) + ")"
 RETENTION_UNTIL = "json_extract(document,'$.retention_until')"
+TASK_RECEIVED_AT = "json_extract(tasks.document,'$.received_at')"
 RESOLUTION_EVENT = "json_extract(document,'$.kind')='resolution'"
 PENDING_CHILD = (
     "json_extract(document,'$.dispatched')=1 AND "
@@ -34,6 +36,10 @@ BUDGET_KEYS = (
 
 def identity(prefix):
     return prefix + "-" + uuid4().hex
+
+
+def elapsed_ms(start, end):
+    return max(0, round((epoch(end) - epoch(start)) * 1000))
 
 
 def encode(value):
@@ -116,10 +122,31 @@ CREATE TABLE IF NOT EXISTS content_classes(task_id TEXT, class TEXT, PRIMARY KEY
 CREATE TABLE IF NOT EXISTS content_releases(
   task_id TEXT, component TEXT, destination TEXT, digest TEXT, revision TEXT, PRIMARY KEY(task_id,component)
 );
+CREATE TABLE IF NOT EXISTS clarification_turns(
+  task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  sequence INTEGER NOT NULL, kind TEXT NOT NULL CHECK(kind IN ('question','reply')),
+  operation_id TEXT NOT NULL, content TEXT NOT NULL,
+  PRIMARY KEY(task_id,sequence), UNIQUE(task_id,kind,operation_id)
+);
+CREATE TABLE IF NOT EXISTS task_followups(
+  task_id TEXT PRIMARY KEY REFERENCES tasks(id) ON DELETE CASCADE,
+  parent_id TEXT NOT NULL UNIQUE REFERENCES tasks(id) ON DELETE CASCADE,
+  root_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  start_after INTEGER NOT NULL,
+  caller_context TEXT,
+  UNIQUE(root_id,start_after)
+);
+CREATE TABLE IF NOT EXISTS task_titles(
+  task_id TEXT PRIMARY KEY REFERENCES tasks(id) ON DELETE CASCADE,
+  title TEXT
+);
 CREATE TABLE IF NOT EXISTS artifacts(id TEXT PRIMARY KEY,task_id TEXT,manifest TEXT,content BLOB,released INTEGER);
 CREATE TABLE IF NOT EXISTS runtimes(task_id TEXT PRIMARY KEY REFERENCES tasks(id),attempt_id TEXT UNIQUE NOT NULL);
 CREATE TABLE IF NOT EXISTS retired_paths(id TEXT PRIMARY KEY,retry_at TEXT);
 CREATE INDEX IF NOT EXISTS tasks_by_session ON tasks(session_id);
+CREATE INDEX IF NOT EXISTS sessions_by_owner ON sessions(owner,id);
+CREATE INDEX IF NOT EXISTS tasks_history_by_session
+  ON tasks(session_id,json_extract(document,'$.received_at') DESC,id DESC);
 CREATE INDEX IF NOT EXISTS indeterminate_tasks ON tasks(id) WHERE state='indeterminate';
 CREATE INDEX IF NOT EXISTS operation_resources ON operations(kind,resource_id);
 CREATE INDEX IF NOT EXISTS children_by_task ON children(task_id);
@@ -258,11 +285,106 @@ PRAGMA user_version={STORAGE_SCHEMA_VERSION};
         self.session(row["session_id"], owner)
         return row, parse_json(row["document"])
 
+    def append_clarification(self, task_id, kind, operation_id, content):
+        self.db.execute(
+            "INSERT INTO clarification_turns "
+            "SELECT ?,COALESCE(MAX(sequence),1)+1,?,?,? FROM clarification_turns WHERE task_id=?",
+            (task_id, kind, operation_id, encode(content), task_id),
+        )
+
+    def followup(self, task_id):
+        return self.db.execute(
+            "SELECT * FROM task_followups WHERE task_id=?", (task_id,)
+        ).fetchone()
+
+    def conversation_tip(self, root_id):
+        return self.db.execute(
+            "SELECT * FROM task_followups WHERE root_id=? ORDER BY start_after DESC LIMIT 1",
+            (root_id,),
+        ).fetchone()
+
+    def conversation_segments(self, root_id, after, limit):
+        return self.db.execute(
+            "SELECT * FROM task_followups WHERE root_id=? AND start_after >= COALESCE("
+            "(SELECT MAX(start_after) FROM task_followups WHERE root_id=? AND start_after<=?),0)"
+            " ORDER BY start_after LIMIT ?",
+            (root_id, root_id, after, limit),
+        ).fetchall()
+
+    def add_followup(self, task_id, parent_id, root_id, start_after, caller_context):
+        self.db.execute(
+            "INSERT INTO task_followups VALUES(?,?,?,?,?)",
+            (task_id, parent_id, root_id, start_after, caller_context),
+        )
+
+    def clarification_page(self, task_id, after, limit):
+        rows = self.db.execute(
+            "SELECT sequence,kind,operation_id,content FROM clarification_turns "
+            "WHERE task_id=? AND sequence>? ORDER BY sequence LIMIT ?",
+            (task_id, after, limit),
+        )
+        return [{**row, "content": parse_json(row["content"])} for row in rows]
+
+    def result_sequence(self, task_id):
+        return self.db.execute(
+            "SELECT COALESCE(MAX(sequence),1)+1 FROM clarification_turns WHERE task_id=?",
+            (task_id,),
+        ).fetchone()[0]
+
+    def content_release(self, task_id, component):
+        return self.db.execute(
+            "SELECT destination,digest,revision FROM content_releases WHERE task_id=? AND component=?",
+            (task_id, component),
+        ).fetchone()
+
+    def task_title(self, task_id):
+        return self.db.execute(
+            "SELECT title FROM task_titles WHERE task_id=?", (task_id,)
+        ).fetchone()
+
+    def save_task_title(self, task_id, title):
+        self.db.execute(
+            "INSERT INTO task_titles VALUES(?,?) ON CONFLICT(task_id) DO NOTHING",
+            (task_id, title),
+        )
+
+    def save_content_release(self, task_id, component, proof):
+        self.db.execute(
+            "INSERT INTO content_releases VALUES(?,?,?,?,?) ON CONFLICT(task_id,component) "
+            "DO UPDATE SET destination=excluded.destination,digest=excluded.digest,revision=excluded.revision",
+            (
+                task_id,
+                component,
+                proof["destination"],
+                proof["payload_digest"],
+                proof["release_scope"],
+            ),
+        )
+
+    def task_history(self, owner, limit, before=None):
+        boundary = f"AND ({TASK_RECEIVED_AT},tasks.id) < (?,?)" if before else ""
+        return self.db.execute(
+            f"SELECT tasks.id AS task_id, {TASK_RECEIVED_AT} AS received_at, "
+            "json_extract(tasks.document,'$.selection.contract') AS contract, "
+            "(SELECT status FROM consumer_events WHERE task_id=COALESCE("
+            "(SELECT task_id FROM task_followups WHERE root_id=tasks.id ORDER BY start_after DESC LIMIT 1),tasks.id) "
+            "ORDER BY sequence DESC LIMIT 1) AS status "
+            "FROM sessions JOIN tasks ON tasks.session_id=sessions.id "
+            f"WHERE sessions.owner=? {boundary} "
+            "AND NOT EXISTS (SELECT 1 FROM task_followups WHERE task_id=tasks.id) "
+            "ORDER BY received_at DESC, tasks.id DESC LIMIT ?",
+            (owner, *(before or ()), limit),
+        ).fetchall()
+
     def save_task(self, document):
         _, current = self.task(document["task_id"])
         require(current["status"] not in TERMINAL, "task_state_conflict", 409)
         document["revision"] = current["revision"] + 1
         document["updated_at"] = instant()
+        if "work_ms" in current:
+            document["work_ms"] = current["work_ms"]
+            if current["status"] in WORKING:
+                document["work_ms"] += elapsed_ms(current["updated_at"], document["updated_at"])
         self.db.execute(
             "UPDATE tasks SET state=?,document=? WHERE id=?",
             (document["status"], encode(document), document["task_id"]),
@@ -274,6 +396,21 @@ PRAGMA user_version={STORAGE_SCHEMA_VERSION};
                 "UPDATE sessions SET document=? WHERE id=?",
                 (encode(session), session["session_id"]),
             )
+
+    def work_clock(self, task):
+        working = task["status"] in WORKING
+        if "work_ms" in task:
+            duration = task["work_ms"]
+        elif self.db.execute(
+            "SELECT 1 FROM consumer_events WHERE task_id=? AND status='awaiting_input' LIMIT 1",
+            (task["task_id"],),
+        ).fetchone():
+            return None
+        else:
+            duration = elapsed_ms(task["received_at"], task["updated_at"])
+        if working:
+            duration += elapsed_ms(task["updated_at"], instant())
+        return {"elapsed_ms": duration, "running": working}
 
     def consumer_state(self, task_id, status):
         row = self.db.execute(

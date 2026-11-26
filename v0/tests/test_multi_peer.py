@@ -61,7 +61,7 @@ def peer_settings(service, credential_ref):
 
 
 async def setup_peers(
-    services, tmp_path, *, contracts_by_peer=None, planner=None, only_attempt=False
+    services, tmp_path, *, contracts_by_peer=None, planner=None, only_attempt=False, local=True
 ):
     workers, runtimes = {}, {}
     raw = documents(tmp_path / "parent", peer=True)
@@ -97,9 +97,37 @@ async def setup_peers(
             for binding in raw["bindings"]
             if binding["contract"]["id"].endswith("/task.attempt")
         ]
+    if not local:
+        raw["bindings"] = [
+            binding
+            for binding in raw["bindings"]
+            if not binding["contract"]["id"].endswith("/task.attempt")
+        ]
     transport = DownstreamTransport(workers)
     client, app = await services(raw=raw, planner=planner, peer_transport=transport)
     return client, app, workers, runtimes, transport
+
+
+@pytest.mark.parametrize("local", [True, False])
+async def test_caller_delegation_restriction_blocks_peer_routes(services, tmp_path, local):
+    client, app, _, _, transport = await setup_peers(services, tmp_path, local=local)
+    request = await task_request(client, app)
+    restricted = await settled(client, await submit(client, app, request | {"delegation": "none"}))
+    assert transport.calls == []
+    coordinator = app.state.coordinator
+    authority = coordinator.authority(restricted["task_id"])
+    assert authority["limits"]["budget"]["delegations"] == 0
+    assert authority["delegation_grants"] == []
+    if local:
+        assert restricted["status"] == "completed", restricted
+    else:
+        assert restricted["status"] == "rejected", restricted
+        assert restricted["problem"]["code"] == "processing_unavailable"
+
+    allowed = await task_request(client, app)
+    result = await settled(client, await submit(client, app, allowed | {"delegation": "policy"}))
+    assert result["status"] == "completed", result
+    assert len(transport.submissions()) == 1
 
 
 @pytest.mark.parametrize("primary", ["available", "offline", "fails_preflight"])

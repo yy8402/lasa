@@ -85,6 +85,33 @@ def audit_events(c):
     ]
 
 
+async def test_conversation_title_inspects_original_source_even_after_truncation(
+    services, tmp_path
+):
+    raw = configure_inspection(documents(tmp_path), "caller", "response")
+    objective = "Summarize the inventory. Synthetic restricted title source."
+    seen = []
+
+    async def gateway(request):
+        body = json.loads(request.content)
+        if body["purpose"] == "conversation_title":
+            seen.append(body["content"])
+            return verdict(body, verdict="hard_deny")
+        return verdict(body)
+
+    client, app = await services(raw=raw, inspection_transport=httpx.MockTransport(gateway))
+    body = await task_request(client, app)
+    body["input"]["objective"] = objective
+    result = await settled(client, await submit(client, app, body))
+    assert result["status"] == "completed"
+    base = raw["service"]["base_url"]
+    listed = (await client.get(base + "/tasks")).json()["tasks"]
+    assert listed[0]["title"] is None
+    assert seen[0] == {"content": {"title": "Summarize the inventory", "source": objective}}
+    page = await client.get(base + "/tasks/" + result["task_id"] + "/conversation")
+    assert page.status_code == 200 and page.json()["title"] is None
+
+
 @pytest.mark.parametrize("purpose", ["planning", "verification", "execution", "compaction"])
 async def test_denied_model_requests_do_not_reach_provider(services, tmp_path, purpose):
     raw = configure_inspection(documents(tmp_path), "model", "request")

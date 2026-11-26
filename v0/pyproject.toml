@@ -26,6 +26,8 @@ lasa-launcher = "lasa_service.launcher:main"
 
 [dependency-groups]
 dev = ["pytest>=8,<10", "pytest-asyncio>=1,<2", "ruff>=0.14,<1"]
+portal = ["authlib>=1.6.5,<2", "jinja2>=3.1.6,<4"]
+portal-test = ["playwright>=1.51,<2"]
 
 [tool.setuptools]
 packages = ["lasa_service", "lasa_contracts"]

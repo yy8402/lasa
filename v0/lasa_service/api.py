@@ -1,8 +1,11 @@
 """Target LASA HTTP API; discovery and task authority share one receiver identity."""
 
+import asyncio
 import base64
 import hashlib
+import hmac
 import re
+import secrets
 from contextlib import asynccontextmanager
 from urllib.parse import urlsplit
 
@@ -12,7 +15,7 @@ from starlette.exceptions import HTTPException
 
 from .capabilities import require
 from .consumer import artifact_release, require_public_data, task_view
-from .contracts import parse_json
+from .contracts import canonical, parse_json
 from .coordinator import Coordinator
 from .errors import LasaError
 
@@ -89,6 +92,7 @@ def create_app(
 
     c.discovery.mount(app)
     prefix = urlsplit(config.document["service"]["base_url"]).path.rstrip("/")
+    history_key = secrets.token_bytes(32)
 
     def principal(request, *, operator=False):
         identity = c.authentication.authenticate_headers(request.headers)
@@ -102,6 +106,11 @@ def create_app(
             raise LasaError("invalid_input") from None
         require(minimum <= value <= maximum, "invalid_input")
         return value
+
+    def sign_history_cursor(owner, encoded):
+        return hmac.digest(
+            history_key, canonical([config.service_id, owner, encoded]), "sha256"
+        ).hex()
 
     async def mutation(request, schema):
         p = principal(request)
@@ -123,13 +132,21 @@ def create_app(
             )
             parts.append(part)
         body = parse_json(b"".join(parts))
-        c.contracts.validate(schema, body)
+        if schema == "TaskRequest":
+            c.contracts.validate_task_request(body, caller=p["kind"] == "user")
+        else:
+            c.contracts.validate(schema, body)
         return p, body, key
 
     def response(document, status=200, *, audience=None):
         if "question" in document:
-            row, _ = c.store.task(document["task_id"], audience["id"])
-            c.check_read_authority(row, audience)
+            question = document["question"]
+            c.check_release_read(
+                document["task_id"],
+                "conversation:question:" + question["question_id"],
+                question,
+                audience,
+            )
         if "result" in document:
             c.check_release_read(document["task_id"], "result", document["result"], audience)
         if audience:
@@ -176,6 +193,40 @@ def create_app(
             *await c.submit(p, session_id, body, key, "POST " + request.url.path), audience=p
         )
 
+    @app.get(prefix + "/tasks")
+    async def list_tasks(request: Request):
+        p = principal(request)
+        require(p["kind"] == "user", "authority_denied", 403)
+        limit = query_integer(request, "limit", "25", 1, 100)
+        before = None
+        if cursor := request.query_params.get("cursor"):
+            require(re.fullmatch(r"[A-Za-z0-9_-]{1,400}\.[0-9a-f]{64}", cursor), "invalid_input")
+            encoded, signature = cursor.split(".")
+            require(
+                hmac.compare_digest(signature, sign_history_cursor(p["id"], encoded)),
+                "invalid_input",
+            )
+            before = parse_json(base64.urlsafe_b64decode(encoded + "=" * (-len(encoded) % 4)))
+        elif "cursor" in request.query_params:
+            raise LasaError("invalid_input")
+        rows = c.store.task_history(p["id"], limit + 1, before)
+        items = [{**row, "contract": parse_json(row["contract"])} for row in rows[:limit]]
+        titles = await asyncio.gather(*(c.visible_title(p, item["task_id"]) for item in items))
+        for item, title in zip(items, titles, strict=True):
+            item["title"] = c.released_title(p, item["task_id"], title)
+        next_cursor = None
+        if len(rows) > limit:
+            last = items[-1]
+            encoded = (
+                base64.urlsafe_b64encode(canonical([last["received_at"], last["task_id"]]))
+                .decode()
+                .rstrip("=")
+            )
+            next_cursor = encoded + "." + sign_history_cursor(p["id"], encoded)
+        return JSONResponse(
+            {"tasks": items, "next_cursor": next_cursor}, headers={"Cache-Control": "no-store"}
+        )
+
     @app.get(prefix + "/tasks/{task_id}")
     async def task(task_id: str, request: Request):
         p = principal(request)
@@ -188,6 +239,24 @@ def create_app(
                 )
             )
         return response(document, audience=p)
+
+    @app.get(prefix + "/tasks/{task_id}/conversation")
+    async def conversation(task_id: str, request: Request):
+        p = principal(request)
+        require(p["kind"] == "user", "authority_denied", 403)
+        after = query_integer(request, "after_sequence", "0", 0, MAX_AFTER_SEQUENCE)
+        limit = query_integer(request, "limit", "8", 1, 32)
+        return JSONResponse(
+            await c.conversation(p, task_id, after, limit), headers={"Cache-Control": "no-store"}
+        )
+
+    @app.post(prefix + "/tasks/{task_id}/follow-ups")
+    async def follow_up(task_id: str, request: Request):
+        p, body, key = await mutation(request, "TaskRequest")
+        require(p["kind"] == "user", "authority_denied", 403)
+        return response(
+            *await c.follow_up(p, task_id, body, key, "POST " + request.url.path), audience=p
+        )
 
     @app.post(prefix + "/tasks/{task_id}/inputs")
     async def answer(task_id: str, request: Request):
@@ -307,7 +376,7 @@ def create_app(
             500,
         )
         public_artifact = artifact_release(manifest, data)
-        c.check_release_read(task_id, artifact_id, public_artifact, p)
+        c.check_release_read(task_id, artifact_id, public_artifact, p, artifact=True)
         require_public_data(c, task_id, public_artifact)
         return Response(
             data,

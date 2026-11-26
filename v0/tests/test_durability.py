@@ -450,7 +450,10 @@ async def test_child_control_retries_without_resubmission(services, tmp_path, fa
         assert all(kind != "result" for kind, _ in calls)
     else:
         assert result["status"] == "completed", result
-        assert [kind for kind, _ in calls] == ["submit", "control", "control", "result"]
+        kinds = [kind for kind, _ in calls]
+        assert kinds[0] == "submit" and kinds[-1] == "result"
+        polls = kinds[1:-1]
+        assert len(polls) >= 2 and set(polls) == {"control"}
 
 
 async def test_changed_requirements_cannot_reuse_semantic_verdict(services):

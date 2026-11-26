@@ -71,6 +71,7 @@ class Transfer:
     connector: str | None = None
     operation: str | None = None
     intake: tuple[dict, dict] | None = None
+    inherited_classes: frozenset[str] = frozenset()
 
 
 class ContentSecurity:
@@ -263,6 +264,21 @@ class ContentSecurity:
     def ensure_current(self, decision):
         require(digest(self.disclosure()) == decision["policy_revision"], "disclosure_denied", 403)
 
+    def transfer_classes(self, transfer, disclosure):
+        source = self.source_classes(transfer.source, disclosure)
+        task = self.c.store.content_classes(transfer.task_id) if transfer.task_id else set()
+        return source, source | task | transfer.inherited_classes
+
+    def ensure_caller_replay(self, transfer, value):
+        disclosure = self.disclosure()
+        _, classes = self.transfer_classes(transfer, disclosure)
+        scoped = disclosure.get("destinations", {}).get(transfer.destination, UNKNOWN)
+        require(
+            self.check_local(transfer, value, "application/json", scoped, classes) is None,
+            "disclosure_denied",
+            403,
+        )
+
     async def evaluate(
         self,
         transfer,
@@ -286,10 +302,7 @@ class ContentSecurity:
         )
         disclosure = self.disclosure()
         policy_revision = digest(disclosure)
-        source_classes = self.source_classes(transfer.source, disclosure)
-        classes = source_classes | (
-            self.c.store.content_classes(transfer.task_id) if transfer.task_id else set()
-        )
+        source_classes, classes = self.transfer_classes(transfer, disclosure)
         destinations = disclosure.get("destinations", {})
         binding = self.bindings.resolve(
             transfer.channel,
@@ -326,7 +339,7 @@ class ContentSecurity:
             "payload_digest": payload_digest(value if wire is None else wire),
             "timestamp": instant(),
         }
-        if transfer.channel == "candidate.release":
+        if transfer.channel in {"caller.response", "candidate.release"}:
             decision["release_scope"] = self.release_scope(
                 artifact=artifact, disclosure_revision=policy_revision
             )

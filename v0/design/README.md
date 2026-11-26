@@ -18,6 +18,10 @@ Read in this order:
 
 [Content inspection and gateway profiles](content-security.md)
 
+[Proposed user and caller portal](caller-portal.md)
+
+[Proposed OpenAI-compatible user interface](openai-interface.md)
+
 Machine-readable artifacts (also packaged for the runtime):
 
 - [Public and internal contracts](contracts.schema.json), [private configuration](config.schema.json), [private policy/runtime/tools schemas](private.schema.json), and [OpenAPI 3.2.1](api.openapi.json).

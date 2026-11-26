@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title }} · LASA</title>
+  <link rel="stylesheet" href="{{ css }}">
+  <script defer src="{{ js }}"></script>
+</head>
+<body class="sign-in">
+  <main class="sign-in-content">
+    <a class="wordmark" href="/">LASA<span> / Caller portal</span></a>
+    <h1>{{ title }}</h1>
+    {% if message %}<p>{{ message }}</p>{% endif %}
+    <a class="primary button" href="{{ href }}"{% if resume %} data-resume{% endif %}>{{ action }}</a>
+  </main>
+</body>
+</html>

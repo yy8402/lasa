@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en"{% if page == "task" %} class="task-page"{% endif %}>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1{% if page == 'task' %}, viewport-fit=cover, interactive-widget=resizes-content{% endif %}">
+  <meta name="csrf-token" content="{{ csrf }}">
+  <title>LASA Caller Portal</title>
+  <link rel="stylesheet" href="{{ css }}">
+  <script defer src="{{ js }}"></script>
+</head>
+<body data-page="{{ page }}" data-id="{{ identifier or '' }}">
+  <a class="skip" href="#main">Skip to content</a>
+  {% if page != "task" %}
+  <header class="mobile-header">
+    <button type="button" class="secondary" id="open-sidebar" aria-expanded="false" aria-controls="mobile-sidebar">Tasks</button>
+    <a class="wordmark" href="/">LASA</a>
+  </header>
+  {% endif %}
+
+  <aside class="sidebar desktop-sidebar">
+    {% include 'sidebar.html' %}
+  </aside>
+  <dialog class="mobile-sidebar" id="mobile-sidebar" aria-label="Tasks">
+    <button type="button" class="secondary close-sidebar">Close</button>
+    {% include 'sidebar.html' %}
+  </dialog>
+
+  <main id="main" class="workspace" tabindex="-1">
+    {% if page != "task" %}<div class="content">{% endif %}
+      {% if page == "new" %}
+      <h1>New task</h1>
+      {% include "composer.html" %}
+      {% elif page == "history" %}
+      <h1>My tasks</h1>
+      <p id="history-status" class="muted" role="status">Loading tasks.</p>
+      <ul id="history" class="history"></ul>
+      <button id="history-next" type="button" class="secondary" hidden>Load more</button>
+      {% elif page == "task" %}
+      <header class="task-header">
+        <div class="content task-heading">
+          <button type="button" class="task-menu toolbar-button" id="open-sidebar" aria-label="Tasks" aria-expanded="false" aria-controls="mobile-sidebar"><span aria-hidden="true"></span></button>
+          <h1 id="task-title">Task</h1>
+          <span id="task-status" class="sr-only" role="status">Loading task.</span>
+        </div>
+      </header>
+      <section class="task-conversation" aria-label="Task conversation">
+        <div class="conversation-pane">
+          <div id="conversation-scroll" tabindex="0" role="group" aria-label="Conversation history">
+            <ol id="conversation-turns" class="content conversation-turns" role="list"></ol>
+            <div class="content task-feedback">
+              <p id="task-error" class="notice" role="alert" hidden></p>
+              <button id="refresh-task" type="button" class="secondary" hidden>Check status</button>
+            </div>
+          </div>
+          <button id="jump-latest" type="button" class="secondary" hidden>Jump to latest</button>
+        </div>
+        <div class="task-dock">
+          <div class="content">
+            <form id="answer-form" hidden>
+              <div class="compose-bar">
+                <label class="sr-only" for="answer">Reply to LASA</label>
+                <textarea id="answer" rows="1" placeholder="Reply to LASA" required></textarea>
+                <button id="answer-submit" type="submit" class="primary" aria-label="Reply to LASA">Reply</button>
+              </div>
+            </form>
+            {% include "composer.html" %}
+            <div class="dock-activity" id="dock-activity" hidden>
+              <details id="progress" class="task-progress" hidden>
+                <summary><span>Activity</span><span id="activity-status"></span><span id="task-elapsed" aria-hidden="true" hidden></span></summary>
+                <div class="progress-panel">
+                  <p class="status">Activity</p>
+                  <div id="live-timeline"></div>
+                </div>
+              </details>
+              <button id="cancel" type="button" class="toolbar-button" aria-label="Cancel task" title="Cancel task" hidden><span aria-hidden="true"></span></button>
+            </div>
+          </div>
+        </div>
+      </section>
+      {% elif page == "recovery" %}
+      <h1>Submission status</h1>
+      <p id="recovery-status" class="status" role="status">Checking submission.</p>
+      <p id="recovery-note" class="muted"></p>
+      <a id="recovered-task" class="primary button" hidden>Open task</a>
+      <button id="check-recovery" type="button" class="secondary">Check status</button>
+      {% endif %}
+    {% if page != "task" %}</div>{% endif %}
+  </main>
+</body>
+</html>

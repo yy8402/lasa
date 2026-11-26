@@ -12,6 +12,7 @@ Useful entry points:
 
 - [Capability ownership and semantics](design/capabilities.md)
 - [Discovery, identity, and HTTP](design/discovery.md)
+- [Optional caller portal](portal/README.md)
 - [Admission, routing, execution, and diagnostics](design/execution.md)
 - [Implementation acceptance requirements](design/acceptance.md)
 - [Private development configuration generator](tools/create_development_config.py)

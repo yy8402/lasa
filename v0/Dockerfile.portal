@@ -1,0 +1,20 @@
+FROM ghcr.io/astral-sh/uv:0.12.3 AS uv
+FROM python:3.12-slim-bookworm AS build
+COPY --from=uv /uv /usr/local/bin/uv
+ENV UV_LINK_MODE=copy UV_PYTHON_DOWNLOADS=never
+WORKDIR /opt/lasa
+COPY pyproject.toml uv.lock MANIFEST.in ./
+COPY lasa_service/ ./lasa_service/
+COPY design/ ./design/
+RUN uv sync --locked --no-dev --group portal --no-editable
+
+FROM python:3.12-slim-bookworm AS portal
+WORKDIR /opt/lasa
+COPY --from=build /opt/lasa/.venv /opt/lasa/.venv
+COPY portal/ ./portal/
+RUN install -d -m 0700 -o 10001 -g 10001 /var/lib/lasa-portal
+ENV PATH="/opt/lasa/.venv/bin:$PATH" PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
+USER 10001:10001
+EXPOSE 8080
+ENTRYPOINT ["python", "-m", "portal"]
+CMD ["--config", "/etc/lasa-portal/config.json"]

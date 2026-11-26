@@ -1,5 +1,7 @@
 """Consumer representations generated from provider-owned records."""
 
+import re
+import unicodedata
 from urllib.parse import unquote, urlsplit
 
 from .capabilities import require
@@ -16,6 +18,44 @@ PUBLIC_TASK_FIELDS = (
     "request_digest",
 )
 PUBLIC_ARTIFACT_FIELDS = ("artifact_id", "digest", "bytes", "media_type", "source_task_id")
+
+
+def title_source(request):
+    inputs = request["input"]
+    if not isinstance(inputs, dict):
+        return None
+    text = inputs.get("objective")
+    if (
+        request["selection"]["contract"]["id"]
+        == "https://contracts.example.net/capabilities/design.review"
+    ):
+        text = inputs["criteria"][0]["description"]
+    return text if isinstance(text, str) else None
+
+
+def conversation_title(request):
+    text = title_source(request)
+    if text is None:
+        return None
+    text = "".join(
+        char if char.isspace() or unicodedata.category(char) not in {"Cc", "Cf"} else ""
+        for char in text
+    )
+    text = next((line.strip() for line in text.splitlines() if line.strip()), "")
+    text = re.split(r"(?<=[.!?。！？])\s+", " ".join(text.split()), maxsplit=1)[0]
+    text = re.sub(r"^(?:please\s+|(?:could|can|would) you\s+)+", "", text, flags=re.I)
+    text = text.rstrip(" .!?:;。！？")
+    if not text:
+        return None
+    limit = 64
+    if len(text) <= limit:
+        return text
+    excerpt, _, _ = text[:limit].rpartition(" ")
+    if len(excerpt) < limit // 2:
+        excerpt = text[: limit - 1]
+        while excerpt and unicodedata.combining(text[len(excerpt)]):
+            excerpt = excerpt[:-1]
+    return (excerpt.rstrip(" ,;:") or text[: limit - 1]) + "…"
 
 
 def public_problem(problem):
