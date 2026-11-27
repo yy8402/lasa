@@ -17,7 +17,14 @@ from weakref import WeakValueDictionary
 from .config import packaged_defaults
 from .enclosure import ATTEMPT_ID, Enclosure
 from .errors import LasaError
-from .launcher_client import MAX_START_SECONDS, close_stream, launcher_scope, send_frame
+from .launcher_client import (
+    DEFAULT_INSTANCE,
+    INSTANCE_NAME,
+    MAX_START_SECONDS,
+    close_stream,
+    launcher_scope,
+    send_frame,
+)
 
 LOG = logging.getLogger(__name__)
 
@@ -154,10 +161,15 @@ class Launcher:
             await close_stream(writer)
 
     @asynccontextmanager
-    async def serve(self, path):
-        # The mount containing this socket is private to the launcher and its supervisor.
-        with path.with_suffix(".lock").open("a") as lock:
-            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    async def serve(self, path, lock_directory):
+        # All launchers on the daemon share this directory. Keep the lease inode after exit.
+        owner_path = lock_directory / (self.enclosure.scope + ".lock")
+        with owner_path.open("a") as owner, path.with_suffix(".lock").open("a") as socket_lock:
+            try:
+                fcntl.flock(owner, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                fcntl.flock(socket_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                raise ValueError("Launcher instance or socket is already owned") from None
             await self.enclosure.verify_image(packaged_defaults()["worker"]["expected_version"])
             await self.sweep()
             with suppress(FileNotFoundError):
@@ -179,24 +191,31 @@ class Launcher:
                 path.unlink(missing_ok=True)
 
 
-async def run(enclosure, path):
-    async with Launcher(enclosure).serve(path):
+async def run(enclosure, path, lock_directory):
+    async with Launcher(enclosure).serve(path, lock_directory):
         await asyncio.Event().wait()
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--image", required=True, help="Immutable local Docker image ID")
-    parser.add_argument(
-        "--scope", required=True, help="Unique, stable service identity on this daemon"
-    )
+    parser.add_argument("--scope", required=True, help="The supervisor's service identity")
+    parser.add_argument("--instance", default=DEFAULT_INSTANCE, help="Stable deployment instance")
     parser.add_argument("--socket", required=True, type=Path)
+    parser.add_argument(
+        "--lock-directory", required=True, type=Path, help="Lease directory shared on this daemon"
+    )
     args = parser.parse_args()
     if not re.fullmatch(r"sha256:[0-9a-f]{64}", args.image) or not args.socket.is_absolute():
         parser.error("An immutable image ID and absolute Unix socket path are required")
+    if not args.lock_directory.is_absolute() or not INSTANCE_NAME.fullmatch(args.instance):
+        parser.error("An absolute lock directory and valid instance name are required")
     os.umask(0o077)
-    scope = launcher_scope(args.scope)
-    asyncio.run(run(Enclosure(args.image, scope), args.socket))
+    scope = launcher_scope(args.scope, args.instance)
+    try:
+        asyncio.run(run(Enclosure(args.image, scope), args.socket, args.lock_directory))
+    except (OSError, ValueError, LasaError, TimeoutError) as exc:
+        parser.exit(1, f"Launcher startup failed: {exc}\n")
 
 
 if __name__ == "__main__":

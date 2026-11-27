@@ -1,0 +1,567 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:lasa:host-deployment",
+  "$defs": {
+    "InstallPath": {
+      "type": "string",
+      "pattern": "^[^\\u0000]+$"
+    },
+    "InstallPort": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 65535
+    },
+    "InstallConfig": {
+      "type": "object",
+      "properties": {
+        "profile": {"enum": ["core", "portal-keycloak", "portal-oidc"]},
+        "site_url": {"type": "string", "format": "uri"},
+        "release": {"$ref": "#/$defs/InstallPath"},
+        "output": {"$ref": "#/$defs/InstallPath"},
+        "name": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}$"},
+        "service_id": {"type": "string", "format": "uri"},
+        "gateway_listen_host": {"type": "string", "format": "ipv4"},
+        "ports": {
+          "type": "object",
+          "properties": {
+            "supervisor": {"$ref": "#/$defs/InstallPort"},
+            "portal": {"$ref": "#/$defs/InstallPort"},
+            "keycloak": {"$ref": "#/$defs/InstallPort"}
+          },
+          "additionalProperties": false
+        },
+        "model": {
+          "type": "object",
+          "properties": {
+            "id": {"type": "string", "minLength": 1},
+            "base_url": {"type": "string", "format": "uri"},
+            "credential_file": {"$ref": "#/$defs/InstallPath"},
+            "ca_file": {"$ref": "#/$defs/InstallPath"}
+          },
+          "required": ["id", "base_url", "credential_file"],
+          "additionalProperties": false
+        },
+        "tls": {
+          "type": "object",
+          "properties": {
+            "certificate_file": {"$ref": "#/$defs/InstallPath"},
+            "key_file": {"$ref": "#/$defs/InstallPath"},
+            "ca_file": {"$ref": "#/$defs/InstallPath"}
+          },
+          "required": ["certificate_file", "key_file"],
+          "additionalProperties": false
+        },
+        "keycloak": {
+          "type": "object",
+          "properties": {
+            "users": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "username": {"type": "string", "minLength": 1, "maxLength": 254},
+                  "email": {"type": "string", "format": "email", "maxLength": 254}
+                },
+                "required": ["email"],
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "oidc": {
+          "type": "object",
+          "properties": {
+            "issuer": {"type": "string", "format": "uri"},
+            "client_id": {"type": "string", "minLength": 1},
+            "client_secret_file": {"$ref": "#/$defs/InstallPath"},
+            "caller_token_file": {"$ref": "#/$defs/InstallPath"},
+            "operator_token_file": {"$ref": "#/$defs/InstallPath"},
+            "jwks_file": {"$ref": "#/$defs/InstallPath"},
+            "ca_file": {"$ref": "#/$defs/InstallPath"},
+            "algorithm": {"enum": ["RS256", "ES256", "EdDSA"]},
+            "audience_parameter": {"enum": ["resource", "audience"]}
+          },
+          "required": ["issuer", "client_id", "client_secret_file", "caller_token_file", "operator_token_file"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["site_url", "model", "tls"],
+      "allOf": [
+        {
+          "if": {"properties": {"profile": {"const": "portal-oidc"}}, "required": ["profile"]},
+          "then": {"required": ["oidc"]}
+        }
+      ],
+      "additionalProperties": false
+    },
+    "DockerDeployment": {
+      "type": "object",
+      "properties": {
+        "supervisor_network": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,127}$"
+        },
+        "supervisors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "local_dlp": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "secrets_directory": {
+              "type": "string",
+              "minLength": 1
+            },
+            "inspector_image": {
+              "$ref": "#/$defs/DockerImage"
+            },
+            "presidio_image": {
+              "$ref": "#/$defs/DockerImage"
+            },
+            "policy_revision": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            }
+          },
+          "if": {
+            "properties": {
+              "enabled": {
+                "const": true
+              }
+            },
+            "required": [
+              "enabled"
+            ]
+          },
+          "then": {
+            "required": [
+              "secrets_directory"
+            ]
+          },
+          "additionalProperties": false
+        },
+        "release": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "supervisor_network"
+      ],
+      "additionalProperties": false,
+      "if": {
+        "required": [
+          "supervisors"
+        ],
+        "properties": {
+          "supervisors": {
+            "minItems": 1
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "release"
+        ]
+      }
+    },
+    "DockerImage": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._/:@-]{0,511}$"
+    },
+    "HostDeployment": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]{0,62}$"
+        },
+        "control_directory": {
+          "type": "string",
+          "pattern": "^/[^\\u0000]+$"
+        },
+        "release": {
+          "type": "string",
+          "pattern": "^/[^\\u0000]+$"
+        },
+        "network": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,127}$"
+        },
+        "docker_socket": {
+          "type": "string",
+          "pattern": "^/[^\\u0000]+$"
+        },
+        "timeout_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 600
+        },
+        "gateway": {
+          "type": "object",
+          "properties": {
+            "listen_host": {
+              "type": "string",
+              "format": "ipv4"
+            },
+            "certificate_file": {
+              "type": "string",
+              "pattern": "^/[^\\u0000]+$"
+            },
+            "key_file": {
+              "type": "string",
+              "pattern": "^/[^\\u0000]+$"
+            },
+            "ca_file": {
+              "type": "string",
+              "pattern": "^/[^\\u0000]+$"
+            }
+          },
+          "required": [
+            "certificate_file",
+            "key_file"
+          ],
+          "additionalProperties": false
+        },
+        "supervisor": {
+          "type": "object",
+          "properties": {
+            "config": {
+              "type": "string",
+              "pattern": "^/[^\\u0000]+$"
+            },
+            "port": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535
+            },
+            "tls_server_name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "ca_file": {
+              "type": "string",
+              "pattern": "^/[^\\u0000]+$"
+            },
+            "caller_token_file": {
+              "type": "string",
+              "pattern": "^/[^\\u0000]+$"
+            },
+            "operator_token_file": {
+              "type": "string",
+              "pattern": "^/[^\\u0000]+$"
+            },
+            "mounts": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^/[^\\u0000]+$"
+              },
+              "uniqueItems": true
+            }
+          },
+          "required": [
+            "config",
+            "port"
+          ],
+          "additionalProperties": false
+        },
+        "portal": {
+          "type": "object",
+          "properties": {
+            "config": {
+              "type": "string",
+              "pattern": "^/[^\\u0000]+$"
+            },
+            "port": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535
+            },
+            "receiver_token_file": {
+              "type": "string",
+              "pattern": "^/[^\\u0000]+$"
+            },
+            "mounts": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^/[^\\u0000]+$"
+              },
+              "uniqueItems": true
+            }
+          },
+          "required": [
+            "config",
+            "port"
+          ],
+          "additionalProperties": false
+        },
+        "local_dlp": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "secrets_directory": {
+              "type": "string",
+              "minLength": 1
+            },
+            "inspector_image": {
+              "$ref": "#/$defs/DockerImage"
+            },
+            "presidio_image": {
+              "$ref": "#/$defs/DockerImage"
+            },
+            "policy_revision": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            }
+          },
+          "if": {
+            "properties": {
+              "enabled": {
+                "const": true
+              }
+            },
+            "required": [
+              "enabled"
+            ]
+          },
+          "then": {
+            "required": [
+              "secrets_directory"
+            ]
+          },
+          "additionalProperties": false
+        },
+        "keycloak": {
+          "type": "object",
+          "properties": {
+            "origin": {
+              "type": "string",
+              "format": "uri"
+            },
+            "port": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535
+            },
+            "directory": {
+              "type": "string",
+              "pattern": "^/[^\\u0000]+$"
+            },
+            "certificate_file": {
+              "type": "string",
+              "pattern": "^/[^\\u0000]+$"
+            },
+            "key_file": {
+              "type": "string",
+              "pattern": "^/[^\\u0000]+$"
+            },
+            "ca_file": {
+              "type": "string",
+              "pattern": "^/[^\\u0000]+$"
+            }
+          },
+          "required": [
+            "origin",
+            "port",
+            "directory",
+            "certificate_file",
+            "key_file"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "name",
+        "control_directory",
+        "release",
+        "network",
+        "supervisor"
+      ],
+      "additionalProperties": false,
+      "if": {
+        "required": [
+          "keycloak"
+        ]
+      },
+      "then": {
+        "required": [
+          "portal"
+        ],
+        "properties": {
+          "supervisor": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "caller_token_file"
+                  ]
+                },
+                {
+                  "required": [
+                    "operator_token_file"
+                  ]
+                }
+              ]
+            }
+          },
+          "portal": {
+            "not": {
+              "required": [
+                "receiver_token_file"
+              ]
+            }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "supervisor": {
+            "required": [
+              "caller_token_file",
+              "operator_token_file"
+            ]
+          },
+          "portal": {
+            "required": [
+              "receiver_token_file"
+            ]
+          }
+        }
+      }
+    },
+    "ReleaseManifest": {
+      "type": "object",
+      "properties": {
+        "release_id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]{0,62}$"
+        },
+        "source_revision": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40,64}$"
+        },
+        "package_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "platform": {
+          "enum": [
+            "linux/amd64",
+            "linux/arm64"
+          ]
+        },
+        "wire_schema_digest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "store_schema": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "artifacts": {
+          "type": "object",
+          "properties": {
+            "service_wheel": {
+              "type": "string",
+              "pattern": "^sha256:[a-f0-9]{64}$"
+            },
+            "deploy_wheel": {
+              "type": "string",
+              "pattern": "^sha256:[a-f0-9]{64}$"
+            },
+            "sdist": {
+              "type": "string",
+              "pattern": "^sha256:[a-f0-9]{64}$"
+            },
+            "images": {
+              "type": "string",
+              "pattern": "^sha256:[a-f0-9]{64}$"
+            },
+            "deploy_requirements": {
+              "type": "string",
+              "pattern": "^sha256:[a-f0-9]{64}$"
+            }
+          },
+          "required": [
+            "service_wheel",
+            "deploy_wheel",
+            "sdist",
+            "deploy_requirements"
+          ],
+          "additionalProperties": false
+        },
+        "images": {
+          "type": "object",
+          "properties": {
+            "supervisor": {
+              "type": "string",
+              "pattern": "^(?:[a-zA-Z0-9][a-zA-Z0-9._:/-]*@)?sha256:[a-f0-9]{64}$"
+            },
+            "launcher": {
+              "type": "string",
+              "pattern": "^(?:[a-zA-Z0-9][a-zA-Z0-9._:/-]*@)?sha256:[a-f0-9]{64}$"
+            },
+            "worker": {
+              "type": "string",
+              "pattern": "^(?:[a-zA-Z0-9][a-zA-Z0-9._:/-]*@)?sha256:[a-f0-9]{64}$"
+            },
+            "portal": {
+              "type": "string",
+              "pattern": "^(?:[a-zA-Z0-9][a-zA-Z0-9._:/-]*@)?sha256:[a-f0-9]{64}$"
+            },
+            "gateway": {
+              "type": "string",
+              "pattern": "^(?:[a-zA-Z0-9][a-zA-Z0-9._:/-]*@)?sha256:[a-f0-9]{64}$"
+            },
+            "keycloak": {
+              "type": "string",
+              "pattern": "^(?:[a-zA-Z0-9][a-zA-Z0-9._:/-]*@)?sha256:[a-f0-9]{64}$"
+            },
+            "postgres": {
+              "type": "string",
+              "pattern": "^(?:[a-zA-Z0-9][a-zA-Z0-9._:/-]*@)?sha256:[a-f0-9]{64}$"
+            }
+          },
+          "required": [
+            "supervisor",
+            "launcher",
+            "worker",
+            "portal"
+          ],
+          "additionalProperties": false,
+          "dependentRequired": {
+            "keycloak": [
+              "postgres"
+            ],
+            "postgres": [
+              "keycloak"
+            ]
+          }
+        }
+      },
+      "required": [
+        "release_id",
+        "source_revision",
+        "package_version",
+        "platform",
+        "wire_schema_digest",
+        "store_schema",
+        "artifacts",
+        "images"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

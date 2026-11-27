@@ -11,6 +11,7 @@ const resume = document.querySelector("[data-resume]");
 if (resume) location.replace(resume.href);
 
 const page = document.body.dataset.page;
+const basePath = document.body.dataset.basePath ?? "";
 const taskId = document.body.dataset.id;
 const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
 const states = {
@@ -33,10 +34,10 @@ async function get(path, options = {}) {
     headers.set("X-CSRF-Token", csrf);
     if (options.body !== undefined) headers.set("Content-Type", "application/json");
   }
-  const response = await fetch(path, { ...options, headers, cache: "no-store" });
+  const response = await fetch(basePath + path, { ...options, headers, cache: "no-store" });
   const value = await response.json().catch(() => ({}));
   if (response.status === 401) {
-    location.assign("/auth/login?next=" + encodeURIComponent(location.pathname));
+    location.assign(basePath + "/auth/login?next=" + encodeURIComponent(location.pathname.slice(basePath.length)));
   }
   if (!response.ok) {
     const error = new Error(value.message ?? value.problem?.message ?? "The request could not be completed.");
@@ -63,7 +64,7 @@ function recentStatus(element, status) {
 function taskRow(task, { chosen = false, recent = false } = {}) {
   const row = node("li");
   const link = node("a");
-  link.href = "/tasks/" + encodeURIComponent(task.task_id);
+  link.href = basePath + "/tasks/" + encodeURIComponent(task.task_id);
   link.dataset.taskId = task.task_id;
   if (chosen) link.setAttribute("aria-current", "page");
   link.append(node("strong", conversationName(task.title)));
@@ -82,7 +83,7 @@ function taskRow(task, { chosen = false, recent = false } = {}) {
 function pendingRow(id) {
   const row = node("li");
   const link = node("a", "Submission unconfirmed");
-  link.href = "/submissions/" + encodeURIComponent(id);
+  link.href = basePath + "/submissions/" + encodeURIComponent(id);
   row.append(link);
   return row;
 }
@@ -115,7 +116,7 @@ function sidebar() {
       button.disabled = true;
       try {
         await get("/auth/logout", { method: "POST" });
-        location.assign("/");
+        location.assign(basePath + "/");
       } catch (error) {
         button.disabled = false;
         button.textContent = "Retry sign out";
@@ -434,7 +435,7 @@ function composer({ recorded, refresh } = {}) {
         retry = attempt;
         retry.expired = Boolean(expiredRetry);
         const link = node("a", "Check original submission");
-        link.href = error.value?.recovery_url ?? ("/submissions/" + retry.id);
+        link.href = error.value?.recovery_url ?? (basePath + "/submissions/" + retry.id);
         notice(errorBox, "Submission unconfirmed. ");
         errorBox.append(link);
         button.textContent = retry.expired ? submitLabel : "Retry same submission";
@@ -509,7 +510,7 @@ function artifactLinks(result, taskId) {
     const length = artifact.bytes < 1024 ? artifact.bytes + " B" : (artifact.bytes / 1024).toFixed(1) + " KB";
     const number = result.artifacts.length > 1 ? " " + (index + 1) : "";
     const link = node("a", "Download " + label.toLowerCase() + number + " · " + length);
-    link.href = "/api/tasks/" + encodeURIComponent(taskId) + "/artifacts/" + encodeURIComponent(artifact.artifact_id);
+    link.href = basePath + "/api/tasks/" + encodeURIComponent(taskId) + "/artifacts/" + encodeURIComponent(artifact.artifact_id);
     const item = node("li");
     item.append(link);
     links.append(item);

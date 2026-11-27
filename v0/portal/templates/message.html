@@ -9,7 +9,7 @@
 </head>
 <body class="sign-in">
   <main class="sign-in-content">
-    <a class="wordmark" href="/">LASA<span> / Caller portal</span></a>
+    <a class="wordmark" href="{{ base_path }}/">LASA<span> / Caller portal</span></a>
     <h1>{{ title }}</h1>
     {% if message %}<p>{{ message }}</p>{% endif %}
     <a class="primary button" href="{{ href }}"{% if resume %} data-resume{% endif %}>{{ action }}</a>

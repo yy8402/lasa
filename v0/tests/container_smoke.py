@@ -2,7 +2,6 @@
 
 import argparse
 import copy
-import hashlib
 import json
 import os
 import secrets
@@ -24,16 +23,15 @@ from fastapi.responses import Response
 from lasa_service.auth import static_token_digest
 from lasa_service.config import builtin_capabilities, local_bindings, reference
 from lasa_service.contracts import digest
-from lasa_service.deployment import GATEWAY_ID as DLP_GATEWAY_ID
-from lasa_service.deployment import POLICY_REVISION as DLP_REVISION
-from lasa_service.deployment import PRESIDIO_IMAGE, DockerDeployment
+from lasa_service.inspection import MANAGED_DLP_GATEWAY_ID, MANAGED_DLP_POLICY_REVISION
+from lasa_service.launcher_client import launcher_scope
 
 from .http_helpers import certificate
 from .protocol_helpers import sse_final, sse_tool, verification_report
+from .smoke_support import MODEL_KEY, docker, mount
 
 ROOT = Path(__file__).resolve().parents[1]
 PEERS = {"review": "design.review", "attempt": "task.attempt"}
-MODEL_KEY = "local-responses-fixture"
 GATEWAY_KEY = "local-inspection-fixture"
 EXECUTION_KEY = secrets.token_hex(32)
 SOURCE_KEY = "local-connector-fixture"
@@ -120,23 +118,6 @@ def read(path):
 
 def save(path, document):
     path.write_text(json.dumps(document, indent=2) + "\n")
-
-
-def docker(*args, timeout=30, check=True):
-    result = subprocess.run(
-        ["docker", *map(str, args)], capture_output=True, text=True, timeout=timeout, check=False
-    )
-    if check and result.returncode:
-        raise RuntimeError(result.stderr.strip() or result.stdout.strip())
-    if args[0] == "logs" and result.returncode:
-        return ""
-    return (result.stdout + result.stderr if args[0] == "logs" else result.stdout).strip()
-
-
-def mount(source, target=None, *, read_only=True):
-    return f"type=bind,source={source},target={target or source}" + (
-        ",readonly" if read_only else ""
-    )
 
 
 def configure(root, name, namespace, *, trusted_parent=None):
@@ -377,9 +358,9 @@ def configure_dlp(root, name, config, group, mode):
         "inspection_profiles": [
             {
                 "id": profile,
-                "gateway_id": DLP_GATEWAY_ID,
+                "gateway_id": MANAGED_DLP_GATEWAY_ID,
                 "url": origin("inspection") + "/inspect",
-                "policy_revision": DLP_REVISION,
+                "policy_revision": MANAGED_DLP_POLICY_REVISION,
                 "credential_ref": "file:" + str(token_file),
                 "ca_file": str(root / "ca.pem"),
                 "region": "isolated",
@@ -1373,8 +1354,8 @@ def verify_dlp_case(client, root, mode, scenario, reason, marker):
         and (scenario != "caller-intake" or record["operation_id"] == "task-" + operation)
         and record["mode"] == mode
         and record["profile_id"] == profile
-        and record["gateway_policy_revision"] == DLP_REVISION
-        and record["gateway_id"] == DLP_GATEWAY_ID
+        and record["gateway_policy_revision"] == MANAGED_DLP_POLICY_REVISION
+        and record["gateway_id"] == MANAGED_DLP_GATEWAY_ID
         and "inspection_id" in record
         and record["reason_code"] == "gateway_" + verdict
     ]
@@ -1923,7 +1904,7 @@ def verify(root):
 
 def deploy_command(path, action, *, error=None):
     result = subprocess.run(
-        [sys.executable, "-m", "lasa_service.cli", "deploy", action, "--settings", str(path)],
+        [sys.executable, "-m", "lasa_deploy.cli", action, "--settings", str(path)],
         capture_output=True,
         text=True,
         timeout=260,
@@ -1936,26 +1917,28 @@ def deploy_command(path, action, *, error=None):
 
 
 def start_managed_dlp(path, document):
+    from lasa_deploy.deployment import DockerDeployment
+
     disabled = {"supervisor_network": document["supervisor_network"]}
     save(path, disabled)
     deploy_command(path, "apply")
-    assert not DockerDeployment.load(path).compose("ps", "-aq")
+    assert not DockerDeployment.load(path).active()[0]
 
-    save(path, {**disabled, "supervisors": document["supervisors"]})
+    save(path, {**disabled, "release": document["release"], "supervisors": document["supervisors"]})
     deploy_command(path, "apply", error="requires local_dlp.enabled=true")
-    assert not DockerDeployment.load(path).compose("ps", "-aq")
+    assert not DockerDeployment.load(path).active()[0]
 
     save(path, document)
     deploy_command(path, "apply")
     deployment = DockerDeployment.load(path)
-    inspector = deployment.compose("ps", "-q", "inspector")
-    analyzer = deployment.compose("ps", "-q", "presidio")
+    inspector, project = deployment.active()
+    analyzer = deployment.compose(project, "ps", "-q", "presidio")
     assert inspector and analyzer
     deploy_command(path, "apply")
-    assert inspector == deployment.compose("ps", "-q", "inspector")
-    assert analyzer == deployment.compose("ps", "-q", "presidio")
+    assert inspector == deployment.active()[0]
+    assert analyzer == deployment.compose(project, "ps", "-q", "presidio")
     host_network = document["supervisor_network"]
-    backend = deployment.project + "_backend"
+    backend = project + "_backend"
     assert docker("network", "inspect", "--format", "{{.Internal}}", backend) == "true"
     for container, expected in ((inspector, {host_network, backend}), (analyzer, {backend})):
         status = json.loads(docker("inspect", container))[0]
@@ -1964,15 +1947,17 @@ def start_managed_dlp(path, document):
 
     wrong_revision = {**document["local_dlp"], "policy_revision": "different-revision"}
     save(path, {**document, "local_dlp": wrong_revision})
-    deploy_command(path, "check", error="must pin")
+    deploy_command(path, "status", error="must pin")
     save(path, {**document, "local_dlp": wrong_revision, "supervisors": []})
-    deploy_command(path, "check", error="unexpected gateway ID or policy revision")
+    deploy_command(path, "status", error="unexpected gateway ID or policy revision")
     save(path, document)
-    deploy_command(path, "check")
+    deploy_command(path, "status")
     return inspector, analyzer
 
 
 def run(args, root):
+    from lasa_deploy.deployment import DockerDeployment
+
     namespace = "lasa-smoke-" + uuid4().hex[:10]
     image = docker("image", "inspect", "--format", "{{.Id}}", args.service_image)
     launcher_image = docker("image", "inspect", "--format", "{{.Id}}", args.launcher_image)
@@ -2054,6 +2039,8 @@ def run(args, root):
     containers = []
     volumes = []
     deployment_file = root / "deployment.json"
+    launcher_locks = root / "launcher-locks"
+    launcher_locks.mkdir(mode=0o700)
     gateway = analyzer = None
     docker("network", "create", "--internal", namespace)
     user = f"{os.getuid()}:{os.getgid()}"
@@ -2071,6 +2058,7 @@ def run(args, root):
                 deployment_file,
                 {
                     "supervisor_network": namespace,
+                    "release": str(args.release.resolve()),
                     "supervisors": [str(root / name / "config.json") for name in configs],
                     "local_dlp": {
                         "enabled": True,
@@ -2143,6 +2131,8 @@ def run(args, root):
                 socket_mount,
                 "--mount",
                 socket_volume,
+                "--mount",
+                mount(launcher_locks, "/run/lasa-launcher-locks", read_only=False),
                 launcher_image,
                 "--image",
                 runtime,
@@ -2150,6 +2140,8 @@ def run(args, root):
                 config["service"]["id"],
                 "--socket",
                 LAUNCHER_SOCKET,
+                "--lock-directory",
+                "/run/lasa-launcher-locks",
             )
             end = time.monotonic() + 20
             while True:
@@ -2272,10 +2264,7 @@ def run(args, root):
         else:
             print(output)
         for name, config in configs.items():
-            label = (
-                "label=com.lasa.launcher="
-                + hashlib.sha256(config["service"]["id"].encode()).hexdigest()
-            )
+            label = "label=com.lasa.launcher=" + launcher_scope(config["service"]["id"])
             assert not docker("ps", "-aq", "--filter", label), "A task enclosure was left running"
             state = Path(config["storage"]["state_root"])
             with sqlite3.connect(state / "private" / "tasks.sqlite3") as store:
@@ -2295,25 +2284,23 @@ def run(args, root):
             docker("stop", "-t", "5", container, check=False)
             docker("rm", "-f", container, check=False)
         for config in configs.values():
-            label = (
-                "label=com.lasa.launcher="
-                + hashlib.sha256(config["service"]["id"].encode()).hexdigest()
-            )
+            label = "label=com.lasa.launcher=" + launcher_scope(config["service"]["id"])
             remaining = docker("ps", "-aq", "--filter", label, check=False).splitlines()
             if remaining:
                 docker("rm", "-f", *remaining)
         for volume in volumes:
             docker("volume", "rm", volume)
         if dlp:
+            deployment = DockerDeployment.load(deployment_file)
+            _, project = deployment.active()
             save(
                 deployment_file, {"supervisor_network": namespace, "local_dlp": {"enabled": False}}
             )
             deploy_command(deployment_file, "apply")
             deployment = DockerDeployment.load(deployment_file)
-            assert not deployment.compose("ps", "-aq")
-            assert not docker(
-                "network", "ls", "-q", "--filter", f"name=^{deployment.project}_backend$"
-            )
+            assert not deployment.active()[0]
+            if project:
+                assert not docker("network", "ls", "-q", "--filter", f"name=^{project}_backend$")
         docker("network", "rm", namespace)
 
 
@@ -2327,6 +2314,8 @@ if __name__ == "__main__":
     elif sys.argv[1:2] == ["verify-recovery"]:
         verify_recovery_canary(Path(sys.argv[2]))
     else:
+        from lasa_deploy.deployment import PRESIDIO_IMAGE
+
         parser = argparse.ArgumentParser(description=__doc__)
         parser.add_argument("--service-image", default="lasa-supervisor:1.0.0")
         parser.add_argument("--launcher-image", default="lasa-launcher:1.0.0")
@@ -2339,9 +2328,16 @@ if __name__ == "__main__":
             action="store_true",
             help="Exercise enforce recovery with the real local gateway.",
         )
+        parser.add_argument(
+            "--release", type=Path, help="Release manifest for the pinned supervisor image"
+        )
         parser.add_argument("--presidio-image", default=PRESIDIO_IMAGE)
         parser.add_argument("--docker-socket", type=Path, default=Path("/var/run/docker.sock"))
         args = parser.parse_args()
+        if args.inspector_image and not args.release:
+            parser.error(
+                "--inspector-image requires --release for the supervisor inspection preflight"
+            )
         if args.recovery_canary and not args.inspector_image:
             parser.error("--recovery-canary requires --inspector-image")
         with tempfile.TemporaryDirectory(prefix="lasa-container-") as directory:

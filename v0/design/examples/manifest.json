@@ -120,11 +120,6 @@
     "visibility": "private"
   },
   {
-    "file": "docker-deployment.json",
-    "schema": "private.schema.json#/$defs/DockerDeployment",
-    "visibility": "private"
-  },
-  {
     "file": "child-plan.json",
     "schema": "private.schema.json#/$defs/ResponsibilityPlan",
     "visibility": "private"

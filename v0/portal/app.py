@@ -190,8 +190,9 @@ def create_app(settings, *, native_transport=None, issuer_transport=None):
     def view(name, *, status=200, **context):
         return HTMLResponse(
             templates.get_template(name).render(
-                css="/assets/" + assets["portal.css"][2] + "/portal.css",
-                js="/assets/" + assets["portal.js"][2] + "/portal.js",
+                css=settings.base_path + "/assets/" + assets["portal.css"][2] + "/portal.css",
+                js=settings.base_path + "/assets/" + assets["portal.js"][2] + "/portal.js",
+                base_path=settings.base_path,
                 **context,
             ),
             status_code=status,
@@ -239,7 +240,7 @@ def create_app(settings, *, native_transport=None, issuer_transport=None):
                 "message.html",
                 title="Sign-in",
                 message=error.message,
-                href="/auth/login",
+                href=settings.base_path + "/auth/login",
                 action="Try sign-in again",
                 resume=False,
                 status=error.status,
@@ -310,7 +311,7 @@ def create_app(settings, *, native_transport=None, issuer_transport=None):
             "message.html",
             title="Signed in",
             message="",
-            href=transaction["next"],
+            href=settings.base_path + transaction["next"],
             action="Continue",
             resume=True,
         )
@@ -339,7 +340,7 @@ def create_app(settings, *, native_transport=None, issuer_transport=None):
                     "message.html",
                     title="LASA caller portal",
                     message="",
-                    href=str(httpx.URL("/auth/login", params={"next": route})),
+                    href=str(httpx.URL(settings.base_path + "/auth/login", params={"next": route})),
                     action="Sign in",
                     resume=False,
                 )

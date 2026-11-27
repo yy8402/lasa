@@ -8,12 +8,12 @@
   <link rel="stylesheet" href="{{ css }}">
   <script defer src="{{ js }}"></script>
 </head>
-<body data-page="{{ page }}" data-id="{{ identifier or '' }}">
+<body data-base-path="{{ base_path }}" data-page="{{ page }}" data-id="{{ identifier or '' }}">
   <a class="skip" href="#main">Skip to content</a>
   {% if page != "task" %}
   <header class="mobile-header">
     <button type="button" class="secondary" id="open-sidebar" aria-expanded="false" aria-controls="mobile-sidebar">Tasks</button>
-    <a class="wordmark" href="/">LASA</a>
+    <a class="wordmark" href="{{ base_path }}/">LASA</a>
   </header>
   {% endif %}
 

@@ -2,14 +2,23 @@ import asyncio
 import json
 import os
 import sys
+import tempfile
 import time
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
 from lasa_service.enclosure import Enclosure
 from lasa_service.errors import LasaError
-from lasa_service.launcher_client import LauncherClient, close_stream, send_frame
+from lasa_service.launcher import Launcher
+from lasa_service.launcher_client import (
+    DEFAULT_INSTANCE,
+    LauncherClient,
+    close_stream,
+    launcher_scope,
+    send_frame,
+)
 from lasa_service.runtime import CodexRuntime
 from lasa_service.store import Store, identity
 from lasa_service.workspace import Workspace
@@ -44,6 +53,39 @@ async def test_unavailable_docker_cannot_confirm_absence(monkeypatch):
         await enclosure.remove(identity("attempt"))
 
 
+async def test_launcher_lease_precedes_sweep_and_canary_has_own_scope(monkeypatch):
+    service_id = "https://lasa.example.net"
+    checked = []
+
+    def launcher(instance):
+        scope = launcher_scope(service_id, instance)
+        enclosure = Enclosure(None, scope)
+
+        async def verify(_version):
+            checked.append(scope)
+
+        async def inventory():
+            return {}
+
+        monkeypatch.setattr(enclosure, "verify_image", verify)
+        monkeypatch.setattr(enclosure, "inventory", inventory)
+        return Launcher(enclosure)
+
+    with tempfile.TemporaryDirectory(prefix="lasa-lease-", dir="/tmp") as directory:
+        root = Path(directory)
+        active = launcher("live")
+        candidate = launcher("canary")
+        async with active.serve(root / "live.sock", root):
+            with pytest.raises(ValueError, match="already owned"):
+                async with launcher("live").serve(root / "duplicate.sock", root):
+                    pytest.fail("A duplicate owner obtained a lease")
+            async with candidate.serve(root / "canary.sock", root):
+                assert checked == [active.enclosure.scope, candidate.enclosure.scope]
+                with pytest.raises(LasaError):
+                    await LauncherClient(root / "canary.sock", service_id, "live").check()
+                await LauncherClient(root / "canary.sock", service_id, "canary").check()
+
+
 @pytest.mark.integration
 async def test_recover_lost_launch_reply_and_fence_duplicate(tmp_path, worker_launcher):
     launcher, path, service_id = worker_launcher
@@ -76,7 +118,11 @@ async def test_recover_lost_launch_reply_and_fence_duplicate(tmp_path, worker_la
                         break
                     await asyncio.sleep(0.02)
             # The supervisor never reads the launch reply and has no container ID or PID.
-            settings = {"launcher_socket": str(path), "startup_timeout_ms": 10000}
+            settings = {
+                "launcher_socket": str(path),
+                "launcher_instance": DEFAULT_INSTANCE,
+                "startup_timeout_ms": 10000,
+            }
             runtime = CodexRuntime(
                 SimpleNamespace(
                     service_id=service_id,

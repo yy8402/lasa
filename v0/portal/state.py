@@ -16,7 +16,7 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 from lasa_service.contracts import canonical, digest
 
-from .config import PortalError, read_key
+from .config import PortalError
 
 
 def now():
@@ -34,11 +34,7 @@ def cookie_digest(value):
 class State:
     def __init__(self, settings):
         self.settings = settings
-        encryption = read_key(settings.encryption_key_file)
-        self.journal_key = read_key(settings.journal_key_file)
-        self.ticket_key = read_key(settings.ticket_key_file)
-        if len({encryption, self.journal_key, self.ticket_key}) != 3:
-            raise ValueError("Use three distinct portal keys")
+        encryption, self.journal_key, self.ticket_key = settings.keys()
         self.cipher = AESGCM(encryption)
         root = Path(settings.state_dir)
         root.mkdir(exist_ok=True, parents=True, mode=0o700)

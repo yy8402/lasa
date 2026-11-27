@@ -25,7 +25,9 @@ class RuntimeHandle:
 class CodexRuntime:
     def __init__(self, config):
         settings = config.document["runtime"]
-        self.launcher = LauncherClient(settings["launcher_socket"], config.service_id)
+        self.launcher = LauncherClient(
+            settings["launcher_socket"], config.service_id, settings["launcher_instance"]
+        )
         self.startup_timeout = settings["startup_timeout_ms"] / 1000
         self.cleanup_timeout = config.document["limits"]["reconciliation_timeout_seconds"]
         self.handles = {}

@@ -147,7 +147,7 @@ async def run_case(directory, case, key, runtime_image):
         for role, layer in (("child", "layer2"), ("parent", "layer1")):
             scope = launcher_scope(service_ids[layer])
             launcher = Launcher(Enclosure(runtime_image, scope))
-            await stack.enter_async_context(launcher.serve(sockets / f"{role}.sock"))
+            await stack.enter_async_context(launcher.serve(sockets / f"{role}.sock", sockets))
         child_raw, child_env = configure(
             directory / "child", "layer2", case, key, sockets / "child.sock", service_ids
         )

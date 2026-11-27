@@ -1,17 +1,22 @@
 import json
 import os
 import secrets
+import sqlite3
 import subprocess
 import sys
 import time
+from pathlib import Path
 
 import pytest
 
 from lasa_service import cli as cli_module
 from lasa_service.config import Configuration, ConfigurationError
 from lasa_service.errors import LasaError
+from lasa_service.store import STORAGE_SCHEMA_VERSION
+from portal.config import Settings
 
 from .conftest import ISSUER, JWK, delegation_grant, example, token
+from .http_helpers import certificate
 
 
 def cli(tmp_path, *arguments):
@@ -268,6 +273,216 @@ def test_check_rejects_conflicting_state_directories(tmp_path, deployment, block
     conflict.symlink_to(manifest_dir, target_is_directory=True)
     with pytest.raises(ConfigurationError, match="direct children"):
         Configuration.load(path)
+
+
+def test_preflight_rejects_incompatible_state_without_writing(tmp_path, deployment):
+    manifest_dir, key_file, args = deployment
+    assert cli(tmp_path, *args).returncode == 0
+    key_file.write_text("fixture-key")
+    private = tmp_path / "state" / "private"
+    private.mkdir(parents=True)
+    path = private / "tasks.sqlite3"
+    with sqlite3.connect(path) as db:
+        db.execute(f"PRAGMA user_version={STORAGE_SCHEMA_VERSION - 1}")
+    before = path.read_bytes()
+    result = cli(tmp_path, "check", "--offline", "--config", manifest_dir / "config.json")
+    assert result.returncode == 2
+    assert f"{path} has schema {STORAGE_SCHEMA_VERSION - 1}" in result.stderr
+    assert f"expected {STORAGE_SCHEMA_VERSION}" in result.stderr
+    assert path.read_bytes() == before
+
+
+@pytest.mark.parametrize(
+    ("profile", "accounts"),
+    [
+        ("core", None),
+        ("portal-keycloak", []),
+        (
+            "portal-keycloak",
+            [{"username": "alice", "email": "alice@example.test"}, {"email": "bob@example.test"}],
+        ),
+        ("portal-oidc", None),
+    ],
+)
+def test_guided_deployment_writes_only_credentials_for_profile(
+    tmp_path, profile, accounts, monkeypatch, capsys
+):
+    from lasa_deploy import cli as deploy_cli
+    from lasa_deploy import image_cache
+    from lasa_deploy.managed_deployment import HostDeployment
+    from lasa_deploy.runtime import ReleaseImages
+
+    from lasa_service.deploy_api import dispatch
+
+    monkeypatch.setattr(
+        ReleaseImages,
+        "supervisor",
+        lambda self, operation, *, mounts=(), **request: dispatch(operation, request),
+    )
+    monkeypatch.setattr(ReleaseImages, "portal", lambda self, spec: Settings.read(spec["config"]))
+    cert, key = certificate(tmp_path, dns_name="lasa.example.test")
+    value = "private-fixture-value"
+    secret_file = tmp_path / "credential"
+    secret_file.write_text(value)
+    release = tmp_path / "release.json"
+    pin = "sha256:" + "a" * 64
+    roles = ["supervisor", "launcher", "worker", "gateway", "portal"]
+    if profile == "portal-keycloak":
+        roles.extend(("keycloak", "postgres"))
+    images = {role: f"sha256:{index:064x}" for index, role in enumerate(roles, 1)}
+    inspected = []
+    monkeypatch.setattr(HostDeployment, "daemon", lambda self: "local-docker")
+    monkeypatch.setattr(
+        image_cache, "inspect_image", lambda image, platform: inspected.append(image)
+    )
+    release.write_text(
+        json.dumps(
+            {
+                "release_id": "test-release",
+                "source_revision": "a" * 40,
+                "package_version": "1.0.0",
+                "platform": "linux/amd64",
+                "wire_schema_digest": pin,
+                "store_schema": STORAGE_SCHEMA_VERSION,
+                "artifacts": {
+                    "service_wheel": pin,
+                    "deploy_wheel": pin,
+                    "sdist": pin,
+                    "deploy_requirements": pin,
+                },
+                "images": images,
+            }
+        )
+    )
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    output = tmp_path / ".local/share/lasa/lasa-example-test"
+    config = {
+        "site_url": "https://lasa.example.test",
+        "model": {
+            "id": "fixture",
+            "base_url": "https://model.example.test/v1",
+            "credential_file": secret_file.name,
+        },
+        "tls": {"certificate_file": cert.name, "key_file": key.name},
+    }
+    if profile != "core":
+        config["profile"] = profile
+    if accounts:
+        config["keycloak"] = {"users": accounts}
+    if profile == "portal-oidc":
+        from lasa_deploy import install_oidc
+
+        discovery = ISSUER + "/.well-known/openid-configuration"
+        jwks = ISSUER + "/jwks"
+        documents = {discovery: {"issuer": ISSUER, "jwks_uri": jwks}, jwks: {"keys": [JWK]}}
+        monkeypatch.setattr(install_oidc, "fetch_document", lambda client, url: documents[url])
+        audience = "https://lasa.example.test/services/lasa-example-test"
+        for role in ("caller", "operator"):
+            (tmp_path / f"{role}.jwt").write_text(token(subject=role, audience=audience))
+        config["oidc"] = {
+            "issuer": ISSUER,
+            "client_id": "external-client",
+            "client_secret_file": secret_file.name,
+            "caller_token_file": "caller.jwt",
+            "operator_token_file": "operator.jwt",
+            "algorithm": "ES256",
+        }
+    install_config = tmp_path / "install.json"
+    install_config.write_text(json.dumps(config))
+    monkeypatch.setattr(
+        sys, "argv", ["lasa-deploy", "install", "--prepare-only", "--config", str(install_config)]
+    )
+    mask = os.umask(0o077)
+    try:
+        deploy_cli.main()
+    finally:
+        os.umask(mask)
+    stdout = capsys.readouterr().out
+    assert value not in stdout
+    selected_roles = roles if profile != "core" else roles[:4]
+    assert inspected == [images[role] for role in selected_roles]
+    receipt = json.loads(stdout)
+    spec = json.loads((output / "deployment.json").read_text())
+    assert receipt["site_url"] == "https://lasa.example.test"
+    assert spec["release"] == str(release) and spec["name"] == "lasa-example-test"
+    assert spec["gateway"]["certificate_file"] == str(cert.resolve())
+    assert ("portal" in spec) == (profile != "core")
+    assert ("keycloak" in spec) == (profile == "portal-keycloak")
+    if profile == "portal-keycloak":
+        assert spec["keycloak"]["origin"] == receipt["site_url"]
+        realm = json.loads((output / "identity/realm/lasa-realm.json").read_text())
+        assert realm["clients"][0]["redirectUris"] == [
+            "https://lasa.example.test/app/auth/callback"
+        ]
+        assert "caller_token_file" not in spec["supervisor"]
+        assert "receiver_token_file" not in spec["portal"]
+        receipts = receipt["user_credentials"]
+        assert len(receipts) == len(accounts)
+        users = [user for user in realm["users"] if "serviceAccountClientId" not in user]
+        for account, realm_user, issued in zip(accounts, users, receipts, strict=True):
+            assert realm_user["email"] == issued["email"] == account["email"]
+            assert (
+                realm_user["username"]
+                == issued["username"]
+                == account.get("username", account["email"])
+            )
+            assert Path(issued["credentials_file"]).stat().st_mode & 0o777 == 0o600
+        policy = json.loads((output / "identity/receiver/authorization.json").read_bytes())
+        assert [principal["subject"] for principal in policy["principals"]] == [
+            user["id"] for user in users
+        ]
+        credential = output / "portal/client-secret"
+    elif profile == "core":
+        credential = Path(receipt["caller_credentials_file"])
+    else:
+        credential = output / "portal/client-secret"
+        policy = json.loads((output / "supervisor/authorization.json").read_bytes())
+        assert [(item["subject"], item["kind"]) for item in policy["principals"]] == [
+            ("caller", "user"),
+            ("operator", "operator"),
+        ]
+    assert credential.stat().st_mode & 0o777 == 0o600
+    if "portal" in spec:
+        portal_settings = Settings.read(spec["portal"]["config"])
+        assert receipt["portal_url"] == "https://lasa.example.test/app/"
+        assert portal_settings.callback == "https://lasa.example.test/app/auth/callback"
+
+
+@pytest.mark.parametrize(
+    ("second", "field"),
+    [
+        ({"username": "ALICE", "email": "other@example.test"}, "username"),
+        ({"username": "other", "email": "ALICE@example.test"}, "email"),
+    ],
+)
+def test_keycloak_install_rejects_duplicate_accounts(tmp_path, second, field):
+    from lasa_deploy.contracts import ConfigurationError as InstallError
+    from lasa_deploy.guided_install import read_install_config
+
+    for filename in ("release.json", "credential", "cert.pem", "key.pem"):
+        (tmp_path / filename).touch()
+    install = tmp_path / "install.json"
+    install.write_text(
+        json.dumps(
+            {
+                "profile": "portal-keycloak",
+                "site_url": "https://site.example.test",
+                "output": "instance",
+                "model": {
+                    "id": "fixture",
+                    "base_url": "https://models.example.test/v1",
+                    "credential_file": "credential",
+                },
+                "tls": {"certificate_file": "cert.pem", "key_file": "key.pem"},
+                "keycloak": {
+                    "users": [{"username": "alice", "email": "alice@example.test"}, second]
+                },
+            }
+        )
+    )
+    with pytest.raises(InstallError, match=rf"keycloak\.users\.1\.{field}: duplicate"):
+        read_install_config(install)
+    assert not (tmp_path / "instance").exists()
 
 
 def test_config_check_prints_resolved_inspection_without_credentials(tmp_path, deployment):

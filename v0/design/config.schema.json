@@ -525,6 +525,10 @@
           "pattern": "^/[^\\u0000]+$",
           "maxLength": 103
         },
+        "launcher_instance": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]{0,62}$"
+        },
         "startup_timeout_ms": {
           "type": "integer",
           "minimum": 1000,

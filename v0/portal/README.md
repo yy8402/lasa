@@ -2,55 +2,44 @@
 
 The portal serves the caller UI and backend as a single image. Deploy one portal replica with its own writable state volume. Point it at a JWT LASA receiver that exposes the caller history route. LASA handles task admission, storage, execution, and release. The pilot runs a pure `task.attempt` offer. [Design and acceptance](../design/caller-portal.md)
 
-## Provision the identity provider and receiver
+Choose the [local Keycloak profile](../deployment/DEPLOYMENT.md#caller-portal-with-local-keycloak)
+or the [external identity provider profile](../deployment/DEPLOYMENT.md#caller-portal-with-an-existing-identity-provider)
+in `install.json`. The installer configures the receiver and portal.
 
-Register a confidential OIDC client with the exact portal HTTPS callback `/auth/callback`. Configure Authorization Code, PKCE S256, client secret basic authentication, user assignment, and the resource or audience parameter supported by the provider. The portal accepts metadata endpoints on the configured issuer origin. It checks the issuer JWKS and requires LASA access tokens with a single audience equal to the LASA service ID, a subject matching the OIDC user, and an expiry, issue time, and token ID. Configure the LASA receiver's issuer, JWKS, and user policy to match.
+## Advanced portal settings
 
-Provision a user rule with the exact built-in `task.attempt` capability, no effects, resources, or delegation grants, and a bounded budget. Grant the named pilot users individually. Configure an assignment claim and value below if the provider expresses portal assignment in its ID token. The initial receiver qualification requires task history and the current LASA wire bundle. Qualify two pilot identities on the actual HTTPS origin and rehearse JWKS rotation before enablement.
+Use the installer's `--prepare-only` option to generate `portal/config.json` before applying.
+Set `assignment_claim` and `assignment_value` if the issuer expresses portal assignment in
+the ID token. For example, use `groups` and `lasa-pilot` to require membership in that group.
+Set `journal_seconds` to cover the receiver's advertised idempotency retention.
 
-## Build and configure
+For an external identity provider, the installer uses the caller token for portal qualification.
+To qualify with a different assigned identity, set `portal.receiver_token_file` in the generated
+`deployment.json` to its LASA-audience token file and grant the identity the `task.attempt`
+capability. The token must carry the issuer's subject and `exp`, `iat`, and `jti` claims.
+Qualify any domain-only ingress before adding its URI to `allowed_processing_domains`.
 
-From the repository root, build the image for the target host and record its immutable ID.
+## Use an existing Keycloak realm
 
-```sh
-docker build --platform linux/amd64 -f v0/Dockerfile.portal -t lasa-portal:pilot v0
-docker image inspect --format '{{.Id}}' lasa-portal:pilot
-```
+For an independently managed realm, use its stable HTTPS issuer URL, such as
+`https://sso.example.net/realms/lasa`, in `oidc.issuer` in the
+[external identity provider profile](../deployment/DEPLOYMENT.md#caller-portal-with-an-existing-identity-provider).
+[Keycloak production setup](https://www.keycloak.org/server/configuration-production)
 
-Create a private configuration directory with the identity-provider client secret and three independent keys. Each key file contains 32 bytes encoded as hex. Use a separate key for token encryption, receipt fingerprints, and write-ticket signatures. Supply a certificate authority bundle for a private LASA or identity provider. Configure the portal state volume for UID/GID `10001:10001`.
-
-The following example shows container paths. The service ID is the receiver's identity URI. The base URL includes the native protocol prefix.
-
-```json
-{
-  "public_origin": "https://portal.example.net",
-  "lasa_url": "https://lasa.example.net/lasa/v1",
-  "lasa_service_id": "https://lasa.example.net/lasa",
-  "issuer": "https://identity.example.net/lasa",
-  "client_id": "lasa-caller-portal",
-  "client_secret_file": "/etc/lasa-portal/client-secret",
-  "state_dir": "/var/lib/lasa-portal",
-  "encryption_key_file": "/etc/lasa-portal/encryption-key",
-  "journal_key_file": "/etc/lasa-portal/journal-key",
-  "ticket_key_file": "/etc/lasa-portal/ticket-key",
-  "ca_file": "/etc/lasa-portal/ca.pem",
-  "audience_parameter": "resource",
-  "assignment_claim": "groups",
-  "assignment_value": "lasa-pilot"
-}
-```
-
-Mount configuration and keys read-only. Publish the application port to the HTTPS ingress on the same host or use a private container network. Preserve the configured public `Host` header. Configure the ingress to omit callback queries and request bodies from logs. Persist only the portal directory in the writable volume. The supervisor retains its own store and workspaces.
-
-```sh
-docker run -d --name lasa-portal --read-only \
-  -p 127.0.0.1:8080:8080 \
-  --mount "type=bind,src=/absolute/private/portal-config,dst=/etc/lasa-portal,readonly" \
-  --mount "type=bind,src=/absolute/private/portal-state,dst=/var/lib/lasa-portal" \
-  lasa-portal:pilot
-```
-
-Use `/health/live` and `/health/ready` to check the portal process and its store. Sign in over the configured HTTPS origin to check issuer and receiver compatibility. Configure `journal_seconds` to cover the receiver's advertised idempotency retention. Explicitly qualify any domain-only ingress before adding its URI to `allowed_processing_domains`.
+1. Create an OpenID Connect client for the portal. Enable **Client authentication** and
+   **Standard flow**, require PKCE **S256**, and register the exact HTTPS callback, such as
+   `https://lasa.example.net/app/auth/callback`. Reference the client secret file in
+   `oidc.client_secret_file`. [Keycloak client settings](https://www.keycloak.org/docs/latest/server_admin/)
+2. Add an **Audience** mapper to the portal client's dedicated scope. Set **Included Custom
+   Audience** to the LASA service ID and add it to the access token only. Remove the default
+   `roles` scope if its Audience Resolve mapper adds extra audiences such as `account`.
+   Retain the `basic` scope for the subject claim. Confirm the access token's `aud` is a
+   single string equal to the LASA service ID. The ID token audience remains the portal
+   client ID. [Keycloak audience configuration](https://www.keycloak.org/docs/latest/server_admin/#_audience)
+3. Supply current access tokens for the distinct caller and operator subjects. If portal
+   assignment uses a group, map group membership into the ID token and set the portal's
+   `assignment_value` to the emitted group. Verify sign-in and refresh through the public
+   portal and submit a task. [Keycloak group mapping](https://www.keycloak.org/docs/latest/server_admin/)
 
 ## Restore and verification
 

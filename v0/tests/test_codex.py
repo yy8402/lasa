@@ -24,7 +24,11 @@ from .protocol_helpers import sse_final, sse_tool
 async def test_readiness_validates_every_executor_and_propagates_secondary_failure(monkeypatch):
     executors = [{"model": name} for name in ("primary", "secondary")]
     document = {
-        "runtime": {"launcher_socket": "/unused.sock", "startup_timeout_ms": 1000},
+        "runtime": {
+            "launcher_socket": "/unused.sock",
+            "launcher_instance": "default",
+            "startup_timeout_ms": 1000,
+        },
         "executors": executors,
         "limits": {"reconciliation_timeout_seconds": 10},
     }

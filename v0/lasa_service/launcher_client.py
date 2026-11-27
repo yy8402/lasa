@@ -3,6 +3,7 @@
 import asyncio
 import hashlib
 import json
+import re
 import time
 from contextlib import suppress
 
@@ -10,10 +11,12 @@ from .errors import LasaError
 
 MAX_START_SECONDS = 60
 FRAME_LIMIT = 2 * 1024 * 1024
+INSTANCE_NAME = re.compile(r"[a-z0-9][a-z0-9-]{0,62}")
+DEFAULT_INSTANCE = "default"
 
 
-def launcher_scope(service_id):
-    return hashlib.sha256(service_id.encode()).hexdigest()
+def launcher_scope(service_id, instance=DEFAULT_INSTANCE):
+    return hashlib.sha256(f"{service_id}\0{instance}".encode()).hexdigest()
 
 
 async def send_frame(writer, frame):
@@ -28,9 +31,9 @@ async def close_stream(writer):
 
 
 class LauncherClient:
-    def __init__(self, path, service_id):
+    def __init__(self, path, service_id, instance=DEFAULT_INSTANCE):
         self.path = path
-        self.scope = launcher_scope(service_id)
+        self.scope = launcher_scope(service_id, instance)
 
     async def request(self, operation, **fields):
         writer = None

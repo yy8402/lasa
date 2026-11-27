@@ -14,7 +14,7 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 25
     defaults:
       run:
         working-directory: v0
@@ -26,15 +26,31 @@ jobs:
           enable-cache: true
           cache-dependency-glob: v0/uv.lock
       - name: Install locked Python dependencies
-        run: uv sync --locked --all-groups --python 3.12
+        run: uv sync --locked --all-packages --all-groups --python 3.12
       - name: Validate contracts and source quality
         run: |
           uv run --locked python design/validate.py
-          uv run --locked ruff check lasa_service tests deployment tools evaluations design/*.py run_task.py
-          uv run --locked ruff format --check lasa_service tests deployment tools evaluations design/*.py run_task.py
-      - name: Build pinned Codex carrier for isolated runtime tests
-        run: docker build --platform linux/amd64 --tag lasa-codex-worker:1.0.0 .
+          uv run --locked ruff check lasa_service host/lasa_deploy portal tests deployment tools evaluations design/*.py run_task.py
+          uv run --locked ruff format --check lasa_service host/lasa_deploy portal tests deployment tools evaluations design/*.py run_task.py
+      - name: Build and verify release artifacts
+        run: |
+          release_id="ci-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          uv run --locked python deployment/build_release.py --release-id "$release_id" --output dist --export-images
+          echo "LASA_TEST_WORKER_IMAGE=lasa-codex-worker:$release_id" >> "$GITHUB_ENV"
       - name: Run tests without provider credentials
-        run: uv run --locked pytest -q
-      - name: Build distributions
-        run: uv build --wheel --sdist --out-dir dist
+        run: uv run --locked --all-packages pytest -q
+      - name: Verify the extracted install, portal login, and rollback
+        run: uv run --locked python deployment/verify_install.py --release dist
+      - name: Verify the installed multi-peer HTTPS stack
+        run: |
+          release_id="ci-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          uv run --locked --all-packages python -m tests.container_smoke \
+            --service-image "lasa-supervisor:$release_id" \
+            --launcher-image "lasa-launcher:$release_id" \
+            --runtime-image "$LASA_TEST_WORKER_IMAGE"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: lasa-linux-amd64-${{ github.run_id }}-${{ github.run_attempt }}
+          path: v0/dist
+          compression-level: 0
+          if-no-files-found: error

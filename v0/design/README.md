@@ -2,7 +2,7 @@
 
 The [verification guide](../VERIFICATION.md) lists the checks for this implementation.
 
-This package specifies the Python runtime and the [processing-boundary and recursive-fulfillment design](multi-peer-delegation.md). The packaged schemas and examples describe this checkout, including deadline-derived recursion. Deployment evidence is recorded separately in [the deployment report](../deployment/DEPLOYMENT.md).
+This package specifies the Python runtime and the [processing-boundary and recursive-fulfillment design](multi-peer-delegation.md). The packaged schemas and examples describe this checkout, including deadline-derived recursion. Deployment evidence is recorded separately in the [deployment history](../deployment/HISTORY.md).
 
 The central decision is to make a capability an immutable, versioned **outcome contract**. Keep that contract separate from how a service fulfills it, what a caller may request, present availability, and permission to execute one task. A parent delegates bounded steps and remains responsible for the original request.
 

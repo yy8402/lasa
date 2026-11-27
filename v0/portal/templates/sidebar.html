@@ -1,8 +1,8 @@
-<a class="wordmark" href="/">LASA<span> / Caller portal</span></a>
+<a class="wordmark" href="{{ base_path }}/">LASA<span> / Caller portal</span></a>
 <nav aria-label="Task navigation">
-  <a class="new-task" href="/new"{% if page == "new" %} aria-current="page"{% endif %}>New task</a>
+  <a class="new-task" href="{{ base_path }}/new"{% if page == "new" %} aria-current="page"{% endif %}>New task</a>
   <h2>Recent tasks</h2>
   <ul class="recent-list"></ul>
-  <a class="all-tasks" href="/tasks"{% if page == "history" %} aria-current="page"{% endif %}>My tasks</a>
+  <a class="all-tasks" href="{{ base_path }}/tasks"{% if page == "history" %} aria-current="page"{% endif %}>My tasks</a>
 </nav>
 <button type="button" class="quiet sign-out">Sign out</button>

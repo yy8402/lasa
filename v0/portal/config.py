@@ -46,6 +46,7 @@ class Settings:
     encryption_key_file: str
     journal_key_file: str
     ticket_key_file: str
+    base_path: str = ""
     ca_file: str | None = None
     audience_parameter: str = "resource"
     assignment_claim: str | None = None
@@ -67,6 +68,8 @@ class Settings:
 
     def __post_init__(self):
         https_url(self.public_origin, origin=True)
+        if self.base_path not in {"", "/app"}:
+            raise ValueError("The portal base path must be /app or empty")
         for value in (self.lasa_url, self.lasa_service_id, self.issuer):
             https_url(value)
         if self.client_id == self.lasa_service_id or not self.client_id:
@@ -116,7 +119,7 @@ class Settings:
 
     @property
     def callback(self):
-        return self.public_origin + "/auth/callback"
+        return self.public_origin + self.base_path + "/auth/callback"
 
     def tls_context(self):
         context = ssl.create_default_context()
@@ -127,6 +130,15 @@ class Settings:
     @classmethod
     def read(cls, path):
         return cls(**json.loads(Path(path).read_bytes()))
+
+    def keys(self):
+        keys = tuple(
+            read_key(path)
+            for path in (self.encryption_key_file, self.journal_key_file, self.ticket_key_file)
+        )
+        if len(set(keys)) != 3:
+            raise ValueError("Use three distinct portal keys")
+        return keys
 
 
 def read_key(path):

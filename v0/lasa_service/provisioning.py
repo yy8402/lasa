@@ -12,6 +12,7 @@ from pathlib import Path
 
 import httpx
 import jwt
+from jsonschema import ValidationError
 
 from . import __version__
 from .auth import (
@@ -29,9 +30,29 @@ from .config import (
     require,
     validate_url,
 )
-from .contracts import protocol_contracts
+from .content_security import new_client
+from .contracts import digest, protocol_contracts
 from .errors import LasaError
+from .inspection import MANAGED_DLP_URL
 from .runtime import CodexRuntime
+from .store import StateStoreError, identity, inspect_state
+
+
+def configuration_error(exc):
+    if isinstance(exc, (ConfigurationError, StateStoreError)):
+        return str(exc)
+    if isinstance(exc.__cause__, ValidationError):
+        error = exc.__cause__
+        path = ".".join(map(str, error.absolute_path)) or "document"
+        if error.validator == "required":
+            missing = ", ".join(key for key in error.validator_value if key not in error.instance)
+            return f"Missing required settings in {path}: {missing}"
+        return f"Schema validation failed at {path} ({error.validator})"
+    if isinstance(exc, LasaError):
+        return f"Invalid configuration ({exc.code})"
+    if isinstance(exc, OSError) and exc.filename:
+        return f"Cannot access {exc.filename}"
+    return "Invalid configuration data"
 
 
 def initial_manifest(
@@ -70,11 +91,12 @@ def initial_manifest(
     return protocol_contracts().validate("Config", manifest)
 
 
-def initial_policy(consumer_subject, operator_subject):
+def initial_policy(consumer_subjects, operator_subject, capability="design.review"):
     principals = []
-    if consumer_subject:
-        definition, _ = builtin_capabilities()["design.review"]
-        principals.append(
+    if consumer_subjects:
+        definition, _ = builtin_capabilities()[capability]
+        review = capability == "design.review"
+        principals.extend(
             {
                 "subject": consumer_subject,
                 "kind": "user",
@@ -82,17 +104,20 @@ def initial_policy(consumer_subject, operator_subject):
                     {
                         "authorization_ref": "default",
                         "contracts": [reference(definition)],
-                        "resources": [{"resource": "workspace:self", "actions": ["read"]}],
-                        "effects": ["workspace.read"],
+                        "resources": [{"resource": "workspace:self", "actions": ["read"]}]
+                        if review
+                        else [],
+                        "effects": ["workspace.read"] if review else [],
                         "budget": packaged_defaults()["limits"]["max_task_budget"],
                         "delegation_grants": [],
                         "content_diagnostics": False,
                     }
                 ],
             }
+            for consumer_subject in consumer_subjects
         )
     if operator_subject:
-        if consumer_subject == operator_subject:
+        if operator_subject in consumer_subjects:
             raise ValueError("Consumer and operator subjects must be distinct")
         principals.append({"subject": operator_subject, "kind": "operator", "rules": []})
     policy = {"revision": "initial", "principals": principals}
@@ -102,7 +127,9 @@ def initial_policy(consumer_subject, operator_subject):
 def write_scaffold(directory, manifest, policy):
     directory.mkdir(parents=True, exist_ok=True, mode=0o700)
     defaults = packaged_defaults()
-    documents = {defaults["authorization"]["policy_file"]: policy}
+    documents = {}
+    if policy is not None:
+        documents[defaults["authorization"]["policy_file"]] = policy
     authentication = manifest["authentication"]
     if authentication.get("mode") == "static_token":
         documents[defaults["static_tokens_file"]] = {"tokens": []}
@@ -185,9 +212,10 @@ def check_storage(config):
             directory.is_dir() and os.access(directory, os.W_OK | os.X_OK),
             f"State directory unavailable for {path}: {directory} must be a writable directory",
         )
+    return inspect_state(config.private_root)
 
 
-def check_deployment(config, *, offline):
+def check_deployment(config, *, offline, issuer_bootstrap=False, readonly_state=False):
     try:
         CapabilityRegistry.configured(config).close()
     except LasaError as exc:
@@ -196,7 +224,11 @@ def check_deployment(config, *, offline):
         ) from None
 
     settings = config.document["storage"]
-    check_storage(config)
+    state = (
+        inspect_state(config.private_root, readonly=True)
+        if readonly_state
+        else check_storage(config)
+    )
     if tls := settings.get("tls"):
         try:
             ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER).load_cert_chain(
@@ -234,7 +266,9 @@ def check_deployment(config, *, offline):
         if "credential_ref" in connector:
             config.secret(connector["credential_ref"], label=label)
 
-    asyncio.run(check_authentication_and_worker(config, offline=offline))
+    if not issuer_bootstrap:
+        asyncio.run(check_authentication_and_worker(config, offline=offline))
+    return state
 
 
 async def check_authentication_and_worker(config, *, offline):
@@ -263,3 +297,49 @@ async def check_authentication_and_worker(config, *, offline):
             raise ConfigurationError(
                 "Cannot verify the configured worker launcher and Docker daemon"
             ) from None
+
+
+def probe_inspection(config):
+    async def check():
+        for profile in config.inspection.active_profiles():
+            if profile["url"] != MANAGED_DLP_URL:
+                continue
+            try:
+                content = {"input": {"objective": "Confirm LASA deployment readiness."}}
+                request = {
+                    "version": "1",
+                    "inspection_id": identity("inspection"),
+                    "binding_revision": digest("deployment"),
+                    "policy_revision": digest("deployment"),
+                    "gateway_policy_revision": profile["policy_revision"],
+                    "channel": "reasoning.request",
+                    "purpose": "execution",
+                    "media_type": "application/json",
+                    "inspection_digest": digest(content),
+                    "content": content,
+                }
+                token = config.secret(profile["credential_ref"], label="Inspection profile")
+                async with new_client(profile, None) as client:
+                    response = await client.post(
+                        profile["url"],
+                        json=request,
+                        timeout=5,
+                        headers={"Authorization": "Bearer " + token},
+                    )
+                response.raise_for_status()
+                result = config.contracts.validate("ContentInspectionResponse", response.json())
+                require(
+                    result["verdict"] == "permit"
+                    and result["gateway_id"] == profile["gateway_id"]
+                    and all(
+                        result[key] == request[key]
+                        for key in ("inspection_id", "inspection_digest", "gateway_policy_revision")
+                    ),
+                    "Unexpected synthetic DLPLite inspection result",
+                )
+            except (httpx.HTTPError, LasaError, OSError, ValueError):
+                raise ConfigurationError(
+                    f"DLPLite qualification failed for profile {profile['id']}"
+                ) from None
+
+    asyncio.run(check())

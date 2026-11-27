@@ -2,17 +2,20 @@
 
 ## Provision an installed service
 
-Install the LASA wheel with its production dependencies. The host-local launcher needs a Docker daemon and the matching Codex worker image. The supervisor connects to the launcher over a private Unix socket. From the source distribution or checkout, build the worker and get the immutable image ID from the daemon that will run the workers.
+For a managed installation, start with the [deployment quickstart](deployment/DEPLOYMENT.md).
+
+For a native development setup, install the LASA wheel with its production dependencies. The host-local launcher needs a Docker daemon and the matching Codex worker image. The supervisor connects to the launcher over a private Unix socket. From the extracted source distribution or the checkout’s `v0/` directory, build the worker and get the immutable image ID from the daemon that will run the workers.
 
 ```sh
-docker build -t lasa-codex-worker:1.0.0 v0
+docker build --platform linux/amd64 -t lasa-codex-worker:1.0.0 .
 lasa_worker_image=$(docker image inspect --format '{{.Id}}' lasa-codex-worker:1.0.0)
 ```
 
 For local development, run the launcher under your account with Docker access. The socket directory should be private and writable by your account. The supervisor connects to the owner-only socket. Use the [separate container deployment](#running-lasa-in-docker) to give Docker access only to the launcher.
 
 ```sh
-lasa-launcher --image "$lasa_worker_image" \
+install -d -m 0700 "$HOME/.local/state/lasa/launcher-locks"
+lasa-launcher --lock-directory "$HOME/.local/state/lasa/launcher-locks" --image "$lasa_worker_image" \
   --scope https://identity.example.net/services/review \
   --socket /run/lasa/review/launcher.sock
 ```
@@ -30,7 +33,7 @@ lasa config init --output /etc/lasa/review --state-root /var/lib/lasa/review \
   --credential-ref file:/run/secrets/lasa/review/model-key
 ```
 
-The initial policy denies access until the administrator adds issuer subjects and grants. Pass `--consumer-subject SUBJECT` to grant read-only `design.review`. Use `--operator-subject SUBJECT` with a distinct subject to grant access to operator traces. `--jwt-algorithm` can be repeated for an issuer with multiple allowed algorithms. Keep signing keys at the issuer. Mount the model key at the referenced path or inject it via an `env:NAME` reference. The scaffold creates the two JSON files exclusively with owner-only permissions.
+The initial policy denies access until the administrator adds issuer subjects and grants. Pass `--consumer-subject SUBJECT` to grant read-only `design.review`. Add `--consumer-capability task.attempt` to provision the bounded, effect-free offer used by the first-task command and portal. Use `--operator-subject SUBJECT` with a distinct subject to grant access to operator traces. `--jwt-algorithm` can be repeated for an issuer with multiple allowed algorithms. Keep signing keys at the issuer. Mount the model key at the referenced path or inject it via an `env:NAME` reference. The scaffold creates the two JSON files exclusively with owner-only permissions.
 
 Before startup, run the check as the service user with the same mounts and credentials. It validates the manifest, bindings, policy, secrets, TLS, authentication, and connectivity to the matching launcher and Docker daemon. The launcher verifies its pinned worker image and Codex version before opening the socket. It leaves the service store untouched and sends no model or peer requests. `--offline` skips the launcher and remote JWKS access and still checks local artifacts.
 
@@ -56,7 +59,7 @@ LASA reads `authorization.json` beside the manifest by default. Set `authorizati
   model-key
 ```
 
-The manifest defaults to a loopback listener on port `8787`, local execution, and built-in review and task attempt capability definitions. It derives the descriptor URL and deployment revision. Manifest changes take effect on restart. Replace the receiver policy atomically to apply grant changes to subsequent checks. File-based credentials are reread on use. Environment secrets and issuer keys loaded at startup require a restart to refresh. [Managed deployment report](deployment/DEPLOYMENT.md)
+The manifest defaults to a loopback listener on port `8787`, local execution, and built-in review and task attempt capability definitions. It derives the descriptor URL and deployment revision. Manifest changes take effect on restart. Replace the receiver policy atomically to apply grant changes to subsequent checks. File-based credentials are reread on use. Environment secrets and issuer keys loaded at startup require a restart to refresh. [Managed configuration updates](deployment/OPERATIONS.md#update-configuration-or-upgrade-lasa)
 
 ### Content security gateways
 
@@ -109,55 +112,10 @@ uv run --project v0 python v0/tools/create_development_config.py \
 
 ## Running LASA in Docker
 
-Build the supervisor and launcher images after building the Codex worker image.
-
-```sh
-docker build -f v0/Dockerfile.service --target launcher -t lasa-launcher:1.0.0 v0
-docker build -f v0/Dockerfile.service -t lasa-supervisor:1.0.0 v0
-```
-
-Mount the Docker daemon socket only in the launcher. Run the launcher with networking disabled and distribute provider keys, TLS keys, and peer credentials only to the supervisor. Give each launcher and supervisor pair a dedicated socket volume. For this example, set `runtime.launcher_socket` to `/run/lasa/launcher.sock` in the manifest.
-
-```sh
-lasa_config=/etc/lasa/review
-lasa_state=/var/lib/lasa/review
-lasa_secrets=/run/secrets/lasa/review
-lasa_socket=/var/run/docker.sock
-lasa_socket_volume=lasa-review-launcher
-lasa_user="$(id -u):$(id -g)"
-lasa_socket_group=$(docker run --rm --network none \
-  --mount "type=bind,source=$lasa_socket,target=/var/run/docker.sock" \
-  --entrypoint stat lasa-launcher:1.0.0 -c '%g' /var/run/docker.sock)
-docker volume create "$lasa_socket_volume"
-docker run --rm --network none --user 0:0 \
-  --mount "type=volume,source=$lasa_socket_volume,target=/run/lasa" \
-  --entrypoint chown lasa-launcher:1.0.0 "$lasa_user" /run/lasa
-docker run -d --name lasa-review-launcher --network none \
-  --user "$lasa_user" --group-add "$lasa_socket_group" \
-  --mount "type=bind,source=$lasa_socket,target=/var/run/docker.sock" \
-  --mount "type=volume,source=$lasa_socket_volume,target=/run/lasa" \
-  lasa-launcher:1.0.0 --image "$lasa_worker_image" \
-  --scope https://identity.example.net/services/review --socket /run/lasa/launcher.sock
-docker run --rm --user "$lasa_user" \
-  --mount "type=volume,source=$lasa_socket_volume,target=/run/lasa,readonly" \
-  --mount "type=bind,source=$lasa_config,target=$lasa_config,readonly" \
-  --mount "type=bind,source=$lasa_state,target=$lasa_state" \
-  --mount "type=bind,source=$lasa_secrets,target=$lasa_secrets,readonly" \
-  --publish 127.0.0.1:8443:8787 \
-  lasa-supervisor:1.0.0 --config "$lasa_config/config.json"
-```
-
-Create the bind mount directories first. For a bridge-network listener, set `storage.listen_host` to `0.0.0.0` and set the absolute TLS certificate and key paths. The certificate must cover the hostname in `service.base_url`. A provider with private TLS can set `executors[].provider_ca_file`; peers use their own `ca_file`. Wait for the launcher socket before starting the supervisor. Use one launcher per service identity on the Docker daemon.
-
-Run the local multi-peer check with all three images available.
-
-```sh
-(cd v0 && .venv/bin/python -m tests.container_smoke)
-```
-
-The check creates an isolated network, three supervisors and launchers, and deterministic HTTPS fixtures for the model, scanner, and app. It submits a parent task, verifies both child traces and the final result, and checks receiver-specific authentication and worker cleanup. It removes the test containers, volumes, and network.
-
-To run local content inspection with DLPLite, connect the supervisor to a user-defined Docker network and opt in with `local_dlp.enabled` in `deployment.json`. Run `lasa deploy apply` before starting supervisors that use the managed endpoint. Register the endpoint in `content_security.inspection_profiles` and select it in the stream bindings. [DLPLite deployment and profile](deployment/LOCAL_DLP.md)
+Use the [installation guide](deployment/DEPLOYMENT.md) to install a pinned supervisor and launcher
+and verify HTTPS readiness. The deployment specification can opt into the [caller portal](portal/README.md)
+and [DLPLite](deployment/LOCAL_DLP.md). Use the [operations runbook](deployment/OPERATIONS.md) to
+update or roll back the installed site while preserving task receipts.
 
 ## Model service and prompts
 
@@ -169,18 +127,23 @@ LASA registers the approved tools for each step as immediately callable Codex Ap
 
 ## Submitting work
 
-Submit work using a receiver-audience JWT in `LASA_ACCESS_TOKEN`:
+Set `LASA_ACCESS_TOKEN` to the caller’s receiver-scoped JWT or static token. Run this command from the extracted source archive or the checkout’s `v0/` directory with the installed environment active.
 
 ```sh
-uv run --project v0 python v0/run_task.py \
+python run_task.py \
   'Explain the responsibilities of a parent service and its bounded worker.' \
   --base-url https://localhost:8443/lasa/v1 \
   --ca-file /absolute/path/to/ca.pem
 ```
 
-The script discovers caller-visible offers, creates a session, submits typed input, polls the task, and prints routing, actual operation metadata, and parent-authorized child traces. Use `--input-json` and `--capability` for a named capability such as `design.review`. Multiple visible offers can be selected with `--offer-id`.
+The script discovers caller-visible offers, creates a session, submits typed input, and prints
+consumer-visible status and events. If your scaffold grants `design.review`, use
+`--capability design.review --input-json /path/to/review.json` with this input shape.
 
-`--diagnostics content` additionally requires receiver policy permission. Metadata is always recorded. Content traces exclude service keys, private developer/system prompts, and hidden reasoning; truncation retains operation headers and digests. Child traces are retrieved by the parent using its own credentials, which are never returned to the caller.
+`{"design":"Text to review","criteria":[{"id":"ownership","description":"Identify the owner."}]}`
+
+Use `--offer-id` when more than one offer matches. An operator can retrieve private traces using
+the receiver’s [operator API](design/api.openapi.json) and an operator credential.
 
 To delegate, add `peers` entries in preference order. Each entry names the downstream descriptor URL, expected service ID, allowed base URL, and receiver-scoped credential reference. Use its `ca_file` for private TLS. The sender’s receiver policy grants the exact sender, receiver and contract in `delegation_grants`. The downstream policy maps the workload subject to that service ID and separately defines its locally fulfillable read-only offers. [Multi-peer delegation](design/multi-peer-delegation.md)
 

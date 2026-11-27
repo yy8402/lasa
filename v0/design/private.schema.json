@@ -743,69 +743,6 @@
       ],
       "additionalProperties": false
     },
-    "DockerDeployment": {
-      "type": "object",
-      "properties": {
-        "supervisor_network": {
-          "type": "string",
-          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,127}$"
-        },
-        "supervisors": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          },
-          "uniqueItems": true
-        },
-        "local_dlp": {
-          "type": "object",
-          "properties": {
-            "enabled": {
-              "type": "boolean"
-            },
-            "secrets_directory": {
-              "type": "string",
-              "minLength": 1
-            },
-            "inspector_image": {
-              "$ref": "#/$defs/DockerImage"
-            },
-            "presidio_image": {
-              "$ref": "#/$defs/DockerImage"
-            },
-            "policy_revision": {
-              "type": "string",
-              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
-            }
-          },
-          "if": {
-            "properties": {
-              "enabled": {
-                "const": true
-              }
-            },
-            "required": [
-              "enabled"
-            ]
-          },
-          "then": {
-            "required": [
-              "secrets_directory"
-            ]
-          },
-          "additionalProperties": false
-        }
-      },
-      "required": [
-        "supervisor_network"
-      ],
-      "additionalProperties": false
-    },
-    "DockerImage": {
-      "type": "string",
-      "pattern": "^[A-Za-z0-9][A-Za-z0-9._/:@-]{0,511}$"
-    },
     "ContentSecurity": {
       "type": "object",
       "properties": {
@@ -1630,13 +1567,26 @@
     "RecursivePeerExecution": {
       "type": "object",
       "properties": {
-        "max_fanout": {"type": "integer", "minimum": 1, "maximum": 64},
-        "min_verification_margin_ms": {
-          "type": "integer", "minimum": 1, "maximum": 9007199254740991
+        "max_fanout": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64
         },
-        "subtree_cap": {"type": "integer", "minimum": 1, "maximum": 9007199254740991}
+        "min_verification_margin_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "subtree_cap": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        }
       },
-      "required": ["max_fanout", "min_verification_margin_ms"],
+      "required": [
+        "max_fanout",
+        "min_verification_margin_ms"
+      ],
       "additionalProperties": false
     },
     "DelegationReport": {

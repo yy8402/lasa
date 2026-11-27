@@ -4,16 +4,17 @@ import socket
 from contextlib import asynccontextmanager, nullcontext
 from datetime import UTC, datetime, timedelta
 
-import uvicorn
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import NameOID
 
 
-def certificate(root, *, dns_name=None):
+def certificate(root, *, dns_name=None, common_name=None):
     key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-    name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, dns_name or "LASA test")])
+    name = x509.Name(
+        [x509.NameAttribute(NameOID.COMMON_NAME, common_name or dns_name or "LASA test")]
+    )
     cert = (
         x509.CertificateBuilder()
         .subject_name(name)
@@ -49,6 +50,8 @@ def certificate(root, *, dns_name=None):
 
 @asynccontextmanager
 async def live_http(app, *, tls=None):
+    import uvicorn
+
     sock = socket.socket()
     sock.bind(("127.0.0.1", 0))
     sock.listen(16)

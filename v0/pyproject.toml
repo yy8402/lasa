@@ -24,18 +24,23 @@ lasa = "lasa_service.cli:main"
 lasa-issue-jwt = "lasa_service.issue_jwt:main"
 lasa-launcher = "lasa_service.launcher:main"
 
+[tool.uv.workspace]
+members = ["host"]
+
 [dependency-groups]
 dev = ["pytest>=8,<10", "pytest-asyncio>=1,<2", "ruff>=0.14,<1"]
 portal = ["authlib>=1.6.5,<2", "jinja2>=3.1.6,<4"]
 portal-test = ["playwright>=1.51,<2"]
 
 [tool.setuptools]
-packages = ["lasa_service", "lasa_contracts"]
-package-dir = {lasa_service = "lasa_service", lasa_contracts = "design"}
+include-package-data = false
+packages = ["lasa_service", "lasa_contracts", "portal"]
+package-dir = {lasa_service = "lasa_service", lasa_contracts = "design", portal = "portal"}
 
 [tool.setuptools.package-data]
 lasa_service = ["config_defaults.json", "prompts.json"]
 lasa_contracts = ["*.json", "examples/*.json", "standards/*.json", "*.md"]
+portal = ["templates/*.html", "static/*.js", "static/*.css"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

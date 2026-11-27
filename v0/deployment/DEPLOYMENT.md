@@ -1,71 +1,191 @@
-# Managed LASA deployment
+# Install LASA
 
-The Mac parent and both air188 backends use the `lasa-service` package and the `lasa-supervisor` and `lasa-codex-worker` images. The `1.0.0` release uses wire protocol `lasa/1.0.0`, the `1.0.0` service manifest and descriptor formats, and OpenAPI `info.version` set to `1.0.0`.
+A guided deployment owns one HTTPS gateway, one supervisor, and its launcher. It can also run
+a caller portal, local Keycloak with PostgreSQL, and a DLPLite gateway. The launcher alone
+mounts the Docker socket. Backend ports bind to loopback for deployment checks. The HTTPS
+gateway serves the site on one DNS hostname and port 443 by default.
 
-| Service | HTTPS API | Container | Authentication |
-| --- | --- | --- | --- |
-| Mac parent | `https://localhost:8443/lasa/v1` | `lasa-parent` | JWT |
-| air188 primary | `https://192.168.0.188/lasa/v1` | `lasa-primary` | JWT |
-| air188 review | `https://192.168.0.188/review/lasa/v1` | `lasa-review` | Static token with workload identity pin |
+For an installed site, use the [operations runbook](OPERATIONS.md) for configuration updates,
+upgrades, recovery, and gateway maintenance.
 
-## Service paths
+## Install from a release
 
-Each host keeps a role's `config.json` and `authorization.json` in `~/.config/lasa/<role>/`. Separate `~/.config/lasa/secrets/<role>/` directories supply credentials and certificates. The supervisor mounts config and secrets read-only. Each role gets one writable mount at `~/.local/state/lasa/<role>` containing its private store and workspaces.
+Use a local Docker Engine with API 1.49 or later, Compose, Python 3.12, and uv. Select the release for the target
+platform. The release contains the host installer wheel, service wheel, source archive,
+hashed host requirements, and a Docker image archive for all three profiles. Verify the hashes
+in `release.json`.
+Install the host wheel and its dependencies in a private environment. The supervisor,
+launcher, and portal images carry the service wheel.
 
-The Mac's `com.lasa.layer1-https` user agent runs Caddy using `~/.config/lasa/proxy/Caddyfile`. The `com.lasa.tokens` agent runs the installed `lasa-issue-jwt` command against `~/.config/lasa/issuer/token-issuance.json`, with separate issuer keys and receiver-scoped token outputs. Operator credentials live in role-specific directories under `~/.config/lasa/clients/`. [Air188 runbook](air188.md)
+```sh
+release=/absolute/path/to/release
+install_root="$HOME/.local/share/lasa/review"
+install -d -m 0700 "$install_root"
+uv venv --python 3.12 "$install_root/venv"
+. "$install_root/venv/bin/activate"
+uv pip sync --require-hashes "$release/requirements-deploy.txt"
+uv pip install --no-deps "$release"/lasa_deploy-*.whl
+```
 
-## Roll out a candidate
+For a local build, run `python3 deployment/build_release.py --release-id RELEASE_ID --output
+/absolute/path/to/release --export-images` from the source directory. You can use `--worker-image`
+to reuse a local worker after validating its platform, Codex version, and entrypoint hash. In an extracted source
+archive, supply `--source-revision` from the original release manifest. Use the recorded image
+IDs, wire digest, and store schema when comparing hosts.
 
-Build and check the wheel and source distribution, then build the `linux/amd64` supervisor, launcher, and worker images. Give each launcher the immutable worker image ID and configure its supervisor's `runtime.launcher_socket`. The launcher owns Docker access. Run `lasa config check` with each supervisor's production identity and mounts. [Package verification](../VERIFICATION.md)
+## Guided setup for a new deployment
 
-The current checkout uses store schema revision 4 for the direct-child ledger and optional subtree charges. Provision fresh candidate roots and verify the exact wire schema digest. Put each candidate supervisor behind authenticated HTTPS with a separate launcher socket and immutable worker image pin. Provision a separate execution binding key for each outgoing relationship and its matching receiver principal. Keep existing container specs, config and policy copies, state roots, proxy configuration, and image IDs available for rollback. Record the active deployment, authentication modes, inspection bindings, and snapshot checks before any cutover. Preserve credentials and raw evidence in owner-only state. [Peer configuration](../CONFIGURATION.md#peer-execution-terms)
+Save one of the examples below as `install.json` beside `release.json` and `images.tar.gz`.
+Point the site hostname at the host and make HTTPS port 443 available to the intended clients.
 
-Prove the candidate canary with both downstream credential modes and with consumer and operator transcripts captured separately. Confirm the three stores are idle immediately before stopping the Mac parent and then the two receivers. Start and verify the matching receiver launchers and supervisors over HTTPS before starting the parent. Verify the live dependent workflow and any approved source read. If a gate fails after a documented cutover starts, restore the matching predecessor group and verify HTTPS readiness. Each state root belongs to one supervisor. [Provisioning guide](../RUNNING.md)
+```sh
+lasa-deploy install --config "$release/install.json"
+```
 
-For deployments that use a managed DLPLite gateway, list the supervisor manifests in `deployment.json` and enable `local_dlp`. Run `lasa deploy apply` and require authenticated HTTPS readiness and matching profile pins before rolling out the affected supervisors. External scanners remain available with the managed stack disabled. [DLPLite deployment workflow](LOCAL_DLP.md)
+The installer reads the file without prompts, checks and loads any missing release images,
+generates the service configuration and `deployment.json`, and applies the release. Its
+result includes the settings path and any generated credential files. Use `--prepare-only`
+to review the settings before applying them with `lasa-deploy plan` and `lasa-deploy apply`.
+If apply fails, the installer prints the saved settings path and the command to resume.
 
-## Historical 1.0.0 deployment verification
+File paths in `install.json` resolve relative to that file. Keep credential values in the
+files named by the settings. The hostname supplies the instance name, with dots converted
+to hyphens. For `https://lasa.example.net`, the installer uses
+`~/.local/share/lasa/lasa-example-net` and service ID
+`https://lasa.example.net/services/lasa-example-net`. Set `release` to select a manifest
+elsewhere, or `output`, `name`, and `service_id` when provisioning a custom instance.
+Backend ports default to 8443, 8080, and 9443 for the supervisor, portal, and Keycloak.
+Use `ports` to resolve a local port conflict and `gateway_listen_host` to bind a specific
+IPv4 address. Supply `tls.ca_file`, `model.ca_file`, or `oidc.ca_file` for an endpoint that
+uses a private CA.
 
-On November 23, 2026, the Mac parent and both air188 backends passed `lasa config check` at deployment revision `docker-1.0.0-unified-43e45cad4420`. All three authenticated HTTPS endpoints advertised wire protocol `lasa/1.0.0`, descriptor format `1.0.0`, and OpenAPI `info.version` `1.0.0`. The Mac JWT renewal job also passed with the updated package.
-
-The clean-slate cutover archived 16 previous Mac tasks, 13 air188 primary tasks, and 14 air188 review tasks. Each host keeps the verified archives and retired settings under `~/.local/state/lasa/archives/pre-1.0.0-20261123/`. The format alignment uses fresh SQLite stores at schema revision `1` and keeps the earlier verification stores under `~/.local/state/lasa/archives/pre-unified-1.0.0-20261123/`.
-
-Live task `task-b37a936281b54a498dd5aaf6a510305e` finished with disposition `fulfilled`. Air188 review ran `design.review` with a pinned static-token workload identity, and air188 primary ran the dependent `task.attempt` using JWT. The primary verifier received the review output, and the Mac verified the original inputs from both steps. Both child traces remained readable after the predecessor containers were retired.
-
-Air188 primary also completed `documents.read` in task `task-204474f7c39243e1a51b587f02053170`. The returned `README.md` digest matched the approved file. Run receipts and diagnostics are in the Mac's private `~/.local/state/lasa/releases/1.0.0/unified-formats/` directory.
-
-## Historical typed workflow rollout and live benchmark
-
-The benchmark used revision `docker-1.0.0-typed-982347ae1b54` across all three supervisors with their existing service identities, task stores, and workspaces. The Mac publishes `design.review-checklist` to the operator under `review-checklist`. The authorization rule pins the static-token review peer for `design.review` and the JWT primary peer for `task.attempt`, with a separate verifier revision pin for each grant. Both receivers use `gpt-6-luna` with low reasoning effort for outcome verification and `gpt-5.5` for execution. The Mac keeps its own verifier for independent checks when policy calls for them.
-
-The typed benchmark used the cutover and rollback design from the earlier open-ended task. Elapsed time is measured from receipt to completion on the Mac. The first attempt reached both peers and failed verification because the checklist added conditions beyond the review evidence. The three timed runs specified readiness, rollback, and retirement as explicit review criteria and asked the checklist to preserve exactly those gates.
-
-| Parent task | Elapsed | Model calls |
-| --- | ---: | ---: |
-| `task-ff7d8d424eb2445d95682079f7fee623` | 52.5 s | 4 |
-| `task-b44087e4386e4c42a2ac6170ac0f362d` | 47.6 s | 4 |
-| `task-c20b697350694366a5a1ec080d36c253` | 43.9 s | 4 |
-
-Each air188 backend made one execution call and one verification call. The Mac accepted both exact, policy-pinned receipts, confirmed the review output matched primary's dependency, and assembled the result without asking a model. Earlier comparable open-ended tasks took 149–162 seconds and ten model calls. The Mac keeps benchmark inputs, traces, the initial rejection, and rollout evidence under `~/.local/state/lasa/releases/1.0.0/typed-workflows/`.
-
-## Verified consumer API rollout
-
-On November 25, 2026, the Mac parent and both air188 receivers moved to `consumer-api-20261125-6121eeb73c44` using the same immutable supervisor, launcher, and worker image IDs. The three predecessor stores were idle at cutover. The candidate used separate schema-3 stores and retained the verified predecessor images, configuration, stores, and container records for rollback.
-
-The authenticated HTTPS canary and deployed workflow verified review on air188 review using its static-token workload relationship, followed by the dependent checklist on air188 primary using JWT. The Mac independently verified both results. Private records bind the exact review handoff to a fresh disclosure decision for the selected receiver. Air188 primary returned the approved document with a matching source digest. The consumer transcript passed the closed schema and identifier checks, and the consumer credential was denied on the operator endpoints. [Air188 isolation](air188.md)
-
-## Verified processing-boundary and recursive-fulfillment rollout
-
-The qualified November 25, 2026 candidate is `processing-recursive-20261125-37be3fc1cca5`. Mac and air188 reported matching immutable image IDs. The final worker was reused from the earlier test-source snapshot because all its build inputs were identical.
-
-| Image | Immutable ID |
+| Site path | Managed route |
 | --- | --- |
-| Supervisor | `sha256:c5fb362e1e8cc1b99430347c436e762323c45931712bbd3f729c0ffe9bcf2cc9` |
-| Launcher | `sha256:76a89fb758f70c5f34c760b200a6de9a9c84938df45b932c298699a22214cdf1` |
-| Codex worker | `sha256:d1f54d26b7053daa0797e0c100c81bb153870560e5ffa5750a88368bd97f74b3` |
+| `/lasa/v1` | Supervisor API |
+| `/app/` | Caller portal, when selected |
+| `/auth/realms/lasa/` and `/auth/resources/` | Local Keycloak sign-in and assets, when selected |
 
-The authenticated canary verified the Mac workflow with the air188 static-token and JWT relationships, exact handoff and release decisions, and the approved document digest. The first production attempt completed the workflow, then the `documents.read` verification encountered an inference transport failure before the connector ran. The rollout restored and reverified all three predecessor HTTPS services. The isolated candidate subsequently completed the same approved read, and fresh retry stores were staged with the same immutable images. The preserved first-attempt log, diagnostic and rollback evidence are `managed-cutover-attempt-1.log`, `primary-production-read-diagnostic.private.json`, and `rollback/` under the Mac release evidence root.
+The managed Caddy gateway verifies upstream TLS for the supervisor and Keycloak. Its
+allowlist keeps Keycloak administration, the master realm, and backend health endpoints
+private. The launcher and PostgreSQL have no public routes. Deploy verifies the site routes
+before opening admission, and application rollback reuses the gateway.
 
-The retry deployed the candidate to the Mac parent and both air188 receivers. All three stores were idle at the cutover gate. The deployed Mac workflow and air188 `documents.read` passed over authenticated HTTPS. Private evidence binds the verified review to a fresh disclosure decision for the exact checklist request and confirms the approved document digest. Consumer discovery, progress, receipts, results, and artifact retrieval preserved the caller boundary. The consumer credential was denied operator traces. `postflight-running.json` confirms the running supervisor and launcher IDs and immutable worker pin on each role. The predecessor containers and state remain available with verified retry snapshots in `rollback-retry/` on the Mac and under `~/.local/state/lasa/releases/1.0.0/processing-recursive-20261125-37be3fc1cca5/evidence/rollback-retry/` on air188.
+### LASA only
 
-The production profile publishes `approved_processing` offers and uses the two air188 receivers as leaves. Its model endpoint is outside the service's administrative domain, so `provider_domain_only` offers are unpublished. Independent TLS fixtures qualify domain-only composition and deeper recursion with synthetic data. [Qualification and private evidence locations](../VERIFICATION.md#processing-boundaries-and-recursive-fulfillment-qualification) · [Air188 isolation](air188.md)
+This is the default profile. LASA generates separate caller and operator credentials.
+
+```json
+{
+  "site_url": "https://lasa.example.net",
+  "model": {
+    "id": "your-model",
+    "base_url": "https://models.example.net/v1",
+    "credential_file": "/etc/lasa/private/model-key"
+  },
+  "tls": {
+    "certificate_file": "/etc/lasa/tls/site.pem",
+    "key_file": "/etc/lasa/tls/site-key.pem"
+  }
+}
+```
+
+### Caller portal with local Keycloak
+
+Set `profile` to `portal-keycloak` and list the users who should have caller access at
+installation. Each user supplies an email and can set a username. When omitted, the username
+defaults to the full email address. Omit the user list or use an empty array to add accounts
+later with `lasa-deploy users add`.
+
+```json
+{
+  "profile": "portal-keycloak",
+  "site_url": "https://lasa.example.net",
+  "model": {
+    "id": "your-model",
+    "base_url": "https://models.example.net/v1",
+    "credential_file": "/etc/lasa/private/model-key"
+  },
+  "tls": {
+    "certificate_file": "/etc/lasa/tls/site.pem",
+    "key_file": "/etc/lasa/tls/site-key.pem"
+  },
+  "keycloak": {
+    "users": [
+      {"username": "alice", "email": "alice@example.net"},
+      {"email": "bob@example.net"}
+    ]
+  }
+}
+```
+
+The portal and Keycloak use the site hostname. With `https://lasa.example.net`, the issuer is
+`https://lasa.example.net/auth/realms/lasa` and the portal callback is
+`https://lasa.example.net/app/auth/callback`. The installer registers both automatically.
+Allow 2 GiB of Docker memory for Keycloak in addition to PostgreSQL and LASA.
+
+Apply creates a persistent PostgreSQL volume and provisions the realm, portal client,
+readiness credentials, and receiver policy. The install result lists each initial account's
+username, email, and private temporary-password file under `user_credentials`. Give each user
+their own file through a private channel. They sign in with the listed username and change
+their password on first use.
+
+For account management and identity backups, see [Manage local Keycloak users](OPERATIONS.md#manage-local-keycloak-users).
+
+### Caller portal with an existing identity provider
+
+Register a confidential portal client with callback `https://lasa.example.net/app/auth/callback`.
+Enable the authorization code flow with PKCE S256 and client secret basic authentication.
+Assign the intended users and configure access tokens with a single audience of
+`https://lasa.example.net/services/lasa-example-net`. The installer verifies the two token
+files against that audience and the issuer, then uses their distinct subjects for the receiver
+policy. The caller token also qualifies the portal. Keep both token files current for
+deployment operations. [Existing Keycloak realm setup](../portal/README.md#use-an-existing-keycloak-realm)
+
+```json
+{
+  "profile": "portal-oidc",
+  "site_url": "https://lasa.example.net",
+  "model": {
+    "id": "your-model",
+    "base_url": "https://models.example.net/v1",
+    "credential_file": "/etc/lasa/private/model-key"
+  },
+  "tls": {
+    "certificate_file": "/etc/lasa/tls/site.pem",
+    "key_file": "/etc/lasa/tls/site-key.pem"
+  },
+  "oidc": {
+    "issuer": "https://identity.example.net",
+    "client_id": "lasa-caller-portal",
+    "client_secret_file": "/etc/lasa/private/portal-client-secret",
+    "caller_token_file": "/etc/lasa/private/caller.jwt",
+    "operator_token_file": "/etc/lasa/private/operator.jwt"
+  }
+}
+```
+
+The installer discovers and saves the issuer signing keys for the receiver. Set
+`oidc.jwks_file` when supplying a local key set. The signing algorithm defaults to
+`RS256` and can be selected with `oidc.algorithm`. The portal requests the LASA audience
+using `resource` by default. Set `oidc.audience_parameter` to `audience` if the provider
+expects it. When the issuer rotates its signing keys, update the receiver's key set with
+both generations during the overlap and apply the updated configuration.
+
+## Custom deployments
+
+Use `lasa-deploy install --config "$release/install.json" --prepare-only` to generate a site's
+settings before making advanced changes. The installer reports the generated `deployment.json`
+path. For example, list additional supervisor files or directories in `supervisor.mounts` using
+absolute host paths. Apply mounts those paths at the same locations inside the container and
+takes a snapshot of the supervisor configuration directory.
+
+For an operator-managed HTTPS gateway, remove the generated `gateway` section before the first
+apply. Forward `/lasa/v1` unchanged. Strip `/app` before forwarding portal requests and preserve
+the public `Host` header. For local Keycloak, preserve `/auth` and forward the sign-in and asset
+routes shown above. Verify upstream TLS and omit callback queries and request bodies from ingress
+logs. Set `supervisor.tls_server_name` when the supervisor certificate uses a different name
+from the public LASA URL.
+
+Run `lasa-deploy plan` and `lasa-deploy apply` with `--settings` pointing to the generated file.
+Verify the public API and, for portal profiles, sign in through the public origin and submit a test
+task. For direct runtime provisioning with `lasa config init`, see [Running the target service](../RUNNING.md#provision-an-installed-service).

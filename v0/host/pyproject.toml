@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lasa-deploy"
+version = "1.0.0"
+description = "Host-side installer and deployment operations for LASA"
+requires-python = ">=3.11"
+dependencies = [
+  "cryptography>=45,<51",
+  "httpx>=0.28,<1",
+  "jsonschema>=4.26,<5",
+  "PyJWT>=2.10,<3",
+  "rfc8785>=0.1.4,<1",
+]
+
+[project.scripts]
+lasa-deploy = "lasa_deploy.cli:main"
+
+[tool.setuptools]
+include-package-data = false
+packages = ["lasa_deploy"]
+
+[tool.setuptools.package-data]
+lasa_deploy = ["deployment.schema.json"]

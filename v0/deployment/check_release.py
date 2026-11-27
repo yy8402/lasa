@@ -46,7 +46,7 @@ def wheel_sources(root, setuptools):
     sources = {}
     for package in setuptools["packages"]:
         prefix = Path(*package.split("."))
-        directory = root / setuptools["package-dir"].get(package, str(prefix))
+        directory = root / setuptools.get("package-dir", {}).get(package, str(prefix))
         for pattern in ["*.py", *setuptools.get("package-data", {}).get(package, ())]:
             for path in directory.glob(pattern):
                 if path.is_file():
@@ -159,11 +159,14 @@ def check_installed_files(project, fingerprints):
 
 def check_installation(project, fingerprints):
     from importlib.resources import files
+    from importlib.util import find_spec
 
     from lasa_service import PROTOCOL_VERSION, __version__
     from lasa_service.contracts import Contracts, digest
 
     check_installed_files(project, fingerprints)
+    if find_spec("lasa_deploy") is not None:
+        raise ValueError("The runtime-only installation contains the host deployment package")
     cli = subprocess.run(
         [sys.executable, "-I", "-m", "lasa_service.cli", "--help"],
         capture_output=True,
@@ -295,11 +298,15 @@ def check_provisioning():
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--wheel", required=True, type=Path)
+    parser.add_argument("--deploy-wheel", required=True, type=Path)
     parser.add_argument("--sdist", required=True, type=Path)
     args = parser.parse_args()
     if not sys.flags.isolated or sys.prefix == sys.base_prefix:
         parser.error("Run with -I using the clean virtual environment that installed the wheel")
     project, fingerprints = check_wheel(args.wheel)
+    deploy_project, _ = check_wheel(args.deploy_wheel, ROOT / "host")
+    if deploy_project["version"] != project["version"]:
+        raise ValueError("Service and deployment wheel versions must match")
     source_count = check_sdist(args.sdist, project)
     examples = check_installation(project, fingerprints)
     check_provisioning()
@@ -308,7 +315,8 @@ def main():
             {
                 "status": "passed",
                 "version": project["version"],
-                "wheel_sha256": sha(args.wheel.read_bytes()),
+                "service_wheel_sha256": sha(args.wheel.read_bytes()),
+                "deploy_wheel_sha256": sha(args.deploy_wheel.read_bytes()),
                 "source_archive_sha256": sha(args.sdist.read_bytes()),
                 "installed_files_matched": len(fingerprints),
                 "source_files_matched": source_count,

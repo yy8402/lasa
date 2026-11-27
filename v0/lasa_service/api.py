@@ -31,6 +31,7 @@ def create_app(
     inspection_transport=None,
     planner=None,
     verifier=None,
+    admission_gate=None,
 ):
     if runtime is None:
         from .runtime import CodexRuntime
@@ -56,6 +57,39 @@ def create_app(
 
     app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.coordinator = c
+    pending_writes = 0
+
+    def admission_mode():
+        try:
+            mode = admission_gate.read_text().strip()
+        except OSError:
+            return "closed"
+        return mode if mode in {"open", "drain"} else "closed"
+
+    if admission_gate is not None:
+
+        @app.middleware("http")
+        async def gate(request, call_next):
+            nonlocal pending_writes
+            if request.method in {"GET", "HEAD", "OPTIONS"}:
+                return await call_next(request)
+            mode = admission_mode()
+            if mode == "closed" or (
+                mode == "drain"
+                and not request.url.path.endswith(("/inputs", "/cancel", "/reconcile"))
+            ):
+                error = LasaError("capacity_exhausted", 503)
+                return JSONResponse(
+                    error.public(),
+                    status_code=503,
+                    media_type="application/problem+json",
+                    headers={"Cache-Control": "no-store", "Retry-After": "5"},
+                )
+            pending_writes += 1
+            try:
+                return await call_next(request)
+            finally:
+                pending_writes -= 1
 
     @app.exception_handler(LasaError)
     async def error(_request, exc):
@@ -176,6 +210,20 @@ def create_app(
         principal(request)
         require(c.availability() != "unavailable", "capacity_exhausted", 503)
         return {"status": "ready"}
+
+    if admission_gate is not None:
+
+        @app.get("/health/drain", include_in_schema=False)
+        async def drain_status(request: Request):
+            principal(request, operator=True)
+            return JSONResponse(
+                {
+                    "mode": admission_mode(),
+                    "writes": pending_writes,
+                    "tasks": len(set(c.store.active()) | c.jobs.keys()),
+                },
+                headers={"Cache-Control": "no-store"},
+            )
 
     @app.post(prefix + "/sessions")
     async def create_session(request: Request):

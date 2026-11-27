@@ -174,7 +174,7 @@ async def worker_launcher(runtime_image):
         path = Path(directory) / "worker.sock"
         service_id = f"https://identity.example.net/services/launcher-test-{uuid4().hex}"
         launcher = Launcher(Enclosure(runtime_image, launcher_scope(service_id)))
-        async with launcher.serve(path):
+        async with launcher.serve(path, path.parent):
             yield launcher, path, service_id
 
 

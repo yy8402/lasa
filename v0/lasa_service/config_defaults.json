@@ -66,6 +66,7 @@
   },
   "static_tokens_file": "static-tokens.json",
   "runtime": {
+    "launcher_instance": "default",
     "startup_timeout_ms": 10000
   },
   "worker": {

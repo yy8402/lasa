@@ -4,6 +4,12 @@ from dataclasses import dataclass
 
 from .contracts import digest
 
+MANAGED_DLP_HOST = "lasa-inspection"
+MANAGED_DLP_ORIGIN = f"https://{MANAGED_DLP_HOST}:8443"
+MANAGED_DLP_URL = MANAGED_DLP_ORIGIN + "/inspect"
+MANAGED_DLP_GATEWAY_ID = "local-dlp"
+MANAGED_DLP_POLICY_REVISION = "english-dlp-v1"
+
 DIRECTIONS = ("request", "response")
 GROUPS = ("caller", "model", "delegates", "connectors")
 

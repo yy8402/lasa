@@ -7,19 +7,21 @@ import sys
 from pathlib import Path
 
 import uvicorn
-from jsonschema import ValidationError
 
 from .api import create_app
 from .config import Configuration, ConfigurationError
-from .deployment import DockerDeployment
+from .contracts import protocol_contracts
 from .errors import LasaError
 from .provisioning import (
     check_deployment,
+    configuration_error,
     initial_manifest,
     initial_policy,
     issue_static_token,
+    probe_inspection,
     write_scaffold,
 )
+from .store import STORAGE_SCHEMA_VERSION
 
 DEFAULT_CONFIG_PATH = Path("/etc/lasa/config.json")
 
@@ -46,10 +48,18 @@ def add_init_options(parser):
         help="Private Unix socket for the worker launcher",
     )
     parser.add_argument("--model", required=True)
+    parser.add_argument("--launcher-instance", help="Stable name shared with the launcher")
+    parser.add_argument("--listen-host", help="Supervisor listen address")
+    parser.add_argument("--listen-port", type=int)
+    parser.add_argument("--tls-certificate", type=Path)
+    parser.add_argument("--tls-key", type=Path)
     parser.add_argument("--provider-url", required=True)
     parser.add_argument("--credential-ref", default="env:LASA_MODEL_API_KEY")
     parser.add_argument(
-        "--consumer-subject", help="Grant this user subject read-only design review"
+        "--consumer-subject", help="Grant this user subject the selected starting capability"
+    )
+    parser.add_argument(
+        "--consumer-capability", choices=("design.review", "task.attempt"), default="design.review"
     )
     parser.add_argument("--operator-subject", help="Grant access to private operator traces")
     parser.add_argument(
@@ -86,31 +96,30 @@ def initialize(args):
         credential_ref=args.credential_ref,
         state_root=args.state_root,
     )
-    write_scaffold(
-        args.output, manifest, initial_policy(args.consumer_subject, args.operator_subject)
-    )
+    if args.launcher_instance:
+        manifest["runtime"]["launcher_instance"] = args.launcher_instance
+    if bool(args.tls_certificate) != bool(args.tls_key):
+        raise ConfigurationError("TLS requires both --tls-certificate and --tls-key")
+    if args.listen_host is not None or args.listen_port is not None or args.tls_certificate:
+        storage = manifest.setdefault("storage", {})
+        if args.listen_host is not None:
+            storage["listen_host"] = args.listen_host
+        if args.listen_port is not None:
+            storage["listen_port"] = args.listen_port
+        if args.tls_certificate:
+            storage["tls"] = {
+                "certificate_file": str(args.tls_certificate.absolute()),
+                "key_file": str(args.tls_key.absolute()),
+            }
+    protocol_contracts().validate("Config", manifest)
+    callers = [args.consumer_subject] if args.consumer_subject else []
+    policy = initial_policy(callers, args.operator_subject, args.consumer_capability)
+    write_scaffold(args.output, manifest, policy)
     print(f"Created LASA configuration in {args.output}.")
 
 
-def configuration_error(exc):
-    if isinstance(exc, ConfigurationError):
-        return str(exc)
-    if isinstance(exc.__cause__, ValidationError):
-        error = exc.__cause__
-        path = ".".join(map(str, error.absolute_path)) or "document"
-        if error.validator == "required":
-            missing = ", ".join(key for key in error.validator_value if key not in error.instance)
-            return f"Missing required settings in {path}: {missing}"
-        return f"Schema validation failed at {path} ({error.validator})"
-    if isinstance(exc, LasaError):
-        return f"Invalid configuration ({exc.code})"
-    if isinstance(exc, OSError) and exc.filename:
-        return f"Cannot access {exc.filename}"
-    return "Invalid configuration data"
-
-
-def run_service(config):
-    app = create_app(config)
+def run_service(config, *, admission_gate=None):
+    app = create_app(config, admission_gate=admission_gate)
     settings = config.document["storage"]
     tls = settings.get("tls", {})
     uvicorn.run(
@@ -136,16 +145,8 @@ def add_config_path(parser):
 def main():
     parser = argparse.ArgumentParser(description="LASA service using Codex App Server")
     add_config_path(parser)
+    parser.add_argument("--admission-gate", type=Path, help=argparse.SUPPRESS)
     commands = parser.add_subparsers(dest="command")
-    deploy = commands.add_parser("deploy", help="Manage optional Docker deployment components")
-    deploy_actions = deploy.add_subparsers(dest="action", required=True)
-    for action, help_text in (
-        ("check", "Validate the deployment and check managed HTTPS readiness"),
-        ("apply", "Apply the Docker deployment settings"),
-    ):
-        deploy_actions.add_parser(action, help=help_text).add_argument(
-            "--settings", type=Path, required=True, help="Path to the deployment JSON file"
-        )
     config_command = commands.add_parser("config", help="Scaffold or check service configuration")
     config_commands = config_command.add_subparsers(dest="action", required=True)
     add_init_options(
@@ -156,6 +157,11 @@ def main():
     check.add_argument(
         "--offline", action="store_true", help="Skip remote JWKS and launcher checks"
     )
+    check.add_argument(
+        "--probe-inspection",
+        action="store_true",
+        help="Send a synthetic request to managed DLPLite",
+    )
     issue = config_commands.add_parser("issue-token", help="Issue a standalone caller token")
     add_config_path(issue)
     issue.add_argument("--subject", required=True)
@@ -164,14 +170,6 @@ def main():
     args = parser.parse_args()
     os.umask(0o077)
     try:
-        if args.command == "deploy":
-            deployment = DockerDeployment.load(args.settings)
-            if args.action == "apply":
-                deployment.apply()
-            else:
-                deployment.check()
-            print("Local DLP is ready." if deployment.enabled else "Local DLP is disabled.")
-            return
         if args.command == "config" and args.action == "init":
             initialize(args)
             return
@@ -183,16 +181,22 @@ def main():
             )
             print(f"Issued a static token for {args.subject} in {args.output}.")
         elif args.command == "config":
-            check_deployment(config, offline=args.offline)
+            state = check_deployment(config, offline=args.offline)
+            if args.probe_inspection:
+                probe_inspection(config)
             mode = " (offline)" if args.offline else ""
             print(
                 f"Configuration valid{mode}. Deployment revision {config.document['service']['deployment_revision']}."
             )
             print(f"Verifier revision {config.verifier_revision}.")
+            print(f"State store: {state} (expected schema {STORAGE_SCHEMA_VERSION}).")
             print("Effective content inspection")
             print(json.dumps(config.inspection.report(), indent=2, sort_keys=True))
         else:
-            run_service(config)
+            if args.admission_gate is None:
+                run_service(config)
+            else:
+                run_service(config, admission_gate=args.admission_gate)
     except (OSError, ValueError, LasaError) as exc:
         print(f"LASA configuration: {configuration_error(exc)}.", file=sys.stderr)
         raise SystemExit(2) from None

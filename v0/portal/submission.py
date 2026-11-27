@@ -88,24 +88,24 @@ def form_body(data, operation_id, *, follow_up=False):
     return body
 
 
-def public(submission_id, record):
-    return {
-        "state": record["state"],
-        "recovery_url": "/submissions/" + submission_id,
-        **(
-            {"task_url": "/tasks/" + record.get("root_id", record["task_id"])}
-            if "task_id" in record
-            else {}
-        ),
-        **({"problem": record["problem"]} if "problem" in record else {}),
-    }
-
-
 class Submissions:
     def __init__(self, state, native, settings):
         self.state = state
         self.native = native
         self.settings = settings
+
+    def public(self, submission_id, record):
+        base = self.settings.base_path
+        return {
+            "state": record["state"],
+            "recovery_url": base + "/submissions/" + submission_id,
+            **(
+                {"task_url": base + "/tasks/" + record.get("root_id", record["task_id"])}
+                if "task_id" in record
+                else {}
+            ),
+            **({"problem": record["problem"]} if "problem" in record else {}),
+        }
 
     def phase(self, body):
         return {
@@ -198,11 +198,11 @@ class Submissions:
 
     async def advance(self, owner, token, submission_id, record, body):
         if record["state"] in {"recorded", "rejected"}:
-            return public(submission_id, record)
+            return self.public(submission_id, record)
         if record.get("lease", 0) > now():
-            return public(submission_id, {**record, "state": "checking"})
+            return self.public(submission_id, {**record, "state": "checking"})
         if body is None and record.get("next_check", 0) > now():
-            return public(submission_id, record)
+            return self.public(submission_id, record)
         record["lease"] = now() + self.settings.timeout_seconds * 10
         record["state"] = "checking"
 
@@ -226,7 +226,7 @@ class Submissions:
             record.pop("lease", None)
             record["next_check"] = now() + 2
             save()
-        return public(submission_id, record)
+        return self.public(submission_id, record)
 
     async def advance_session(self, token, record, can_post, save):
         if "session_id" in record:

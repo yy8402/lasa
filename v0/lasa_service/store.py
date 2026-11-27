@@ -3,7 +3,7 @@
 import fcntl
 import os
 import sqlite3
-from contextlib import contextmanager
+from contextlib import closing, contextmanager
 from pathlib import Path
 from uuid import uuid4
 
@@ -11,6 +11,8 @@ from .capabilities import epoch, instant, require
 from .contracts import canonical, parse_json
 
 STORAGE_SCHEMA_VERSION = 4
+DATABASE_NAME = "tasks.sqlite3"
+STORE_LOCK = "service.lock"
 TERMINAL = frozenset({"completed", "failed", "rejected", "cancelled", "indeterminate"})
 WORKING = frozenset({"evaluating", "accepted", "executing", "waiting_child"})
 ACTIVE_TASKS = "state NOT IN (" + ",".join(repr(state) for state in sorted(TERMINAL)) + ")"
@@ -74,24 +76,73 @@ def event_bytes(row):
     return f"COALESCE(length(CAST(json_extract({row}.document,'$.content.text') AS BLOB)),0)"
 
 
+class StateStoreError(ValueError):
+    pass
+
+
+def check_schema(db, path):
+    version = db.execute("PRAGMA user_version").fetchone()[0]
+    if version == 0 and not db.execute("SELECT 1 FROM sqlite_schema LIMIT 1").fetchone():
+        return "empty"
+    if version != STORAGE_SCHEMA_VERSION:
+        raise StateStoreError(
+            f"State store {path} has schema {version}; expected {STORAGE_SCHEMA_VERSION}"
+        )
+    return "compatible"
+
+
+def inspect_state(root, *, readonly=False):
+    path = root / DATABASE_NAME
+
+    def inspect(owned):
+        status = "empty"
+        if path.exists():
+            options = "mode=ro"
+            # A checkpointed, unowned store needs no writable WAL index.
+            if readonly and not owned and not path.with_name(path.name + "-wal").exists():
+                options += "&immutable=1"
+            with closing(sqlite3.connect(path.as_uri() + "?" + options, uri=True)) as db:
+                status = check_schema(db, path)
+        return "owned" if owned else status
+
+    try:
+        if (lock := root / STORE_LOCK).exists():
+            with lock.open("rb") as handle:
+                try:
+                    fcntl.flock(handle, fcntl.LOCK_SH | fcntl.LOCK_NB)
+                except BlockingIOError:
+                    return inspect(owned=True)
+                return inspect(owned=False)
+        return inspect(owned=False)
+    except (sqlite3.Error, OSError):
+        raise StateStoreError(f"Cannot inspect state store {path}") from None
+
+
 class Store:
     def __init__(self, root: Path):
         root.mkdir(parents=True, exist_ok=True, mode=0o700)
         os.chmod(root, 0o700)
-        self.lock = (root / "service.lock").open("a+")
+        self.lock = (root / STORE_LOCK).open("a+")
+        self.db = None
         try:
             fcntl.flock(self.lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except OSError:
+        except BlockingIOError:
             self.lock.close()
-            raise ValueError("Another service owns this storage") from None
-        self.db = sqlite3.connect(root / "tasks.sqlite3", isolation_level=None)
+            raise StateStoreError(f"Another supervisor owns state store {root}") from None
+        path = root / DATABASE_NAME
+        try:
+            self.db = sqlite3.connect(path, isolation_level=None)
+            check_schema(self.db, path)
+        except StateStoreError:
+            self.close()
+            raise
+        except sqlite3.Error:
+            self.close()
+            raise StateStoreError(f"Cannot open state store {path}") from None
         self.db.row_factory = sqlite3.Row
         self.db.execute("PRAGMA journal_mode=WAL")
         self.db.execute("PRAGMA synchronous=FULL")
         self.db.execute("PRAGMA foreign_keys=ON")
-        if self.db.execute("PRAGMA user_version").fetchone()[0] not in (0, STORAGE_SCHEMA_VERSION):
-            self.close()
-            raise ValueError("Unsupported target storage version")
         self.db.executescript(f"""
 CREATE TABLE IF NOT EXISTS sessions(id TEXT PRIMARY KEY,owner TEXT,document TEXT);
 CREATE TABLE IF NOT EXISTS tasks(id TEXT PRIMARY KEY,session_id TEXT REFERENCES sessions(id),state TEXT,document TEXT,request TEXT,principal TEXT,authority TEXT,plan TEXT);
